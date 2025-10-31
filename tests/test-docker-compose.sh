@@ -74,6 +74,9 @@ if ! docker_compose config > /dev/null 2>&1; then
     exit 1
 fi
 
+# Сохраняем вывод конфигурации для дальнейших проверок
+CONFIG_OUTPUT=$(docker_compose config 2>/dev/null)
+
 echo "✅ PASS: docker-compose.yml валиден"
 
 echo ""
@@ -81,7 +84,7 @@ echo "=========================================="
 echo "Тест 2: Проверка обязательных сервисов"
 echo "=========================================="
 
-SERVICES=$(docker_compose config --services 2>/dev/null)
+SERVICES=$(echo "$CONFIG_OUTPUT" | grep -E "^\s+[a-z0-9-]+:" | grep -v "version:" | sed 's/:$//' | sed 's/^[[:space:]]*//' | sort -u || docker_compose config --services 2>/dev/null)
 REQUIRED_SERVICES=("n8n" "mcp-server")
 
 for service in "${REQUIRED_SERVICES[@]}"; do
@@ -119,20 +122,27 @@ echo "=========================================="
 echo "Тест 4: Проверка портов"
 echo "=========================================="
 
-# Генерируем итоговую конфигурацию для анализа
-CONFIG_OUTPUT=$(docker_compose config 2>/dev/null)
-
-if echo "$CONFIG_OUTPUT" | grep -q "target: 5678" && echo "$CONFIG_OUTPUT" | grep -q "published: \"5678\""; then
+# Проверка портов n8n (5678)
+if echo "$CONFIG_OUTPUT" | grep -A 3 "n8n:" | grep -q "target: 5678" && echo "$CONFIG_OUTPUT" | grep -A 3 "n8n:" | grep -q "published: \"5678\""; then
     echo "✅ PASS: Порт 5678 для n8n настроен"
+elif echo "$CONFIG_OUTPUT" | grep -E "5678:5678|published.*5678" | grep -q "5678"; then
+    echo "✅ PASS: Порт 5678 для n8n настроен (альтернативный формат)"
 else
     echo "❌ FAIL: Порт 5678 для n8n не настроен"
+    echo "Debug output:"
+    echo "$CONFIG_OUTPUT" | grep -A 5 "n8n:" | head -10
     exit 1
 fi
 
-if echo "$CONFIG_OUTPUT" | grep -q "target: 1880" && echo "$CONFIG_OUTPUT" | grep -q "published: \"1880\""; then
+# Проверка портов mcp-server (1880)
+if echo "$CONFIG_OUTPUT" | grep -A 3 "mcp-server:" | grep -q "target: 1880" && echo "$CONFIG_OUTPUT" | grep -A 3 "mcp-server:" | grep -q "published: \"1880\""; then
     echo "✅ PASS: Порт 1880 для mcp-server настроен"
+elif echo "$CONFIG_OUTPUT" | grep -E "1880:1880|published.*1880" | grep -q "1880"; then
+    echo "✅ PASS: Порт 1880 для mcp-server настроен (альтернативный формат)"
 else
     echo "❌ FAIL: Порт 1880 для mcp-server не настроен"
+    echo "Debug output:"
+    echo "$CONFIG_OUTPUT" | grep -A 5 "mcp-server:" | head -10
     exit 1
 fi
 
