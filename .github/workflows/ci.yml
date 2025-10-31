@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ master, main ]
   workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Деплой на продакшен'
+        required: false
+        default: 'false'
 
 jobs:
   test:
@@ -20,4 +25,89 @@ jobs:
       - name: Run all tests
         run: |
           bash tests/run-all-tests.sh
+
+  changes:
+    name: detect-changes
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.filter.outputs.deploy }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Check changed files
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            deploy:
+              - 'docker-compose.yml'
+              - 'mcp-server/**'
+              - 'setup/**'
+              - '.github/workflows/ci.yml'
+
+  deploy:
+    name: deploy
+    needs: [test, changes]
+    if: >
+      github.ref == 'refs/heads/master' &&
+      (needs.changes.outputs.deploy == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy == 'true'))
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH with password auth
+        run: |
+          sudo apt-get update && sudo apt-get install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts || true
+
+      - name: Deploy to Hetzner server
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+          REPO_URL: https://github.com/${{ github.repository }}.git
+        run: |
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} bash << 'EOF'
+            set -e
+            echo "🚀 Начинаем деплой..."
+            
+            if [ ! -d "/root/geodrive_n8n-agents" ]; then
+              echo "📥 Клонируем репозиторий..."
+              cd /root && git clone ${REPO_URL} geodrive_n8n-agents
+            fi
+            
+            cd /root/geodrive_n8n-agents
+            echo "📦 Обновляем код..."
+            git fetch origin
+            git reset --hard origin/master || git reset --hard origin/main || true
+            
+            echo "🐳 Перезапускаем Docker Compose..."
+            docker compose down 2>/dev/null || true
+            docker compose pull || true
+            docker compose up -d
+            
+            echo "⏳ Ждем запуска сервисов..."
+            sleep 15
+            
+            echo "✅ Статус сервисов:"
+            docker compose ps
+            
+            echo "🎉 Деплой завершен!"
+          EOF
+
+      - name: Verify deployment
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+        run: |
+          echo "🔍 Проверяем доступность n8n..."
+          sleep 5
+          curl -f http://${SERVER_IP}:5678 || echo "⚠️ n8n еще запускается..."
+          echo "🔍 Проверяем доступность MCP..."
+          curl -f http://${SERVER_IP}:1880 || echo "⚠️ MCP еще запускается..."
 
