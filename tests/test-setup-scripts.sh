@@ -1,7 +1,7 @@
 #!/bin/bash
 # Тесты для скриптов установки
 
-set -e
+# Не используем set -e в начале, ошибки обрабатываются явно
 
 echo "=========================================="
 echo "Тест 1: Проверка наличия обязательных скриптов"
@@ -36,15 +36,21 @@ echo "Тест 2: Проверка синтаксиса bash скриптов"
 echo "=========================================="
 
 # Проверка синтаксиса всех .sh файлов
-find setup -name "*.sh" | while read -r script; do
+SYNTAX_ERRORS=0
+while IFS= read -r script; do
     if bash -n "$script" 2>/dev/null; then
         echo "✅ PASS: Синтаксис $script корректен"
     else
         echo "❌ FAIL: Ошибка синтаксиса в $script"
-        bash -n "$script"
-        exit 1
+        bash -n "$script" 2>&1 | head -5
+        SYNTAX_ERRORS=$((SYNTAX_ERRORS + 1))
     fi
-done
+done < <(find setup -name "*.sh" 2>/dev/null)
+
+if [ $SYNTAX_ERRORS -gt 0 ]; then
+    echo "❌ Найдено ошибок синтаксиса: $SYNTAX_ERRORS"
+    exit 1
+fi
 
 echo ""
 echo "=========================================="
