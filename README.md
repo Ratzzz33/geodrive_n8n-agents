@@ -129,20 +129,30 @@ docker compose restart
 - **Пароль root:** `enebit7Lschwrkb93vnm`
 - **Статус:** Готов к установке
 
-## 🚀 Быстрая установка
+## 🚀 Быстрая установка (с данными Neon)
 
-Выполните одну команду на сервере:
+**Данные Neon уже настроены!** Выполните на сервере:
 
 ```bash
 ssh root@46.224.17.15
 # Пароль: enebit7Lschwrkb93vnm
 
-cd /root && git clone https://github.com/Ratzzz33/geodrive_n8n-agents.git && \
-cd geodrive_n8n-agents && chmod +x setup/complete-installation.sh && \
-bash setup/complete-installation.sh
+cd /root/geodrive_n8n-agents && \
+cat > .env << 'EOF'
+N8N_PASSWORD=geodrive_secure_pass_2024
+N8N_HOST=0.0.0.0
+NEON_HOST=ep-rough-heart-ahnybmq0-pooler.c-3.us-east-1.aws.neon.tech
+NEON_PORT=5432
+NEON_DATABASE=neondb
+NEON_USER=neondb_owner
+NEON_PASSWORD=npg_cHIT9Kxfk1Am
+NEON_API_KEY=napi_zwcney8v8p1k753p6tjaoj6hh77ekf5ptvec7sj6thoqz3ncc05hq1qkf5err7b9
+N8N_API_KEY=
+EOF
+docker compose up -d
 ```
 
-Или используйте инструкцию: [AUTO_INSTALL.md](AUTO_INSTALL.md)
+См. [DEPLOY_NOW.md](DEPLOY_NOW.md) для подробностей.
 
 ## Лицензия
 
