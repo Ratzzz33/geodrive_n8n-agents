@@ -36,39 +36,49 @@ jobs:
       run: |
         bash tests/run-all-tests.sh
     
-    - name: Test Docker Compose configuration
-      continue-on-error: true
+    - name: Validate Docker Compose syntax
       run: |
-        # Проверка только если .env.example доступен (для примера)
-        if [ -f "env.example" ]; then
-          # Создаем временный .env для проверки
-          cp env.example .env.test
-          # Заменяем переменные на тестовые значения
-          sed -i 's/your-project.neon.tech/test.neon.tech/g' .env.test || true
-          sed -i 's/your_password_here/testpass/g' .env.test || true
-          # Проверяем конфигурацию
-          docker compose --env-file .env.test config --quiet || true
-          rm -f .env.test
-        else
-          docker compose config --quiet || true
-        fi
+        # Создаем минимальный .env для проверки синтаксиса
+        cat > .env << 'EOF'
+N8N_PASSWORD=test_password
+N8N_HOST=0.0.0.0
+NEON_HOST=test.neon.tech
+NEON_PORT=5432
+NEON_DATABASE=testdb
+NEON_USER=testuser
+NEON_PASSWORD=testpass
+NEON_API_KEY=test_api_key
+N8N_API_KEY=test_n8n_key
+EOF
+        # Проверяем только синтаксис YAML
+        docker compose config --quiet
+        rm -f .env
 
   deploy:
     name: Деплой на сервер
     needs: test
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'push' && 
-      (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') &&
-      secrets.SERVER_IP != '' &&
-      (secrets.SERVER_SSH_KEY != '' || secrets.SERVER_PASSWORD != '')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
+    - name: Check secrets
+      id: check_secrets
+      run: |
+        if [ -z "${{ secrets.SERVER_IP }}" ]; then
+          echo "skip_deploy=true" >> $GITHUB_OUTPUT
+          echo "⚠️ SERVER_IP не настроен, пропускаем деплой"
+        elif [ -z "${{ secrets.SERVER_SSH_KEY }}" ] && [ -z "${{ secrets.SERVER_PASSWORD }}" ]; then
+          echo "skip_deploy=true" >> $GITHUB_OUTPUT
+          echo "⚠️ Нет SSH ключа или пароля, пропускаем деплой"
+        else
+          echo "skip_deploy=false" >> $GITHUB_OUTPUT
+        fi
+    
     - name: Setup SSH with key
-      if: secrets.SERVER_SSH_KEY != ''
+      if: steps.check_secrets.outputs.skip_deploy != 'true' && secrets.SERVER_SSH_KEY != ''
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
@@ -76,7 +86,7 @@ jobs:
         ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts || true
     
     - name: Setup SSH with password (fallback)
-      if: secrets.SERVER_SSH_KEY == '' && secrets.SERVER_PASSWORD != ''
+      if: steps.check_secrets.outputs.skip_deploy != 'true' && secrets.SERVER_SSH_KEY == ''
       run: |
         sudo apt-get update
         sudo apt-get install -y sshpass
@@ -84,6 +94,7 @@ jobs:
         ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts || true
     
     - name: Deploy to server
+      if: steps.check_secrets.outputs.skip_deploy != 'true'
       env:
         SERVER_IP: ${{ secrets.SERVER_IP }}
         SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
@@ -188,6 +199,7 @@ jobs:
         fi
     
     - name: Verify deployment
+      if: steps.check_secrets.outputs.skip_deploy != 'true'
       env:
         SERVER_IP: ${{ secrets.SERVER_IP }}
         SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
