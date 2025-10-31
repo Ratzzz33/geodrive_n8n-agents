@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # Базовые настройки
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-changeme}
+      - N8N_HOST=${N8N_HOST:-0.0.0.0}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://geodrive.netlify.app/
+      
+      # Подключение к базе данных Neon PostgreSQL
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=${NEON_HOST}
+      - DB_POSTGRESDB_PORT=${NEON_PORT:-5432}
+      - DB_POSTGRESDB_DATABASE=${NEON_DATABASE}
+      - DB_POSTGRESDB_USER=${NEON_USER}
+      - DB_POSTGRESDB_PASSWORD=${NEON_PASSWORD}
+      - DB_POSTGRESDB_SSL_ENABLED=true
+      - DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false
+      
+      # Настройки безопасности
+      - N8N_SECURE_COOKIE=false
+      - NODE_ENV=production
+      - EXECUTIONS_PROCESS=main
+      - EXECUTIONS_MODE=regular
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - n8n-network
+
+  mcp-server:
+    image: node:20-alpine
+    container_name: n8n-mcp-server
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "1880:1880"
+    environment:
+      - NODE_ENV=production
+      - N8N_API_URL=http://n8n:5678/api
+      - N8N_API_KEY=${N8N_API_KEY}
+      - PORT=1880
+    volumes:
+      - ./mcp-server:/app
+      - mcp_node_modules:/app/node_modules
+    command: sh -c "npm install && npm start"
+    depends_on:
+      - n8n
+    networks:
+      - n8n-network
+
+volumes:
+  n8n_data:
+    driver: local
+  mcp_node_modules:
+    driver: local
+
+networks:
+  n8n-network:
+    driver: bridge
+

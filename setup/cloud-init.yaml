@@ -1,0 +1,37 @@
+#cloud-config
+# Инициализация сервера при первом запуске
+# Устанавливает базовые пакеты и настраивает окружение
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - curl
+  - wget
+  - git
+  - vim
+  - ufw
+
+write_files:
+  - path: /etc/motd
+    content: |
+      Welcome to GeoDrive n8n Server
+      ================================
+      
+      This server runs n8n and MCP services.
+      
+      Services:
+      - n8n: http://localhost:5678
+      - MCP: http://localhost:1880
+
+runcmd:
+  - systemctl enable ufw
+  - ufw --force enable
+  - ufw allow 22/tcp
+  - ufw allow 5678/tcp  # n8n
+  - ufw allow 1880/tcp  # MCP
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+
+final_message: "Server setup completed. User: root, IP: $private_ipv4"
+
