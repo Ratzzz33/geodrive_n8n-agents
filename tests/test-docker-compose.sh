@@ -3,6 +3,41 @@
 
 # Не используем set -e в начале, ошибки обрабатываются явно
 
+# Подготовка окружения для docker compose (создаем временный .env при необходимости)
+TEMP_ENV_FILE=""
+COMPOSE_ARGS=()
+
+if [ -f ".env" ]; then
+    echo "Используется существующий .env"
+else
+    TEMP_ENV_FILE=".env.ci"
+    echo "Создание временного .env ($TEMP_ENV_FILE) для проверки..."
+    cat > "$TEMP_ENV_FILE" << 'EOF'
+N8N_PASSWORD=test_password
+N8N_HOST=0.0.0.0
+NEON_HOST=test.neon.tech
+NEON_PORT=5432
+NEON_DATABASE=testdb
+NEON_USER=testuser
+NEON_PASSWORD=testpass
+NEON_API_KEY=test_api_key
+N8N_API_KEY=test_n8n_key
+EOF
+    COMPOSE_ARGS+=(--env-file "$TEMP_ENV_FILE")
+fi
+
+cleanup() {
+    if [ -n "$TEMP_ENV_FILE" ] && [ -f "$TEMP_ENV_FILE" ]; then
+        rm -f "$TEMP_ENV_FILE"
+    fi
+}
+
+trap cleanup EXIT
+
+docker_compose() {
+    docker compose "${COMPOSE_ARGS[@]}" "$@"
+}
+
 echo "=========================================="
 echo "Тест 1: Валидация docker-compose.yml"
 echo "=========================================="
@@ -33,15 +68,11 @@ else
 fi
 
 # Проверка синтаксиса docker-compose
-if ! docker compose config > /dev/null 2>&1; then
+if ! docker_compose config > /dev/null 2>&1; then
     echo "❌ FAIL: docker-compose.yml содержит ошибки синтаксиса"
-    docker compose config 2>&1 | head -20
-    [ "$TEMP_ENV" = "true" ] && rm -f .env
+    docker_compose config 2>&1 | head -20
     exit 1
 fi
-
-# Удаляем временный .env если создавали
-[ "$TEMP_ENV" = "true" ] && rm -f .env
 
 echo "✅ PASS: docker-compose.yml валиден"
 
@@ -50,25 +81,7 @@ echo "=========================================="
 echo "Тест 2: Проверка обязательных сервисов"
 echo "=========================================="
 
-# Создаем временный .env если нужно
-if [ ! -f ".env" ]; then
-    cat > .env << 'EOF'
-N8N_PASSWORD=test_password
-N8N_HOST=0.0.0.0
-NEON_HOST=test.neon.tech
-NEON_PORT=5432
-NEON_DATABASE=testdb
-NEON_USER=testuser
-NEON_PASSWORD=testpass
-NEON_API_KEY=test_api_key
-N8N_API_KEY=test_n8n_key
-EOF
-    TEMP_ENV=true
-else
-    TEMP_ENV=false
-fi
-
-SERVICES=$(docker compose config --services 2>/dev/null)
+SERVICES=$(docker_compose config --services 2>/dev/null)
 REQUIRED_SERVICES=("n8n" "mcp-server")
 
 for service in "${REQUIRED_SERVICES[@]}"; do
@@ -76,12 +89,9 @@ for service in "${REQUIRED_SERVICES[@]}"; do
         echo "✅ PASS: Сервис $service найден"
     else
         echo "❌ FAIL: Сервис $service отсутствует"
-        [ "$TEMP_ENV" = "true" ] && rm -f .env
         exit 1
     fi
 done
-
-[ "$TEMP_ENV" = "true" ] && rm -f .env
 
 echo ""
 echo "=========================================="
@@ -109,42 +119,22 @@ echo "=========================================="
 echo "Тест 4: Проверка портов"
 echo "=========================================="
 
-# Создаем временный .env если нужно
-if [ ! -f ".env" ]; then
-    cat > .env << 'EOF'
-N8N_PASSWORD=test_password
-N8N_HOST=0.0.0.0
-NEON_HOST=test.neon.tech
-NEON_PORT=5432
-NEON_DATABASE=testdb
-NEON_USER=testuser
-NEON_PASSWORD=testpass
-NEON_API_KEY=test_api_key
-N8N_API_KEY=test_n8n_key
-EOF
-    TEMP_ENV=true
-else
-    TEMP_ENV=false
-fi
+# Генерируем итоговую конфигурацию для анализа
+CONFIG_OUTPUT=$(docker_compose config 2>/dev/null)
 
-# Проверка что порты определены
-if docker compose config 2>/dev/null | grep -q "5678:5678"; then
+if echo "$CONFIG_OUTPUT" | grep -q "target: 5678" && echo "$CONFIG_OUTPUT" | grep -q "published: \"5678\""; then
     echo "✅ PASS: Порт 5678 для n8n настроен"
 else
     echo "❌ FAIL: Порт 5678 для n8n не настроен"
-    [ "$TEMP_ENV" = "true" ] && rm -f .env
     exit 1
 fi
 
-if docker compose config 2>/dev/null | grep -q "1880:1880"; then
+if echo "$CONFIG_OUTPUT" | grep -q "target: 1880" && echo "$CONFIG_OUTPUT" | grep -q "published: \"1880\""; then
     echo "✅ PASS: Порт 1880 для mcp-server настроен"
 else
     echo "❌ FAIL: Порт 1880 для mcp-server не настроен"
-    [ "$TEMP_ENV" = "true" ] && rm -f .env
     exit 1
 fi
-
-[ "$TEMP_ENV" = "true" ] && rm -f .env
 
 echo ""
 echo "=========================================="
