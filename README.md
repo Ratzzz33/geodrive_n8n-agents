@@ -127,9 +127,22 @@ docker compose restart
 ✅ **Сервер создан в Hetzner Cloud:**
 - **IP адрес:** `46.224.17.15`
 - **Пароль root:** `enebit7Lschwrkb93vnm`
-- **Статус:** Готов к настройке
+- **Статус:** Готов к установке
 
-См. [SERVER_INFO.md](SERVER_INFO.md) для подробной информации о подключении и настройке.
+## 🚀 Быстрая установка
+
+Выполните одну команду на сервере:
+
+```bash
+ssh root@46.224.17.15
+# Пароль: enebit7Lschwrkb93vnm
+
+cd /root && git clone https://github.com/Ratzzz33/geodrive_n8n-agents.git && \
+cd geodrive_n8n-agents && chmod +x setup/complete-installation.sh && \
+bash setup/complete-installation.sh
+```
+
+Или используйте инструкцию: [AUTO_INSTALL.md](AUTO_INSTALL.md)
 
 ## Лицензия
 
