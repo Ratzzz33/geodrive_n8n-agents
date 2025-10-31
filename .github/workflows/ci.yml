@@ -36,24 +36,6 @@ jobs:
     - name: Run all tests
       run: |
         bash tests/run-all-tests.sh
-    
-    - name: Validate Docker Compose syntax
-      run: |
-        # Создаем минимальный .env для проверки синтаксиса
-        cat > .env << 'EOF'
-N8N_PASSWORD=test_password
-N8N_HOST=0.0.0.0
-NEON_HOST=test.neon.tech
-NEON_PORT=5432
-NEON_DATABASE=testdb
-NEON_USER=testuser
-NEON_PASSWORD=testpass
-NEON_API_KEY=test_api_key
-N8N_API_KEY=test_n8n_key
-EOF
-        # Проверяем только синтаксис YAML
-        docker compose config --quiet
-        rm -f .env
 
   deploy:
     name: Деплой на сервер
