@@ -121,12 +121,15 @@ GitHub Actions автоматически:
 - ✅ Запускает тесты при каждом push
 - 🚀 Деплоит на сервер после успешных тестов
 
-Настройка secrets в GitHub:
-- `HCLOUD_TOKEN` - API токен Hetzner Cloud
-- `SERVER_IP` - IP сервера
-- `SERVER_USER` - SSH пользователь (root)
-- `SERVER_SSH_KEY` - SSH приватный ключ (опционально)
-- `SERVER_PASSWORD` - SSH пароль (если нет ключа)
+**Настройка secrets в GitHub:**
+См. подробную инструкцию: [GITHUB_SECRETS_SETUP.md](GITHUB_SECRETS_SETUP.md)
+
+**Быстрая настройка:**
+1. Перейдите: Settings → Secrets and variables → Actions
+2. Добавьте secrets:
+   - `SERVER_IP` = `46.224.17.15`
+   - `SERVER_PASSWORD` = `Geodrive2024SecurePass` (или `SERVER_SSH_KEY`)
+   - `SERVER_USER` = `root` (опционально)
 
 ## Управление
 
