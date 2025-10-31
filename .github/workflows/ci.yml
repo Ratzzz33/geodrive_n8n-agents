@@ -1,0 +1,163 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+env:
+  HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+  SERVER_IP: ${{ secrets.SERVER_IP }}
+  SERVER_USER: ${{ secrets.SERVER_USER }}
+  SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+  SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+
+jobs:
+  test:
+    name: Запуск тестов
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Docker Compose
+      run: |
+        sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
+    
+    - name: Make test scripts executable
+      run: |
+        chmod +x tests/*.sh
+    
+    - name: Run all tests
+      run: |
+        bash tests/run-all-tests.sh
+    
+    - name: Test Docker Compose configuration
+      run: |
+        docker compose config --quiet
+
+  deploy:
+    name: Деплой на сервер
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SERVER_SSH_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts
+    
+    - name: Setup SSH with password (fallback)
+      if: env.SERVER_SSH_KEY == ''
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y sshpass
+        mkdir -p ~/.ssh
+        ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts
+    
+    - name: Deploy to server
+      env:
+        SERVER_IP: ${{ secrets.SERVER_IP }}
+        SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
+      run: |
+        if [ -n "$SERVER_SSH_KEY" ]; then
+          # Использование SSH ключа
+          ssh -i ~/.ssh/id_rsa ${SERVER_USER}@${SERVER_IP} << 'ENDSSH'
+            set -e
+            echo "=========================================="
+            echo "Обновление проекта на сервере"
+            echo "=========================================="
+            
+            cd /root/geodrive_n8n-agents || (cd /root && git clone https://github.com/${{ github.repository }}.git geodrive_n8n-agents && cd geodrive_n8n-agents)
+            git pull origin master || git pull origin main
+            
+            echo ""
+            echo "Обновление .env (если нужно)..."
+            if [ ! -f .env ]; then
+              cp env.example .env
+              echo "⚠️  ВНИМАНИЕ: Необходимо настроить .env файл!"
+            fi
+            
+            echo ""
+            echo "Настройка MCP сервера..."
+            if [ -f setup/04-setup-mcp-server.sh ]; then
+              chmod +x setup/04-setup-mcp-server.sh
+              bash setup/04-setup-mcp-server.sh || true
+            fi
+            
+            echo ""
+            echo "Перезапуск контейнеров..."
+            docker compose down 2>/dev/null || true
+            docker compose up -d --build
+            
+            echo ""
+            echo "Ожидание запуска (15 секунд)..."
+            sleep 15
+            
+            echo ""
+            echo "Статус контейнеров:"
+            docker compose ps
+            
+            echo ""
+            echo "=========================================="
+            echo "✅ Деплой завершен!"
+            echo "=========================================="
+          ENDSSH
+        else
+          # Использование пароля через sshpass
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << 'ENDSSH'
+            set -e
+            echo "=========================================="
+            echo "Обновление проекта на сервере"
+            echo "=========================================="
+            
+            cd /root/geodrive_n8n-agents || (cd /root && git clone https://github.com/${{ github.repository }}.git geodrive_n8n-agents && cd geodrive_n8n-agents)
+            git pull origin master || git pull origin main
+            
+            echo ""
+            echo "Настройка MCP сервера..."
+            if [ -f setup/04-setup-mcp-server.sh ]; then
+              chmod +x setup/04-setup-mcp-server.sh
+              bash setup/04-setup-mcp-server.sh || true
+            fi
+            
+            echo ""
+            echo "Перезапуск контейнеров..."
+            docker compose down 2>/dev/null || true
+            docker compose up -d
+            
+            echo ""
+            echo "Ожидание запуска (15 секунд)..."
+            sleep 15
+            
+            echo ""
+            echo "Статус контейнеров:"
+            docker compose ps
+            
+            echo ""
+            echo "=========================================="
+            echo "✅ Деплой завершен!"
+            echo "=========================================="
+          ENDSSH
+        fi
+    
+    - name: Verify deployment
+      run: |
+        sleep 10
+        if [ -n "$SERVER_SSH_KEY" ]; then
+          ssh -i ~/.ssh/id_rsa ${SERVER_USER}@${SERVER_IP} "docker compose ps && docker compose logs --tail=20 n8n mcp-server"
+        else
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} "docker compose ps && docker compose logs --tail=20 n8n mcp-server"
+        fi
+
