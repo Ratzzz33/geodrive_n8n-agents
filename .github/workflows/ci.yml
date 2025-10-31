@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
@@ -7,190 +7,17 @@ on:
     branches: [ master, main ]
   workflow_dispatch:
 
-# Global env variables - not needed at workflow level
-# env:
-#   HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
-#   SERVER_IP: ${{ secrets.SERVER_IP }}
-#   SERVER_USER: ${{ secrets.SERVER_USER }}
-#   SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
-#   SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
-
 jobs:
   test:
-    name: Запуск тестов
+    name: tests
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Setup Docker Compose
-      run: |
-        # Используем встроенный docker compose (v2)
-        docker compose version
-    
-    - name: Make test scripts executable
-      run: |
-        chmod +x tests/*.sh
-    
-    - name: Run all tests
-      run: |
-        bash tests/run-all-tests.sh
-
-  deploy:
-    name: Деплой на сервер
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Check secrets
-      id: check_secrets
-      run: |
-        if [ -z "${{ secrets.SERVER_IP }}" ]; then
-          echo "skip_deploy=true" >> $GITHUB_OUTPUT
-          echo "⚠️ SERVER_IP не настроен, пропускаем деплой"
-        elif [ -z "${{ secrets.SERVER_SSH_KEY }}" ] && [ -z "${{ secrets.SERVER_PASSWORD }}" ]; then
-          echo "skip_deploy=true" >> $GITHUB_OUTPUT
-          echo "⚠️ Нет SSH ключа или пароля, пропускаем деплой"
-        else
-          echo "skip_deploy=false" >> $GITHUB_OUTPUT
-        fi
-    
-    - name: Setup SSH with key
-      if: steps.check_secrets.outputs.skip_deploy != 'true' && secrets.SERVER_SSH_KEY != ''
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts || true
-    
-    - name: Setup SSH with password (fallback)
-      if: steps.check_secrets.outputs.skip_deploy != 'true' && secrets.SERVER_SSH_KEY == ''
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y sshpass
-        mkdir -p ~/.ssh
-        ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts || true
-    
-    - name: Deploy to server
-      if: steps.check_secrets.outputs.skip_deploy != 'true'
-      env:
-        SERVER_IP: ${{ secrets.SERVER_IP }}
-        SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
-        REPO_URL: https://github.com/${{ github.repository }}.git
-      continue-on-error: false
-      timeout-minutes: 10
-      run: |
-        if [ -n "${{ secrets.SERVER_SSH_KEY }}" ]; then
-          # Использование SSH ключа
-          ssh -i ~/.ssh/id_rsa ${SERVER_USER}@${SERVER_IP} bash << EOF
-            set -e
-            echo "=========================================="
-            echo "Обновление проекта на сервере"
-            echo "=========================================="
-            
-            if [ ! -d "/root/geodrive_n8n-agents" ]; then
-              cd /root
-              git clone ${REPO_URL} geodrive_n8n-agents
-              cd geodrive_n8n-agents
-            else
-              cd /root/geodrive_n8n-agents
-              git fetch origin
-              git reset --hard origin/master || git reset --hard origin/main || true
-            fi
-            
-            echo ""
-            echo "Обновление .env (если нужно)..."
-            if [ ! -f .env ]; then
-              cp env.example .env
-              echo "⚠️  ВНИМАНИЕ: Необходимо настроить .env файл!"
-            fi
-            
-            echo ""
-            echo "Настройка MCP сервера..."
-            if [ -f setup/04-setup-mcp-server.sh ]; then
-              chmod +x setup/04-setup-mcp-server.sh
-              bash setup/04-setup-mcp-server.sh || true
-            fi
-            
-            echo ""
-            echo "Перезапуск контейнеров..."
-            docker compose down 2>/dev/null || true
-            docker compose pull || true
-            docker compose up -d
-            
-            echo ""
-            echo "Ожидание запуска (15 секунд)..."
-            sleep 15
-            
-            echo ""
-            echo "Статус контейнеров:"
-            docker compose ps
-            
-            echo ""
-            echo "=========================================="
-            echo "✅ Деплой завершен!"
-            echo "=========================================="
-          EOF
-        else
-          # Использование пароля через sshpass
-          sshpass -p "${{ secrets.SERVER_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} bash << EOF
-            set -e
-            echo "=========================================="
-            echo "Обновление проекта на сервере"
-            echo "=========================================="
-            
-            if [ ! -d "/root/geodrive_n8n-agents" ]; then
-              cd /root
-              git clone ${REPO_URL} geodrive_n8n-agents
-              cd geodrive_n8n-agents
-            else
-              cd /root/geodrive_n8n-agents
-              git fetch origin
-              git reset --hard origin/master || git reset --hard origin/main || true
-            fi
-            
-            echo ""
-            echo "Настройка MCP сервера..."
-            if [ -f setup/04-setup-mcp-server.sh ]; then
-              chmod +x setup/04-setup-mcp-server.sh
-              bash setup/04-setup-mcp-server.sh || true
-            fi
-            
-            echo ""
-            echo "Перезапуск контейнеров..."
-            docker compose down 2>/dev/null || true
-            docker compose up -d
-            
-            echo ""
-            echo "Ожидание запуска (15 секунд)..."
-            sleep 15
-            
-            echo ""
-            echo "Статус контейнеров:"
-            docker compose ps
-            
-            echo ""
-            echo "=========================================="
-            echo "✅ Деплой завершен!"
-            echo "=========================================="
-          EOF
-        fi
-    
-    - name: Verify deployment
-      if: steps.check_secrets.outputs.skip_deploy != 'true'
-      env:
-        SERVER_IP: ${{ secrets.SERVER_IP }}
-        SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
-      run: |
-        sleep 10
-        if [ -n "${{ secrets.SERVER_SSH_KEY }}" ]; then
-          ssh -i ~/.ssh/id_rsa ${SERVER_USER}@${SERVER_IP} "docker compose ps && docker compose logs --tail=20 n8n mcp-server"
-        else
-          sshpass -p "${{ secrets.SERVER_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} "docker compose ps && docker compose logs --tail=20 n8n mcp-server"
-        fi
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Make test scripts executable
+        run: |
+          chmod +x tests/*.sh || true
+      - name: Run all tests
+        run: |
+          bash tests/run-all-tests.sh
 
