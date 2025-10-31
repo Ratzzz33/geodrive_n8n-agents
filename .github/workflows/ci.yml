@@ -99,8 +99,15 @@ jobs:
             echo "Обновление проекта на сервере"
             echo "=========================================="
             
-            cd /root/geodrive_n8n-agents || (cd /root && git clone ${REPO_URL} geodrive_n8n-agents && cd geodrive_n8n-agents)
-            git pull origin master || git pull origin main || true
+            if [ ! -d "/root/geodrive_n8n-agents" ]; then
+              cd /root
+              git clone ${REPO_URL} geodrive_n8n-agents
+              cd geodrive_n8n-agents
+            else
+              cd /root/geodrive_n8n-agents
+              git fetch origin
+              git reset --hard origin/master || git reset --hard origin/main || true
+            fi
             
             echo ""
             echo "Обновление .env (если нужно)..."
@@ -143,8 +150,15 @@ jobs:
             echo "Обновление проекта на сервере"
             echo "=========================================="
             
-            cd /root/geodrive_n8n-agents || (cd /root && git clone ${REPO_URL} geodrive_n8n-agents && cd geodrive_n8n-agents)
-            git pull origin master || git pull origin main || true
+            if [ ! -d "/root/geodrive_n8n-agents" ]; then
+              cd /root
+              git clone ${REPO_URL} geodrive_n8n-agents
+              cd geodrive_n8n-agents
+            else
+              cd /root/geodrive_n8n-agents
+              git fetch origin
+              git reset --hard origin/master || git reset --hard origin/main || true
+            fi
             
             echo ""
             echo "Настройка MCP сервера..."
