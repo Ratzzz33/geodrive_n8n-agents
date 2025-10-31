@@ -16,7 +16,7 @@ fi
 # Проверка синтаксиса docker-compose
 if ! docker compose config > /dev/null 2>&1; then
     echo "❌ FAIL: docker-compose.yml содержит ошибки синтаксиса"
-    docker compose config
+    docker compose config 2>&1 | head -20
     exit 1
 fi
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Запуск всех тестов
 
-set -e
+# Не используем set -e, так как ошибки обрабатываются функцией run_test
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
