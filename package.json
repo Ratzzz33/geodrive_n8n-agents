@@ -1,0 +1,15 @@
+{
+  "name": "geodrive_n8n-agents",
+  "version": "1.0.0",
+  "description": "Проект для интеграции Cursor с n8n через MCP (Model Context Protocol) на Hetzner Cloud.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

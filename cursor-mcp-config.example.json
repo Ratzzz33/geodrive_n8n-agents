@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "n8n-workflow-builder": {
+      "command": "n8n-workflow-builder",
+      "env": {
+        "N8N_HOST": "http://46.224.17.15:5678/api/v1",
+        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZDYyYjM3My0yMDFiLTQ3ZjMtODU5YS1jZGM2OWRkZWE0NGEiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYxOTUzNjIzLCJleHAiOjE3NjQ0Nzg4MDB9.RJQy3rXOo0_x_S41IFEGFfAhlVvPaB5dNBYKheP_csM"
+      },
+      "description": "MCP сервер для управления n8n workflow, агентами и оркестратором"
+    }
+  }
+}
+
