@@ -1,0 +1,67 @@
+name: Check ENV File
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-env:
+    name: Check .env file on server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts || true
+
+      - name: Check .env file
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+        run: |
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << 'EOF'
+            cd /root/geodrive_n8n-agents
+            
+            echo "📋 Содержимое .env файла:"
+            echo "=========================================="
+            if [ -f .env ]; then
+              # Показываем все переменные, скрывая значения (только имена)
+              echo ""
+              echo "Переменные в .env (первые 100 символов значений):"
+              while IFS= read -r line; do
+                if [[ $line =~ ^[A-Z_]+= ]]; then
+                  var_name=$(echo "$line" | cut -d'=' -f1)
+                  var_value=$(echo "$line" | cut -d'=' -f2-)
+                  if [ ${#var_value} -gt 100 ]; then
+                    var_value="${var_value:0:100}... (длинное значение)"
+                  fi
+                  # Скрываем чувствительные данные
+                  if [[ "$var_name" == *"TOKEN"* ]] || [[ "$var_name" == *"KEY"* ]] || [[ "$var_name" == *"PASSWORD"* ]] || [[ "$var_name" == *"SECRET"* ]]; then
+                    if [ ${#var_value} -gt 10 ]; then
+                      masked="${var_value:0:5}***${var_value: -3}"
+                    else
+                      masked="***"
+                    fi
+                    echo "$var_name=$masked"
+                  else
+                    echo "$var_name=$var_value"
+                  fi
+                fi
+              done < .env
+              
+              echo ""
+              echo "=========================================="
+              echo "📊 Статистика:"
+              var_count=$(grep -c "^[A-Z_][A-Z0-9_]*=" .env || echo "0")
+              echo "Всего переменных: $var_count"
+            else
+              echo "❌ Файл .env не найден!"
+            fi
+            
+            echo ""
+            echo "🔍 Проверяю наличие .env.backup или других резервных копий..."
+            ls -la /root/geodrive_n8n-agents/.env* 2>/dev/null || echo "Резервных копий не найдено"
+          EOF
+
