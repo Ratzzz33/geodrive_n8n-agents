@@ -79,29 +79,60 @@ function getBranchKeys(): Record<BranchName, string> {
 
 /**
  * Получение временного токена для филиала
- * Обменивает company token на request token с кэшированием
+ * Обменивает company token на request token
+ * Возвращает объект с токеном и временем истечения
  */
-export async function getBranchToken(branchKey: string): Promise<string> {
+async function getBranchTokenWithExpiry(branchKey: string): Promise<{ token: string; expiresAt: Date }> {
   const baseUrl = config.rentprogBaseUrl || 'https://rentprog.net/api/v1/public';
   const authUrl = `${baseUrl}/get_token?company_token=${branchKey}`;
+  
+  logger.debug(`Получаю токен для филиала через: ${baseUrl}/get_token`);
   
   try {
     const response = await axios.get<{ token: string; exp: string }>(authUrl, {
       timeout: config.rentprogTimeoutMs || 10000,
     });
 
+    if (!response.data.token) {
+      throw new Error('Токен не получен в ответе API');
+    }
+
     const expiresAt = new Date(response.data.exp);
-    // Сохраняем в кэш с запасом 2 секунды
-    expiresAt.setSeconds(expiresAt.getSeconds() - 2);
+    // Сохраняем в кэш с запасом 5 секунд для безопасности
+    expiresAt.setSeconds(expiresAt.getSeconds() - 5);
     
-    return response.data.token;
+    logger.debug(`Токен получен, истекает: ${expiresAt.toISOString()}`);
+    
+    return {
+      token: response.data.token,
+      expiresAt,
+    };
   } catch (error) {
     const axiosError = error as AxiosError;
-    logger.error(`Ошибка получения токена для филиала: ${axiosError.message}`);
-    if (axiosError.response?.status === 401 || axiosError.response?.status === 429) {
-      // Backoff на 401/429
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    if (axiosError.response) {
+      logger.error(
+        `Ошибка получения токена: ${axiosError.response.status} ${axiosError.response.statusText}`,
+        {
+          status: axiosError.response.status,
+          data: axiosError.response.data,
+          url: authUrl.replace(branchKey, '***'),
+        }
+      );
+    } else {
+      logger.error(`Ошибка получения токена для филиала: ${axiosError.message}`, {
+        url: authUrl.replace(branchKey, '***'),
+      });
     }
+    
+    if (axiosError.response?.status === 401) {
+      throw new Error('Неверный company token (401 Unauthorized)');
+    }
+    if (axiosError.response?.status === 429) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      throw new Error('Rate limit exceeded (429), попробуйте позже');
+    }
+    
     throw error;
   }
 }
@@ -115,21 +146,36 @@ export async function getCachedBranchToken(branch: BranchName): Promise<string> 
   
   // Если токен валиден, возвращаем из кэша
   if (cached && cached.expiresAt > now) {
+    logger.debug(`Используем кэшированный токен для филиала ${branch}`);
     return cached.token;
   }
   
-  // Получаем новый токен
-  const keys = getBranchKeys();
-  const branchKey = keys[branch];
-  const token = await getBranchToken(branchKey);
+  logger.info(`Получаю новый токен для филиала ${branch}...`);
   
-  // Кэшируем (TTL ~240 секунд, но мы сохраняем с запасом)
-  const expiresAt = new Date();
-  expiresAt.setSeconds(expiresAt.getSeconds() + 238); // Запас 2 секунды
-  
-  tokenCache.set(branch, { token, expiresAt });
-  
-  return token;
+  try {
+    // Получаем ключ филиала
+    const keys = getBranchKeys();
+    const branchKey = keys[branch];
+    
+    if (!branchKey || branchKey.trim() === '') {
+      throw new Error(`Ключ для филиала ${branch} пустой`);
+    }
+    
+    logger.debug(`Использую company token для филиала ${branch} (первые 10 символов: ${branchKey.substring(0, 10)}...)`);
+    
+    // Получаем новый токен с временем истечения
+    const { token, expiresAt } = await getBranchTokenWithExpiry(branchKey);
+    
+    // Кэшируем токен
+    tokenCache.set(branch, { token, expiresAt });
+    
+    logger.info(`Токен для филиала ${branch} получен и кэширован до ${expiresAt.toISOString()}`);
+    
+    return token;
+  } catch (error) {
+    logger.error(`Ошибка получения токена для филиала ${branch}:`, error);
+    throw error;
+  }
 }
 
 /**
