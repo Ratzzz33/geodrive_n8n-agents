@@ -13,11 +13,38 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const envPath = join(__dirname, '../../.env');
 
-// Загружаем .env с явным указанием пути
-const dotenvResult = dotenv.config({ path: envPath });
-if (dotenvResult.error) {
-  // Пробуем загрузить из текущей директории (если запускаем из корня проекта)
-  dotenv.config();
+// Для логирования создаем logger здесь (избегаем циклических зависимостей)
+const debugLog = process.env.DEBUG === 'true' || process.env.LOG_LEVEL === 'debug';
+
+// Пробуем несколько путей для .env
+const possiblePaths = [
+  envPath, // Относительно скомпилированного файла
+  join(process.cwd(), '.env'), // От корня проекта (cwd)
+  '.env', // Текущая директория
+];
+
+let envLoaded = false;
+for (const envFile of possiblePaths) {
+  if (debugLog) {
+    console.log(`[DEBUG] Пробую загрузить .env из: ${envFile}`);
+  }
+  const result = dotenv.config({ path: envFile });
+  if (!result.error) {
+    envLoaded = true;
+    if (debugLog) {
+      console.log(`[DEBUG] ✅ .env загружен из: ${envFile}`);
+      console.log(`[DEBUG] DATABASE_URL установлен: ${!!process.env.DATABASE_URL}`);
+      if (process.env.DATABASE_URL) {
+        const masked = process.env.DATABASE_URL.replace(/:[^:@]+@/, ':***@');
+        console.log(`[DEBUG] DATABASE_URL: ${masked.substring(0, 50)}...`);
+      }
+    }
+    break;
+  }
+}
+
+if (!envLoaded) {
+  console.warn('[WARN] Не удалось загрузить .env файл из стандартных мест');
 }
 
 const configSchema = z.object({
