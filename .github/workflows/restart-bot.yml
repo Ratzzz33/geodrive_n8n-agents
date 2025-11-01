@@ -44,14 +44,33 @@ jobs:
             echo "🧹 Очищаю логи..."
             rm -f /root/bot.log
             
-            echo "🚀 Запускаю бота..."
-            nohup npm run dev > /root/bot.log 2>&1 &
+            echo "🔍 Проверяю Node.js и npm..."
+            which node || echo "Node.js не найден"
+            which npm || echo "npm не найден"
+            
+            # Ищем npm в стандартных местах
+            NPM_CMD="npm"
+            if ! command -v npm &> /dev/null; then
+              if [ -f /usr/bin/npm ]; then
+                NPM_CMD="/usr/bin/npm"
+              elif [ -f /usr/local/bin/npm ]; then
+                NPM_CMD="/usr/local/bin/npm"
+              elif [ -d "$HOME/.nvm" ]; then
+                export NVM_DIR="$HOME/.nvm"
+                [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+                NPM_CMD="npm"
+              fi
+            fi
+            
+            echo "🚀 Запускаю бота через: $NPM_CMD..."
+            cd /root/geodrive_n8n-agents
+            nohup $NPM_CMD run dev > /root/bot.log 2>&1 &
             
             echo "⏳ Жду запуска..."
             sleep 5
             
             echo "📋 Последние 30 строк логов:"
-            tail -n 30 /root/bot.log
+            tail -n 30 /root/bot.log || echo "Лог файл пуст или не создан"
             
             echo ""
             echo "✅ Бот перезапущен!"
