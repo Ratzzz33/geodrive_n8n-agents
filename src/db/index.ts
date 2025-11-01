@@ -21,9 +21,14 @@ export async function initDatabase(): Promise<void> {
     throw new Error('DATABASE_URL не установлен в переменных окружения');
   }
 
+  // Маскируем пароль в логах
+  const maskedUrl = config.databaseUrl.replace(/:[^:@]+@/, ':***@');
+  logger.debug(`Подключаюсь к БД: ${maskedUrl}`);
+
   try {
     connection = postgres(config.databaseUrl, {
       max: 1, // Для MVP достаточно одного соединения
+      ssl: 'require', // Для Neon требуется SSL
     });
 
     db = drizzle(connection, { schema });
@@ -32,7 +37,26 @@ export async function initDatabase(): Promise<void> {
     await connection`SELECT 1`;
     logger.info('✅ DB connected');
   } catch (error) {
-    logger.error('❌ DB connection failed:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    logger.error('❌ DB connection failed:', {
+      message: errorMessage,
+      stack: errorStack,
+      url: maskedUrl,
+    });
+    
+    // Детальная информация об ошибке
+    if (errorMessage.includes('getaddrinfo')) {
+      logger.error('Ошибка DNS: не удалось разрешить имя хоста БД');
+    } else if (errorMessage.includes('timeout')) {
+      logger.error('Таймаут подключения: БД не отвечает');
+    } else if (errorMessage.includes('password') || errorMessage.includes('authentication')) {
+      logger.error('Ошибка аутентификации: проверьте пароль');
+    } else if (errorMessage.includes('SSL')) {
+      logger.error('Ошибка SSL: проверьте параметры SSL в URL');
+    }
+    
     throw error;
   }
 }
