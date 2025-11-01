@@ -43,8 +43,8 @@ jobs:
               sed -i '/^DATABASE_URL=/d' .env
             fi
             
-            # Добавляем новую DATABASE_URL
-            echo "DATABASE_URL=$DATABASE_URL" >> .env
+            # Добавляем новую DATABASE_URL (в кавычках для безопасности)
+            echo "DATABASE_URL=\"$DATABASE_URL\"" >> .env
             
             echo "✅ DATABASE_URL добавлен"
             echo ""
