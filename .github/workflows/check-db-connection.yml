@@ -1,0 +1,95 @@
+name: Check DB Connection
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-db:
+    name: Test database connection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts || true
+
+      - name: Test DB connection
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+        run: |
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << 'EOF'
+            cd /root/geodrive_n8n-agents
+            
+            echo "🔍 Проверяю DATABASE_URL..."
+            source .env 2>/dev/null || true
+            
+            if [ -z "$DATABASE_URL" ]; then
+              echo "❌ DATABASE_URL не установлен"
+              exit 1
+            fi
+            
+            # Маскируем пароль для вывода
+            MASKED_URL=$(echo "$DATABASE_URL" | sed 's/:[^:@]*@/:***@/')
+            echo "DATABASE_URL: $MASKED_URL"
+            
+            echo ""
+            echo "🔍 Проверяю логи бота на ошибки БД..."
+            if [ -f /root/bot.log ]; then
+              echo "Последние 50 строк с ошибками БД:"
+              tail -n 100 /root/bot.log | grep -i -A 5 -B 5 "database\|db\|connection\|error\|ssl" || echo "Нет ошибок БД в логах"
+            fi
+            
+            echo ""
+            echo "🔍 Тестирую подключение к БД через Node.js..."
+            node << NODE_SCRIPT
+              const postgres = require('postgres');
+              const url = process.env.DATABASE_URL || '';
+              
+              console.log('Длина DATABASE_URL:', url.length);
+              console.log('Начинается с:', url.substring(0, 20));
+              
+              if (!url) {
+                console.error('❌ DATABASE_URL пустой');
+                process.exit(1);
+              }
+              
+              // Проверяем наличие sslmode
+              const hasSslMode = url.includes('sslmode=');
+              console.log('sslmode в URL:', hasSslMode ? 'есть' : 'нет');
+              
+              const options = {
+                max: 1,
+              };
+              
+              if (!hasSslMode) {
+                options.ssl = { rejectUnauthorized: false };
+                console.log('Добавляю SSL опцию');
+              }
+              
+              console.log('Пробую подключиться...');
+              
+              (async () => {
+                try {
+                  const sql = postgres(url, options);
+                  await sql\`SELECT 1\`;
+                  console.log('✅ Подключение к БД успешно!');
+                  await sql.end();
+                  process.exit(0);
+                } catch (error) {
+                  console.error('❌ Ошибка подключения:', error.message);
+                  if (error.stack) {
+                    console.error('Stack:', error.stack);
+                  }
+                  if (error.cause) {
+                    console.error('Cause:', error.cause);
+                  }
+                  process.exit(1);
+                }
+              })();
+NODE_SCRIPT
+          EOF
+
