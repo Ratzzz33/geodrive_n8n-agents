@@ -27,18 +27,64 @@ services:
       - DB_POSTGRESDB_SSL_ENABLED=true
       - DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false
       
-      # Настройки безопасности
+      # Настройки безопасности и окружения
       - N8N_SECURE_COOKIE=false
       - NODE_ENV=production
+      
+      # Настройки выполнения (максимальные возможности, без ограничений)
       - EXECUTIONS_PROCESS=main
       - EXECUTIONS_MODE=regular
       - EXECUTIONS_DATA_SAVE_ON_ERROR=all
       - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      - EXECUTIONS_DATA_MAX_AGE=168  # Сохранять выполнения 7 дней (168 часов)
+      - EXECUTIONS_DATA_PRUNE=true   # Автоматическая очистка старых выполнений
+      
+      # Убрать ограничения на количество выполнений и workflow
+      # В Community Edition нет лимитов, но настраиваем для максимальной производительности
+      - EXECUTIONS_TIMEOUT=3600  # Таймаут выполнения 1 час
+      - EXECUTIONS_TIMEOUT_MAX=7200  # Максимальный таймаут 2 часа
+      
+      # Настройки производительности и мониторинга
+      - N8N_METRICS=true
+      - N8N_LOG_LEVEL=info
+      - N8N_LOG_OUTPUT=console
+      
+      # Отключить диагностику и уведомления о платных планах
+      - N8N_DIAGNOSTICS_ENABLED=false
+      
+      # Настройки для максимальной функциональности
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-}
+      - N8N_USER_FOLDER=/home/node/.n8n
+      
+      # Настройки очереди и обработки
+      - QUEUE_BULL_REDIS_HOST=
+      - QUEUE_BULL_REDIS_PORT=
+      - QUEUE_BULL_REDIS_PASSWORD=
+      - QUEUE_BULL_REDIS_DB=
+      
+      # Настройки для работы с файлами и хранилищем
+      - N8N_DEFAULT_BINARY_DATA_MODE=filesystem
+      - N8N_BINARY_DATA_STORAGE_PATH=/home/node/.n8n
+      
+      # Настройки масштабирования
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=false
+      - N8N_SECURITY_AUDIT_ENABLED=false
+      
+      # Webhook настройки (без ограничений)
+      - WEBHOOK_URL=${WEBHOOK_URL:-https://geodrive.netlify.app/}
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://46.224.17.15:5678/}
       
     volumes:
       - n8n_data:/home/node/.n8n
     networks:
       - n8n-network
+    # Ресурсы для максимальной производительности
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
 
 volumes:
   n8n_data:
