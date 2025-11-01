@@ -1,16 +1,26 @@
-name: Restore ENV Variables
+name: Restore Missing ENV Variables
 
 on:
   workflow_dispatch:
+    inputs:
+      umnico_api_token:
+        description: 'Umnico API Token (optional)'
+        required: false
+        type: string
+      umnico_api_url:
+        description: 'Umnico API URL (optional)'
+        required: false
+        type: string
+      stripe_api_key:
+        description: 'Stripe API Key (optional)'
+        required: false
+        type: string
 
 jobs:
-  restore-env:
-    name: Restore missing variables from env.example
+  restore:
+    name: Restore missing env variables
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Setup SSH
         run: |
           sudo apt-get update
@@ -18,82 +28,74 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts || true
 
-      - name: Restore missing variables
+      - name: Restore variables
         env:
           SERVER_IP: ${{ secrets.SERVER_IP }}
           SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
           SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+          UMNICO_API_TOKEN: ${{ github.event.inputs.umnico_api_token }}
+          UMNICO_API_URL: ${{ github.event.inputs.umnico_api_url }}
+          STRIPE_API_KEY: ${{ github.event.inputs.stripe_api_key }}
         run: |
-          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << 'EOF'
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << EOF
             cd /root/geodrive_n8n-agents
             
-            echo "📋 Восстанавливаю переменные из env.example..."
+            echo "📋 Проверяю отсутствующие переменные..."
             
-            # Создаем backup текущего .env
-            if [ -f .env ]; then
-              cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
-              echo "✅ Создан backup: .env.backup.$(date +%Y%m%d_%H%M%S)"
+            # Проверка и добавление Umnico
+            if [ ! -z "$UMNICO_API_TOKEN" ]; then
+              if grep -q "^UMNICO_API_TOKEN=" .env; then
+                echo "⚠️ UMNICO_API_TOKEN уже существует, обновляю..."
+                sed -i '/^UMNICO_API_TOKEN=/d' .env
+              fi
+              printf 'UMNICO_API_TOKEN=%s\n' "$UMNICO_API_TOKEN" >> .env
+              echo "✅ UMNICO_API_TOKEN добавлен"
+            elif ! grep -q "^UMNICO_API_TOKEN=" .env; then
+              echo "⚠️ UMNICO_API_TOKEN отсутствует (можно добавить через workflow)"
             fi
             
-            # Создаем временный файл для нового .env
-            TEMP_ENV=$(mktemp)
-            
-            # Если .env существует, копируем существующие переменные
-            if [ -f .env ]; then
-              cp .env "$TEMP_ENV"
+            if [ ! -z "$UMNICO_API_URL" ]; then
+              if grep -q "^UMNICO_API_URL=" .env; then
+                sed -i '/^UMNICO_API_URL=/d' .env
+              fi
+              printf 'UMNICO_API_URL=%s\n' "$UMNICO_API_URL" >> .env
+              echo "✅ UMNICO_API_URL добавлен"
             fi
             
-            # Добавляем недостающие переменные из env.example
-            if [ -f env.example ]; then
-              while IFS= read -r line; do
-                # Пропускаем комментарии и пустые строки
-                if [[ ! "$line" =~ ^[[:space:]]*# ]] && [[ ! -z "${line// }" ]]; then
-                  if [[ "$line" =~ ^([A-Z_][A-Z0-9_]*)= ]]; then
-                    var_name="${BASH_REMATCH[1]}"
-                    # Проверяем, есть ли уже эта переменная в .env
-                    if ! grep -q "^${var_name}=" "$TEMP_ENV"; then
-                      echo "➕ Добавляю: $var_name"
-                      echo "$line" >> "$TEMP_ENV"
-                    fi
-                  fi
-                fi
-              done < env.example
+            # Проверка и добавление Stripe
+            if [ ! -z "$STRIPE_API_KEY" ]; then
+              if grep -q "^STRIPE_API_KEY=" .env; then
+                echo "⚠️ STRIPE_API_KEY уже существует, обновляю..."
+                sed -i '/^STRIPE_API_KEY=/d' .env
+              fi
+              printf 'STRIPE_API_KEY=%s\n' "$STRIPE_API_KEY" >> .env
+              echo "✅ STRIPE_API_KEY добавлен"
+            elif ! grep -q "^STRIPE_API_KEY=" .env; then
+              echo "⚠️ STRIPE_API_KEY отсутствует (можно добавить через workflow)"
             fi
-            
-            # Заменяем .env новым файлом
-            mv "$TEMP_ENV" .env
-            
-            echo ""
-            echo "✅ Восстановление завершено"
-            echo "📊 Проверка:"
-            var_count=$(grep -c "^[A-Z_][A-Z0-9_]*=" .env || echo "0")
-            echo "Всего переменных: $var_count"
             
             echo ""
             echo "🔄 Перезапускаю бота..."
             pkill -9 -f "tsx.*index.ts" || pkill -9 -f "node.*dist/index.js" || true
             sleep 3
             
-            # Загружаем окружение
             export PATH="/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH"
             if [ -f ~/.bashrc ]; then source ~/.bashrc; fi
             if [ -f ~/.profile ]; then source ~/.profile; fi
             
-            # Удаляем webhook
-            source .env 2>/dev/null || true
-            if [ ! -z "\$TELEGRAM_BOT_TOKEN" ]; then
-              curl -s "https://api.telegram.org/bot\${TELEGRAM_BOT_TOKEN}/deleteWebhook?drop_pending_updates=true" > /dev/null
+            NODE_CMD=\$(command -v node || echo "")
+            NPM_CMD=\$(command -v npm || echo "")
+            
+            if [ ! -z "\$NPM_CMD" ]; then
+              cd /root/geodrive_n8n-agents
+              nohup bash -c "cd /root/geodrive_n8n-agents && export PATH='/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH' && [ -f ~/.bashrc ] && source ~/.bashrc; [ -f ~/.profile ] && source ~/.profile; npm run dev" > /root/bot.log 2>&1 &
+            elif [ -f "node_modules/.bin/tsx" ]; then
+              NODE_BIN=\$(find /usr -name "node" -type f 2>/dev/null | head -1 || find /opt -name "node" -type f 2>/dev/null || echo "node")
+              cd /root/geodrive_n8n-agents
+              nohup bash -c "cd /root/geodrive_n8n-agents && export PATH='/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH' && [ -f ~/.bashrc ] && source ~/.bashrc; \$NODE_BIN ./node_modules/.bin/tsx watch src/index.ts" > /root/bot.log 2>&1 &
             fi
             
-            # Перезапускаем бота
-            rm -f /root/bot.log
-            nohup bash -c "cd /root/geodrive_n8n-agents && export PATH='/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH' && [ -f ~/.bashrc ] && source ~/.bashrc; [ -f ~/.profile ] && source ~/.profile; npm run dev" > /root/bot.log 2>&1 &
-            
-            echo "⏳ Жду запуска..."
             sleep 8
-            
-            echo ""
-            echo "📋 Последние 20 строк логов:"
-            tail -n 20 /root/bot.log || echo "Лог пуст"
+            echo "📋 Последние строки логов:"
+            tail -n 15 /root/bot.log || echo "Логи еще не созданы"
           EOF
-
