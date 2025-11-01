@@ -21,11 +21,13 @@ import { sendSyncProgressToN8n } from '../integrations/n8n';
 let bot: Telegraf | null = null;
 
 /**
- * Инициализация бота
+ * Инициализация основного Telegram бота
+ * Использует TELEGRAM_BOT_TOKEN (@test_geodrive_check_bot или другой основной бот)
+ * Для работы с пользователями: команды, ответы, синхронизация
  */
 export function initBot(): Telegraf {
   if (!config.telegramBotToken) {
-    throw new Error('TELEGRAM_BOT_TOKEN не установлен');
+    throw new Error('TELEGRAM_BOT_TOKEN не установлен (основной бот для работы с пользователями)');
   }
 
   bot = new Telegraf(config.telegramBotToken);
@@ -353,12 +355,29 @@ export async function startBot(): Promise<void> {
   }
 
   try {
+    // ВАЖНО: Удаляем webhook перед запуском polling
+    // Это нужно если бот был настроен на webhook (например, через n8n)
+    try {
+      await bot.telegram.deleteWebhook({ drop_pending_updates: true });
+      logger.info('✅ Webhook удален, переходим на polling режим');
+    } catch (error) {
+      logger.debug('Webhook не был установлен или уже удален');
+    }
+
     await bot.launch({
       polling: {
         dropPendingUpdates: true,
       },
     });
     logger.info('🤖 Bot started (polling mode)');
+    
+    // Выводим информацию о боте
+    try {
+      const me = await bot.telegram.getMe();
+      logger.info(`📱 Bot @${me.username} connected (ID: ${me.id})`);
+    } catch (error) {
+      logger.warn('Не удалось получить информацию о боте:', error);
+    }
   } catch (error) {
     logger.error('Failed to launch bot:', error);
     throw error;
