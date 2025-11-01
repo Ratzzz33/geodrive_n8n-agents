@@ -19,8 +19,15 @@ async function main(): Promise<void> {
     try {
       await initDatabase();
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.warn('⚠️  Database connection failed, continuing without DB');
+      logger.warn(`   Error: ${errorMessage}`);
       logger.warn('   Some features may not work');
+      
+      // Детальное логирование для диагностики
+      if (error instanceof Error && error.stack) {
+        logger.debug('Database connection error stack:', error.stack);
+      }
     }
 
     // Запуск HTTP API сервера (для health checks)

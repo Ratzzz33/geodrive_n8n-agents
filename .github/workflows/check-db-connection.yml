@@ -2,6 +2,8 @@ name: Check DB Connection
 
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [check-db]
 
 jobs:
   check-db:
