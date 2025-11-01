@@ -72,6 +72,13 @@ services:
       - WEBHOOK_URL=${WEBHOOK_URL:-https://geodrive.netlify.app/}
       - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://46.224.17.15:5678/}
       
+      # Пользовательские переменные для использования в workflow через $env
+      # Примеры (замените на свои значения):
+      # - MY_API_URL=https://api.example.com
+      # - CHAT_ID=123456789
+      # - ENABLE_ALERTS=true
+      # В workflow используйте: {{ $env.MY_API_URL }}, {{ $env.CHAT_ID }}, etc.
+      
     volumes:
       - n8n_data:/home/node/.n8n
     networks:
