@@ -48,6 +48,28 @@ jobs:
             
             echo "✅ DATABASE_URL добавлен"
             echo ""
+            echo "📋 Проверка записанного значения:"
+            DB_LINE=$(grep "^DATABASE_URL=" .env | tail -1)
+            if [ ! -z "$DB_LINE" ]; then
+              DB_VALUE=$(echo "$DB_LINE" | cut -d'=' -f2-)
+              if [ -z "$DB_VALUE" ]; then
+                echo "❌ ОШИБКА: DATABASE_URL записан пустым!"
+                echo "Пробую записать через printf..."
+                # Удаляем пустую строку
+                sed -i '/^DATABASE_URL=$/d' .env
+                # Записываем правильно через printf
+                printf 'DATABASE_URL=%s\n' "$DATABASE_URL" >> .env
+                echo "Проверка после исправления:"
+                grep "^DATABASE_URL=" .env | tail -1 | head -c 100
+                echo ""
+              else
+                echo "✅ Значение записано (длина: ${#DB_VALUE} символов)"
+                echo "Первые 50 символов: ${DB_VALUE:0:50}..."
+              fi
+            else
+              echo "❌ Строка DATABASE_URL не найдена в .env"
+            fi
+            echo ""
             echo "🔄 Перезапускаю бота..."
             pkill -9 -f "tsx.*index.ts" || pkill -9 -f "node.*dist/index.js" || true
             sleep 3
