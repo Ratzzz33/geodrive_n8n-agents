@@ -42,8 +42,8 @@ jobs:
               sed -i '/^RENTPROG_BASE_URL=/d' .env
             fi
             
-            # Добавляем правильный URL
-            echo "RENTPROG_BASE_URL=$RENTPROG_URL" >> .env
+            # Добавляем правильный URL (используем printf для корректной обработки спецсимволов)
+            printf "RENTPROG_BASE_URL=%s\n" "$RENTPROG_URL" >> .env
             
             echo "✅ RENTPROG_BASE_URL обновлен"
             echo ""
