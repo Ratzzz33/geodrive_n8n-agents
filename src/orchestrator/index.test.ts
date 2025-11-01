@@ -7,22 +7,26 @@ import { route, subscribe } from './index';
 import { SystemEvent, EventType } from '../types/events';
 
 // Моки зависимостей
-vi.mock('../utils/logger', () => ({
-  logger: {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}));
+vi.mock('../utils/logger', async () => {
+  return {
+    logger: {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    },
+  };
+});
 
-vi.mock('./rentprog-handler', () => ({
-  handleRentProgEvent: vi.fn().mockResolvedValue({
-    ok: true,
-    processed: true,
-    entityIds: {},
-  }),
-}));
+vi.mock('./rentprog-handler', async () => {
+  return {
+    handleRentProgEvent: vi.fn().mockResolvedValue({
+      ok: true,
+      processed: true,
+      entityIds: {},
+    }),
+  };
+});
 
 describe('Orchestrator route function', () => {
   beforeEach(() => {

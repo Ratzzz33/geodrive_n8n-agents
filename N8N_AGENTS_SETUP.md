@@ -1,6 +1,6 @@
 # Настройка агентов в n8n
 
-Это руководство поможет вам настроить AI агентов в n8n с помощью Cursor через MCP.
+Это руководство поможет вам настроить AI агентов в n8n через REST API.
 
 ## Что такое агенты в n8n?
 
@@ -13,22 +13,50 @@
 ## Предварительные требования
 
 1. ✅ n8n установлен и запущен
-2. ✅ MCP сервер настроен (см. [MCP_SETUP.md](MCP_SETUP.md))
-3. ✅ API ключ n8n получен и настроен
+2. ✅ API ключ n8n получен и настроен
+3. ✅ Настроена работа с n8n через REST API (см. [README_N8N_API.md](README_N8N_API.md))
 
-## Шаг 1: Создание базового агента через MCP
+## Шаг 1: Создание базового агента через REST API
 
-Через Cursor вы можете попросить:
+Используйте PowerShell скрипт или Node.js модуль для создания workflow. Сначала создайте JSON файл с описанием workflow:
 
+```json
+{
+  "name": "Basic Agent",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "options": {}
+      },
+      "name": "AI Model",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [450, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "AI Model", "type": "main", "index": 0}]]
+    }
+  }
+}
 ```
-Создай workflow в n8n для агента, который:
-1. Принимает текстовый запрос
-2. Обрабатывает его через AI (OpenAI/Anthropic)
-3. Выполняет действия на основе ответа
-4. Возвращает результат
+
+Затем создайте workflow через API:
+
+```powershell
+.\n8n-api.ps1 create -FilePath "agent-workflow.json"
 ```
 
-MCP автоматически создаст workflow со следующими узлами:
+Базовая структура workflow для агента включает:
 - **Webhook** - для приема запросов
 - **AI Model Node** - для обработки запросов
 - **Code Node** - для логики агента
@@ -220,7 +248,7 @@ MCP автоматически создаст workflow со следующими
 ## Следующие шаги
 
 - [N8N_ORCHESTRATOR_SETUP.md](N8N_ORCHESTRATOR_SETUP.md) - Детальная настройка оркестратора
-- [MCP_SETUP.md](MCP_SETUP.md) - Настройка MCP для Cursor
+- [README_N8N_API.md](README_N8N_API.md) - Работа с n8n через REST API
 
 ## Полезные команды для Cursor
 

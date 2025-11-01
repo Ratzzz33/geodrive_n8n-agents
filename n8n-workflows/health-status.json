@@ -1,0 +1,150 @@
+{
+  "name": "Health & Status",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "cron-node",
+      "name": "Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.RENTPROG_HEALTH_URL || 'https://geodrive.netlify.app/.netlify/functions/rentprog-health' }}",
+        "options": {}
+      },
+      "id": "http-node",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Парсим ответ health check\nconst response = $input.item.json;\nconst branches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];\n\nconst results = [];\n\nif (response.perBranch) {\n  for (const branch of branches) {\n    const branchStatus = response.perBranch[branch];\n    results.push({\n      json: {\n        ts: new Date().toISOString(),\n        branch,\n        ok: branchStatus.ok || false,\n        reason: branchStatus.error || 'ok'\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "code-node",
+      "name": "Process Health",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "health",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ts": "={{ $json.ts }}",
+            "branch": "={{ $json.branch }}",
+            "ok": "={{ $json.ok }}",
+            "reason": "={{ $json.reason }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "data-table-node",
+      "name": "Save Health",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [850, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "health-fail",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "not"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-fail-node",
+      "name": "If Failed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "=🚨 RentProg Health Check Failed\n\nBranch: {{ $json.branch }}\nReason: {{ $json.reason }}\nTime: {{ $json.ts }}",
+        "additionalFields": {}
+      },
+      "id": "telegram-node",
+      "name": "Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1250, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cron": {
+      "main": [[{ "node": "HTTP Request", "type": "main", "index": 0 }]]
+    },
+    "HTTP Request": {
+      "main": [[{ "node": "Process Health", "type": "main", "index": 0 }]]
+    },
+    "Process Health": {
+      "main": [[{ "node": "Save Health", "type": "main", "index": 0 }]]
+    },
+    "Save Health": {
+      "main": [[{ "node": "If Failed", "type": "main", "index": 0 }]]
+    },
+    "If Failed": {
+      "main": [
+        [],
+        [
+          { "node": "Telegram Alert", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-15T00:00:00.000Z",
+  "versionId": "1"
+}
+

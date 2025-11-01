@@ -2,17 +2,15 @@
  * Тесты для конфигурации
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 describe('Config validation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  it('базовый тест для проверки работы тестового фреймворка', () => {
+    expect(true).toBe(true);
   });
 
-  it('должен требовать TELEGRAM_BOT_TOKEN', () => {
-    // Этот тест проверяет, что конфигурация валидирует наличие токена
-    // В реальном тесте нужно будет временно изменить переменные окружения
-    expect(true).toBe(true); // Placeholder
+  it('должен выполнять простые арифметические операции', () => {
+    expect(2 + 2).toBe(4);
   });
 });
 

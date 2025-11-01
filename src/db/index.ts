@@ -1,0 +1,143 @@
+/**
+ * Подключение к базе данных (PostgreSQL/Neon)
+ * Использует Drizzle ORM
+ */
+
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import { eq, lt } from 'drizzle-orm';
+import { config } from '../config';
+import { logger } from '../utils/logger';
+import * as schema from './schema';
+
+let connection: postgres.Sql | null = null;
+let db: ReturnType<typeof drizzle> | null = null;
+
+/**
+ * Инициализация подключения к БД
+ */
+export async function initDatabase(): Promise<void> {
+  if (!config.databaseUrl) {
+    throw new Error('DATABASE_URL не установлен в переменных окружения');
+  }
+
+  try {
+    connection = postgres(config.databaseUrl, {
+      max: 1, // Для MVP достаточно одного соединения
+    });
+
+    db = drizzle(connection, { schema });
+
+    // Простая health-probe
+    await connection`SELECT 1`;
+    logger.info('✅ DB connected');
+  } catch (error) {
+    logger.error('❌ DB connection failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Получить экземпляр БД
+ */
+export function getDatabase() {
+  if (!db) {
+    throw new Error('База данных не инициализирована. Вызовите initDatabase() сначала.');
+  }
+  return db;
+}
+
+/**
+ * Проверка подключения к БД
+ */
+export async function checkDatabaseHealth(): Promise<boolean> {
+  if (!connection) {
+    return false;
+  }
+
+  try {
+    await connection`SELECT 1`;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Закрытие подключения к БД
+ */
+export async function closeDatabase(): Promise<void> {
+  if (connection) {
+    await connection.end();
+    connection = null;
+    db = null;
+    logger.info('DB connection closed');
+  }
+}
+
+/**
+ * Экспорт схемы для использования в миграциях
+ */
+export { schema };
+
+/**
+ * Функция дедупликации вебхуков
+ */
+export async function checkWebhookDedup(
+  source: string,
+  dedupHash: string
+): Promise<boolean> {
+  if (!db) {
+    throw new Error('База данных не инициализирована');
+  }
+
+  const existing = await db
+    .select()
+    .from(schema.webhookDedup)
+    .where(eq(schema.webhookDedup.dedup_hash, dedupHash))
+    .limit(1);
+
+  return existing.length > 0;
+}
+
+/**
+ * Сохранить хеш вебхука для дедупликации
+ */
+export async function saveWebhookDedup(
+  source: string,
+  dedupHash: string
+): Promise<void> {
+  if (!db) {
+    throw new Error('База данных не инициализирована');
+  }
+
+  try {
+    await db.insert(schema.webhookDedup).values({
+      source,
+      dedup_hash: dedupHash,
+    });
+  } catch (error) {
+    // Игнорируем ошибку уникальности (дубликат)
+    if (error instanceof Error && !error.message.includes('unique')) {
+      throw error;
+    }
+  }
+}
+
+/**
+ * Очистка старых записей дедупа (старше TTL)
+ */
+export async function cleanupWebhookDedup(ttlMinutes: number): Promise<void> {
+  if (!db || !connection) {
+    return;
+  }
+
+  const ttlDate = new Date();
+  ttlDate.setMinutes(ttlDate.getMinutes() - ttlMinutes);
+
+  // Используем Drizzle delete вместо raw SQL
+  await db
+    .delete(schema.webhookDedup)
+    .where(lt(schema.webhookDedup.received_at, ttlDate));
+}
+

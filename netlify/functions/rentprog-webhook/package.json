@@ -1,0 +1,9 @@
+{
+  "name": "rentprog-webhook-function",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@netlify/functions": "^2.0.0"
+  }
+}
+

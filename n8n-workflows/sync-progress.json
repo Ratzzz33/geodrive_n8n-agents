@@ -1,0 +1,115 @@
+{
+  "name": "Sync Progress",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sync/progress",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "sync-progress"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "sync_runs",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ts": "={{ $json.body.ts || $now }}",
+            "branch": "={{ $json.body.branch }}",
+            "entity": "={{ $json.body.entity }}",
+            "page": "={{ $json.body.page || 0 }}",
+            "added": "={{ $json.body.added || 0 }}",
+            "updated": "={{ $json.body.updated || 0 }}",
+            "ok": "={{ $json.body.ok !== undefined ? $json.body.ok : true }}",
+            "msg": "={{ $json.body.msg || '' }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "data-table-node",
+      "name": "Save Progress",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [450, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "cron-node",
+      "name": "Cron (Poll)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 500]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SYNC_STATUS_URL || 'https://geodrive.netlify.app/api/sync/status' }}",
+        "options": {}
+      },
+      "id": "http-status-node",
+      "name": "HTTP Get Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [450, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"received\": true } }}",
+        "options": {}
+      },
+      "id": "respond-node",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Save Progress", "type": "main", "index": 0 }]]
+    },
+    "Save Progress": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    },
+    "Cron (Poll)": {
+      "main": [[{ "node": "HTTP Get Status", "type": "main", "index": 0 }]]
+    },
+    "HTTP Get Status": {
+      "main": [[{ "node": "Save Progress", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-15T00:00:00.000Z",
+  "versionId": "1"
+}
+

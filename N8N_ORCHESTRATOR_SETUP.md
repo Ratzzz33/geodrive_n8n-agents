@@ -308,7 +308,7 @@ Switch Node
 ## Следующие шаги
 
 - [N8N_AGENTS_SETUP.md](N8N_AGENTS_SETUP.md) - Настройка агентов
-- [MCP_SETUP.md](MCP_SETUP.md) - Настройка MCP для Cursor
+- [README_N8N_API.md](README_N8N_API.md) - Работа с n8n через REST API
 
 ## Полезные команды
 

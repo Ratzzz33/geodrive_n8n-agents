@@ -1,0 +1,139 @@
+{
+  "name": "RentProg Webhooks Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rentprog-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "rentprog-webhook-monitor"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "validation-error",
+              "leftValue": "={{ $json.body.ok }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "not"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-node",
+      "name": "If Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "events",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ts": "={{ $now }}",
+            "branch": "={{ $json.query.branch || 'unknown' }}",
+            "type": "={{ $json.body.type || $json.body.event || 'unknown' }}",
+            "ext_id": "={{ $json.body.payload.id || $json.body.payload.rentprog_id || 'unknown' }}",
+            "ok": "={{ $json.body.ok || true }}",
+            "reason": "={{ $json.body.error || 'ok' }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "data-table-node",
+      "name": "Save Event",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [650, 200],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "=🚨 RentProg Webhook Error\n\nBranch: {{ $json.query.branch }}\nType: {{ $json.body.type || $json.body.event }}\nError: {{ $json.body.error || 'Unknown error' }}",
+        "additionalFields": {}
+      },
+      "id": "telegram-node",
+      "name": "Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [650, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"received\": true } }}",
+        "options": {}
+      },
+      "id": "respond-node",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 200]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "If Error", "type": "main", "index": 0 }]]
+    },
+    "If Error": {
+      "main": [
+        [
+          { "node": "Save Event", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Telegram Alert", "type": "main", "index": 0 },
+          { "node": "Save Event", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Save Event": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    },
+    "Telegram Alert": {
+      "main": [[{ "node": "Save Event", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-15T00:00:00.000Z",
+  "versionId": "1"
+}
+
