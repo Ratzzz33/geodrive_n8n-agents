@@ -1,0 +1,89 @@
+name: Fix RentProg Branch Keys
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch_keys:
+        description: 'RENTPROG_BRANCH_KEYS JSON string'
+        required: true
+        type: string
+
+jobs:
+  fix-keys:
+    name: Fix RENTPROG_BRANCH_KEYS in .env
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts || true
+
+      - name: Fix RENTPROG_BRANCH_KEYS
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+          BRANCH_KEYS: ${{ github.event.inputs.branch_keys }}
+        run: |
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << EOF
+            cd /root/geodrive_n8n-agents
+            
+            echo "📝 Исправляю RENTPROG_BRANCH_KEYS в .env..."
+            
+            # Создаем backup
+            if [ -f .env ]; then
+              cp .env .env.backup.\$(date +%Y%m%d_%H%M%S)
+            fi
+            
+            # Проверяем валидность JSON
+            echo "🔍 Проверяю валидность JSON..."
+            if echo "\$BRANCH_KEYS" | python3 -m json.tool > /dev/null 2>&1; then
+              echo "✅ JSON валиден"
+            else
+              echo "⚠️ JSON может быть невалидным, но продолжаю..."
+            fi
+            
+            # Удаляем старый RENTPROG_BRANCH_KEYS если есть
+            if grep -q "^RENTPROG_BRANCH_KEYS=" .env; then
+              sed -i '/^RENTPROG_BRANCH_KEYS=/d' .env
+            fi
+            
+            # Добавляем ключи (без дополнительных кавычек, JSON как есть)
+            # В .env файле JSON должен быть записан БЕЗ внешних кавычек
+            echo "RENTPROG_BRANCH_KEYS=\$BRANCH_KEYS" >> .env
+            
+            echo "✅ RENTPROG_BRANCH_KEYS обновлен"
+            echo ""
+            echo "📋 Проверка (первые 100 символов):"
+            grep "RENTPROG_BRANCH_KEYS" .env | head -1 | cut -c1-100
+            
+            echo ""
+            echo "🔄 Перезапускаю бота..."
+            pkill -9 -f "tsx.*index.ts" || pkill -9 -f "node.*dist/index.js" || true
+            sleep 3
+            
+            # Загружаем окружение
+            export PATH="/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH"
+            if [ -f ~/.bashrc ]; then source ~/.bashrc; fi
+            if [ -f ~/.profile ]; then source ~/.profile; fi
+            
+            # Удаляем webhook
+            source .env 2>/dev/null || true
+            if [ ! -z "\$TELEGRAM_BOT_TOKEN" ]; then
+              curl -s "https://api.telegram.org/bot\${TELEGRAM_BOT_TOKEN}/deleteWebhook?drop_pending_updates=true" > /dev/null
+            fi
+            
+            # Перезапускаем бота
+            rm -f /root/bot.log
+            nohup bash -c "cd /root/geodrive_n8n-agents && export PATH='/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH' && [ -f ~/.bashrc ] && source ~/.bashrc; [ -f ~/.profile ] && source ~/.profile; npm run dev" > /root/bot.log 2>&1 &
+            
+            echo "⏳ Жду запуска..."
+            sleep 8
+            
+            echo ""
+            echo "📋 Последние 25 строк логов:"
+            tail -n 25 /root/bot.log || echo "Лог пуст"
+          EOF
+
