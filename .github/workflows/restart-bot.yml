@@ -1,0 +1,68 @@
+name: Restart Bot on Server
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [restart-bot]
+
+jobs:
+  restart-bot:
+    name: Restart bot on Hetzner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts || true
+
+      - name: Restart bot on server
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+        run: |
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << 'EOF'
+            set -e
+            cd /root/geodrive_n8n-agents
+            
+            echo "📥 Обновляю код..."
+            git pull origin master || git pull origin main || true
+            
+            echo "🔄 Останавливаю бота..."
+            pkill -9 -f "tsx.*index.ts" || pkill -9 -f "node.*dist/index.js" || true
+            sleep 3
+            
+            echo "🔧 Удаляю webhook через Telegram API..."
+            source .env 2>/dev/null || true
+            if [ ! -z "$TELEGRAM_BOT_TOKEN" ]; then
+              curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteWebhook?drop_pending_updates=true"
+              echo ""
+            fi
+            
+            echo "🧹 Очищаю логи..."
+            rm -f /root/bot.log
+            
+            echo "🚀 Запускаю бота..."
+            nohup npm run dev > /root/bot.log 2>&1 &
+            
+            echo "⏳ Жду запуска..."
+            sleep 5
+            
+            echo "📋 Последние 30 строк логов:"
+            tail -n 30 /root/bot.log
+            
+            echo ""
+            echo "✅ Бот перезапущен!"
+          EOF
+
+      - name: Verify bot is running
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+        run: |
+          sleep 3
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} "ps aux | grep -E 'tsx|node.*index' | grep -v grep || echo '⚠️ Процесс бота не найден'"
+
