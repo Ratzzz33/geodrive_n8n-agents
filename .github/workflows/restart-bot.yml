@@ -44,6 +44,33 @@ jobs:
             echo "🧹 Очищаю логи..."
             rm -f /root/bot.log
             
+            echo "🔍 Проверяю .env файл..."
+            if [ ! -f .env ]; then
+              echo "⚠️ Файл .env не найден, создаю из примера..."
+              if [ -f .env.example ]; then
+                cp .env.example .env
+                echo "✅ Создан .env из .env.example"
+                echo "❌ ВАЖНО: Добавьте TELEGRAM_BOT_TOKEN в файл .env на сервере!"
+              else
+                echo "⚠️ .env.example не найден"
+              fi
+            fi
+            
+            # Проверяем наличие токена
+            if ! grep -q "TELEGRAM_BOT_TOKEN=" .env || grep -q "TELEGRAM_BOT_TOKEN=your_main" .env || grep -q "TELEGRAM_BOT_TOKEN=$" .env; then
+              echo "❌ TELEGRAM_BOT_TOKEN не установлен или имеет значение по умолчанию в .env"
+              echo "💡 Добавьте правильный токен в файл /root/geodrive_n8n-agents/.env"
+              echo "💡 Формат: TELEGRAM_BOT_TOKEN=your_token_here"
+              exit 1
+            fi
+            
+            echo "✅ .env файл найден, проверяю токен..."
+            source .env 2>/dev/null || true
+            if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ "$TELEGRAM_BOT_TOKEN" = "your_main_telegram_bot_token_here" ]; then
+              echo "❌ TELEGRAM_BOT_TOKEN не установлен или имеет значение по умолчанию"
+              exit 1
+            fi
+            
             echo "🔍 Проверяю окружение и пути..."
             
             # Загружаем окружение
