@@ -1,0 +1,99 @@
+name: Restore ENV Variables
+
+on:
+  workflow_dispatch:
+
+jobs:
+  restore-env:
+    name: Restore missing variables from env.example
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts || true
+
+      - name: Restore missing variables
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+        run: |
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << 'EOF'
+            cd /root/geodrive_n8n-agents
+            
+            echo "📋 Восстанавливаю переменные из env.example..."
+            
+            # Создаем backup текущего .env
+            if [ -f .env ]; then
+              cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
+              echo "✅ Создан backup: .env.backup.$(date +%Y%m%d_%H%M%S)"
+            fi
+            
+            # Создаем временный файл для нового .env
+            TEMP_ENV=$(mktemp)
+            
+            # Если .env существует, копируем существующие переменные
+            if [ -f .env ]; then
+              cp .env "$TEMP_ENV"
+            fi
+            
+            # Добавляем недостающие переменные из env.example
+            if [ -f env.example ]; then
+              while IFS= read -r line; do
+                # Пропускаем комментарии и пустые строки
+                if [[ ! "$line" =~ ^[[:space:]]*# ]] && [[ ! -z "${line// }" ]]; then
+                  if [[ "$line" =~ ^([A-Z_][A-Z0-9_]*)= ]]; then
+                    var_name="${BASH_REMATCH[1]}"
+                    # Проверяем, есть ли уже эта переменная в .env
+                    if ! grep -q "^${var_name}=" "$TEMP_ENV"; then
+                      echo "➕ Добавляю: $var_name"
+                      echo "$line" >> "$TEMP_ENV"
+                    fi
+                  fi
+                fi
+              done < env.example
+            fi
+            
+            # Заменяем .env новым файлом
+            mv "$TEMP_ENV" .env
+            
+            echo ""
+            echo "✅ Восстановление завершено"
+            echo "📊 Проверка:"
+            var_count=$(grep -c "^[A-Z_][A-Z0-9_]*=" .env || echo "0")
+            echo "Всего переменных: $var_count"
+            
+            echo ""
+            echo "🔄 Перезапускаю бота..."
+            pkill -9 -f "tsx.*index.ts" || pkill -9 -f "node.*dist/index.js" || true
+            sleep 3
+            
+            # Загружаем окружение
+            export PATH="/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH"
+            if [ -f ~/.bashrc ]; then source ~/.bashrc; fi
+            if [ -f ~/.profile ]; then source ~/.profile; fi
+            
+            # Удаляем webhook
+            source .env 2>/dev/null || true
+            if [ ! -z "\$TELEGRAM_BOT_TOKEN" ]; then
+              curl -s "https://api.telegram.org/bot\${TELEGRAM_BOT_TOKEN}/deleteWebhook?drop_pending_updates=true" > /dev/null
+            fi
+            
+            # Перезапускаем бота
+            rm -f /root/bot.log
+            nohup bash -c "cd /root/geodrive_n8n-agents && export PATH='/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH' && [ -f ~/.bashrc ] && source ~/.bashrc; [ -f ~/.profile ] && source ~/.profile; npm run dev" > /root/bot.log 2>&1 &
+            
+            echo "⏳ Жду запуска..."
+            sleep 8
+            
+            echo ""
+            echo "📋 Последние 20 строк логов:"
+            tail -n 20 /root/bot.log || echo "Лог пуст"
+          EOF
+
