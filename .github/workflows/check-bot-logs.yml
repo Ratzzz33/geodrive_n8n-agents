@@ -1,0 +1,62 @@
+name: Check Bot Logs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-logs:
+    name: Check bot logs on server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts || true
+
+      - name: Check bot status and logs
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+        run: |
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << 'EOF'
+            echo "🔍 Проверяю процессы бота..."
+            ps aux | grep -E 'tsx|node.*index' | grep -v grep || echo "⚠️ Процесс бота не найден"
+            
+            echo ""
+            echo "📋 Последние 50 строк логов бота:"
+            echo "=========================================="
+            if [ -f /root/bot.log ]; then
+              tail -n 50 /root/bot.log
+            else
+              echo "⚠️ Файл логов не найден"
+            fi
+            
+            echo ""
+            echo "🔍 Проверяю наличие .env файла и токена..."
+            cd /root/geodrive_n8n-agents
+            if [ -f .env ]; then
+              if grep -q "TELEGRAM_BOT_TOKEN" .env; then
+                echo "✅ TELEGRAM_BOT_TOKEN найден в .env"
+                TOKEN_LENGTH=$(grep "TELEGRAM_BOT_TOKEN" .env | cut -d'=' -f2 | tr -d ' ' | wc -c)
+                echo "   Длина токена: $TOKEN_LENGTH символов"
+              else
+                echo "❌ TELEGRAM_BOT_TOKEN не найден в .env"
+              fi
+            else
+              echo "❌ Файл .env не найден"
+            fi
+            
+            echo ""
+            echo "🔍 Проверяю подключение к Telegram API..."
+            source .env 2>/dev/null || true
+            if [ ! -z "$TELEGRAM_BOT_TOKEN" ]; then
+              BOT_INFO=$(curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe" || echo "error")
+              echo "$BOT_INFO"
+            else
+              echo "⚠️ TELEGRAM_BOT_TOKEN не установлен"
+            fi
+          EOF
+
