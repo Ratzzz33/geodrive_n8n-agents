@@ -26,10 +26,20 @@ export async function initDatabase(): Promise<void> {
   logger.debug(`Подключаюсь к БД: ${maskedUrl}`);
 
   try {
-    connection = postgres(config.databaseUrl, {
+    // Для Neon требуется SSL, но параметры SSL могут быть в URL
+    // Проверяем, есть ли sslmode в URL
+    const urlHasSsl = config.databaseUrl.includes('sslmode=');
+    
+    const connectionOptions: postgres.Options<{}> = {
       max: 1, // Для MVP достаточно одного соединения
-      ssl: 'require', // Для Neon требуется SSL
-    });
+    };
+    
+    // Если SSL не указан в URL, добавляем явно
+    if (!urlHasSsl) {
+      connectionOptions.ssl = { rejectUnauthorized: false }; // Для Neon
+    }
+    
+    connection = postgres(config.databaseUrl, connectionOptions);
 
     db = drizzle(connection, { schema });
 
