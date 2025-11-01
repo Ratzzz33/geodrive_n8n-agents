@@ -5,10 +5,24 @@
 
 import dotenv from 'dotenv';
 import { z } from 'zod';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-dotenv.config();
+// Определяем путь к .env файлу
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const envPath = join(__dirname, '../../.env');
+
+// Загружаем .env с явным указанием пути
+const dotenvResult = dotenv.config({ path: envPath });
+if (dotenvResult.error) {
+  // Пробуем загрузить из текущей директории (если запускаем из корня проекта)
+  dotenv.config();
+}
 
 const configSchema = z.object({
+  // Основной Telegram бот для работы с пользователями (команды, ответы)
+  // Бот: @test_geodrive_check_bot (или другой основной бот)
   telegramBotToken: z.string().min(1, 'TELEGRAM_BOT_TOKEN обязателен'),
   databaseUrl: z.string().optional(),
   rentprogApiKey: z.string().optional(),
@@ -40,6 +54,8 @@ const configSchema = z.object({
   n8nBaseWebhookUrl: z.string().url().optional(),
   n8nEventsUrl: z.string().url().optional(),
   n8nAlertsUrl: z.string().url().optional(),
+  // Бот для алертов через n8n (используется в n8n workflows для отправки уведомлений)
+  // Бот: @n8n_alert_geodrive_bot
   n8nAlertsTelegramBotToken: z.string().optional(),
   dedupTtlMinutes: z.coerce.number().optional(),
 });
