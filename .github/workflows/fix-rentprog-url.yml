@@ -27,14 +27,14 @@ jobs:
           SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
           RENTPROG_URL: ${{ github.event.inputs.rentprog_url }}
         run: |
-          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << 'EOF'
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << EOF
             cd /root/geodrive_n8n-agents
             
             echo "📝 Исправляю RENTPROG_BASE_URL в .env..."
             
             # Создаем backup
             if [ -f .env ]; then
-              cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
+              cp .env .env.backup.\$(date +%Y%m%d_%H%M%S)
             fi
             
             # Удаляем старый RENTPROG_BASE_URL если есть
@@ -42,8 +42,8 @@ jobs:
               sed -i '/^RENTPROG_BASE_URL=/d' .env
             fi
             
-            # Добавляем правильный URL (используем printf для корректной обработки спецсимволов)
-            printf "RENTPROG_BASE_URL=%s\n" "$RENTPROG_URL" >> .env
+            # Добавляем правильный URL (используем переменную напрямую из окружения)
+            echo "RENTPROG_BASE_URL=$RENTPROG_URL" >> .env
             
             echo "✅ RENTPROG_BASE_URL обновлен"
             echo ""
