@@ -1,0 +1,135 @@
+name: Add Umnico and Stripe Keys
+
+on:
+  workflow_dispatch:
+    inputs:
+      umnico_api_token:
+        description: 'Umnico API Token'
+        required: true
+        type: string
+      umnico_api_url:
+        description: 'Umnico API URL'
+        required: false
+        type: string
+      stripe_api_key:
+        description: 'Stripe API Key'
+        required: true
+        type: string
+
+jobs:
+  add-keys:
+    name: Add Umnico and Stripe keys to .env
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts || true
+
+      - name: Add keys to .env
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+          UMNICO_API_TOKEN: ${{ github.event.inputs.umnico_api_token }}
+          UMNICO_API_URL: ${{ github.event.inputs.umnico_api_url }}
+          STRIPE_API_KEY: ${{ github.event.inputs.stripe_api_key }}
+        run: |
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << EOF
+            cd /root/geodrive_n8n-agents
+            
+            echo "📝 Добавляю ключи Umnico и Stripe в .env..."
+            
+            # Создаем backup
+            if [ -f .env ]; then
+              cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
+            fi
+            
+            # Удаляем старые ключи если есть
+            sed -i '/^UMNICO_API_TOKEN=/d' .env
+            sed -i '/^UMNICO_API_URL=/d' .env
+            sed -i '/^STRIPE_API_KEY=/d' .env
+            
+            # Добавляем новые ключи
+            printf 'UMNICO_API_TOKEN=%s\n' "$UMNICO_API_TOKEN" >> .env
+            
+            if [ ! -z "$UMNICO_API_URL" ]; then
+              printf 'UMNICO_API_URL=%s\n' "$UMNICO_API_URL" >> .env
+            fi
+            
+            printf 'STRIPE_API_KEY=%s\n' "$STRIPE_API_KEY" >> .env
+            
+            echo "✅ Ключи добавлены"
+            echo ""
+            echo "📋 Проверка записанных значений:"
+            
+            # Проверка Umnico
+            UMNICO_LINE=$(grep "^UMNICO_API_TOKEN=" .env | tail -1)
+            if [ ! -z "$UMNICO_LINE" ]; then
+              UMNICO_VALUE=$(echo "$UMNICO_LINE" | cut -d'=' -f2-)
+              if [ ! -z "$UMNICO_VALUE" ]; then
+                echo "✅ UMNICO_API_TOKEN записан (длина: ${#UMNICO_VALUE} символов)"
+              else
+                echo "❌ UMNICO_API_TOKEN записан пустым!"
+              fi
+            fi
+            
+            if [ ! -z "$UMNICO_API_URL" ]; then
+              UMNICO_URL_LINE=$(grep "^UMNICO_API_URL=" .env | tail -1)
+              if [ ! -z "$UMNICO_URL_LINE" ]; then
+                echo "✅ UMNICO_API_URL записан"
+              fi
+            fi
+            
+            # Проверка Stripe
+            STRIPE_LINE=$(grep "^STRIPE_API_KEY=" .env | tail -1)
+            if [ ! -z "$STRIPE_LINE" ]; then
+              STRIPE_VALUE=$(echo "$STRIPE_LINE" | cut -d'=' -f2-)
+              if [ ! -z "$STRIPE_VALUE" ]; then
+                echo "✅ STRIPE_API_KEY записан (длина: ${#STRIPE_VALUE} символов)"
+              else
+                echo "❌ STRIPE_API_KEY записан пустым!"
+              fi
+            fi
+            
+            echo ""
+            echo "🔄 Перезапускаю бота..."
+            pkill -9 -f "tsx.*index.ts" || pkill -9 -f "node.*dist/index.js" || true
+            sleep 3
+            
+            # Загружаем окружение
+            export PATH="/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH"
+            if [ -f ~/.bashrc ]; then source ~/.bashrc; fi
+            if [ -f ~/.profile ]; then source ~/.profile; fi
+            
+            # Проверяем наличие Node.js
+            NODE_CMD=\$(command -v node || echo "")
+            NPM_CMD=\$(command -v npm || echo "")
+            
+            if [ ! -z "\$NPM_CMD" ]; then
+              cd /root/geodrive_n8n-agents
+              nohup bash -c "cd /root/geodrive_n8n-agents && export PATH='/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH' && [ -f ~/.bashrc ] && source ~/.bashrc; [ -f ~/.profile ] && source ~/.profile; npm run dev" > /root/bot.log 2>&1 &
+            elif [ -f "node_modules/.bin/tsx" ]; then
+              NODE_BIN=\$(find /usr -name "node" -type f 2>/dev/null | head -1 || find /opt -name "node" -type f 2>/dev/null || echo "node")
+              cd /root/geodrive_n8n-agents
+              nohup bash -c "cd /root/geodrive_n8n-agents && export PATH='/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH' && [ -f ~/.bashrc ] && source ~/.bashrc; \$NODE_BIN ./node_modules/.bin/tsx watch src/index.ts" > /root/bot.log 2>&1 &
+            fi
+            
+            echo "⏳ Жду запуска..."
+            sleep 8
+            
+            echo ""
+            echo "📋 Последние 20 строк логов:"
+            tail -n 20 /root/bot.log || echo "Логи еще не созданы"
+            
+            echo ""
+            echo "🔍 Проверяю подключение к Umnico и Stripe:"
+            if grep -q "UMNICO_API_TOKEN=" .env && grep -q "STRIPE_API_KEY=" .env; then
+              echo "✅ Ключи установлены"
+            else
+              echo "❌ Ключи не найдены"
+            fi
+          EOF
+
