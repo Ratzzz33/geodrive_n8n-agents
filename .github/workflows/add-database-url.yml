@@ -27,7 +27,7 @@ jobs:
           SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
           DATABASE_URL: ${{ github.event.inputs.database_url }}
         run: |
-          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << 'EOF'
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << EOF
             cd /root/geodrive_n8n-agents
             
             echo "📝 Добавляю DATABASE_URL в .env..."
