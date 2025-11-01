@@ -34,9 +34,13 @@ jobs:
             
             echo "📋 Проверяю синтаксис JSON..."
             # Проверяем валидность JSON через Node.js
-            node -e "
+            node << NODE_SCRIPT
+              const keysStr = process.env.RENTPROG_BRANCH_KEYS || '';
+              console.log('Длина строки RENTPROG_BRANCH_KEYS:', keysStr.length);
+              console.log('Первые 100 символов:', keysStr.substring(0, 100));
+              
               try {
-                const keys = JSON.parse(process.env.RENTPROG_BRANCH_KEYS);
+                const keys = JSON.parse(keysStr);
                 console.log('✅ JSON валиден');
                 console.log('Filiалы:', Object.keys(keys).join(', '));
                 for (const [branch, key] of Object.entries(keys)) {
@@ -48,17 +52,18 @@ jobs:
                 }
               } catch (e) {
                 console.error('❌ Ошибка парсинга JSON:', e.message);
-                console.log('Первые 200 символов:', process.env.RENTPROG_BRANCH_KEYS.substring(0, 200));
+                console.log('Первые 200 символов:', keysStr.substring(0, 200));
                 process.exit(1);
               }
-            " <<< "RENTPROG_BRANCH_KEYS=$RENTPROG_BRANCH_KEYS"
+NODE_SCRIPT
             
             echo ""
             echo "🔍 Тестирую получение токенов для каждого филиала..."
             RENTPROG_BASE_URL=${RENTPROG_BASE_URL:-https://rentprog.net/api/v1/public}
             
-            node -e "
-              const keys = JSON.parse(process.env.RENTPROG_BRANCH_KEYS);
+            node << NODE_SCRIPT
+              const keysStr = process.env.RENTPROG_BRANCH_KEYS || '';
+              const keys = JSON.parse(keysStr);
               const baseUrl = process.env.RENTPROG_BASE_URL || 'https://rentprog.net/api/v1/public';
               
               async function testToken(branch, key) {
@@ -129,6 +134,6 @@ jobs:
                 const allOk = results.every(r => r);
                 process.exit(allOk ? 0 : 1);
               })();
-            " <<< "RENTPROG_BRANCH_KEYS=$RENTPROG_BRANCH_KEYS" <<< "RENTPROG_BASE_URL=$RENTPROG_BASE_URL"
+NODE_SCRIPT
           EOF
 
