@@ -73,11 +73,15 @@ services:
       - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://46.224.17.15:5678/}
       
       # Пользовательские переменные для использования в workflow через $env
-      # Примеры (замените на свои значения):
-      # - MY_API_URL=https://api.example.com
-      # - CHAT_ID=123456789
+      # Добавьте свои переменные ниже (замените значения на реальные):
+      - RENTPROG_HEALTH_URL=${RENTPROG_HEALTH_URL:-http://46.224.17.15:3000/rentprog/health}
+      - TELEGRAM_ALERT_CHAT_ID=${TELEGRAM_ALERT_CHAT_ID:-}
+      - API_BASE_URL=${API_BASE_URL:-https://api.example.com}
+      # Примеры дополнительных переменных (раскомментируйте при необходимости):
+      # - RENTPROG_BASE_URL=https://api.rentprog.example
       # - ENABLE_ALERTS=true
-      # В workflow используйте: {{ $env.MY_API_URL }}, {{ $env.CHAT_ID }}, etc.
+      # - DEFAULT_TIMEOUT=10000
+      # В workflow используйте: {{ $env.RENTPROG_HEALTH_URL }}, {{ $env.TELEGRAM_ALERT_CHAT_ID }}, etc.
       
     volumes:
       - n8n_data:/home/node/.n8n
