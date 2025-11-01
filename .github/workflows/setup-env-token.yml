@@ -1,0 +1,90 @@
+name: Setup ENV Token
+
+on:
+  workflow_dispatch:
+    inputs:
+      bot_token:
+        description: 'Telegram Bot Token'
+        required: true
+        type: string
+
+jobs:
+  setup-token:
+    name: Add token to .env on server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts || true
+
+      - name: Add token to .env
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+          BOT_TOKEN: ${{ github.event.inputs.bot_token }}
+        run: |
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << EOF
+            cd /root/geodrive_n8n-agents
+            
+            echo "📝 Настраиваю .env файл..."
+            
+            # Если .env не существует, создаем его
+            if [ ! -f .env ]; then
+              echo "Создаю новый .env файл..."
+              touch .env
+            fi
+            
+            # Проверяем, есть ли уже TELEGRAM_BOT_TOKEN
+            if grep -q "^TELEGRAM_BOT_TOKEN=" .env; then
+              echo "Обновляю существующий TELEGRAM_BOT_TOKEN..."
+              # Удаляем старую строку и добавляем новую
+              sed -i '/^TELEGRAM_BOT_TOKEN=/d' .env
+            else
+              echo "Добавляю TELEGRAM_BOT_TOKEN..."
+            fi
+            
+            # Добавляем токен в конец файла
+            echo "TELEGRAM_BOT_TOKEN=$BOT_TOKEN" >> .env
+            
+            echo ""
+            echo "✅ Токен добавлен в .env"
+            echo "📋 Проверка:"
+            grep "TELEGRAM_BOT_TOKEN" .env | sed 's/=.*/=***/' || echo "⚠️ Токен не найден"
+            
+            echo ""
+            echo "🔄 Перезапускаю бота..."
+            pkill -9 -f "tsx.*index.ts" || pkill -9 -f "node.*dist/index.js" || true
+            sleep 3
+            
+            # Загружаем окружение
+            export PATH="/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH"
+            if [ -f ~/.bashrc ]; then source ~/.bashrc; fi
+            if [ -f ~/.profile ]; then source ~/.profile; fi
+            
+            # Удаляем webhook
+            source .env 2>/dev/null || true
+            if [ ! -z "\$TELEGRAM_BOT_TOKEN" ]; then
+              curl -s "https://api.telegram.org/bot\${TELEGRAM_BOT_TOKEN}/deleteWebhook?drop_pending_updates=true"
+              echo ""
+            fi
+            
+            # Перезапускаем бота
+            rm -f /root/bot.log
+            nohup bash -c "cd /root/geodrive_n8n-agents && export PATH='/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH' && [ -f ~/.bashrc ] && source ~/.bashrc; [ -f ~/.profile ] && source ~/.profile; npm run dev" > /root/bot.log 2>&1 &
+            
+            echo "⏳ Жду запуска..."
+            sleep 8
+            
+            echo ""
+            echo "📋 Последние 20 строк логов:"
+            tail -n 20 /root/bot.log || echo "Лог пуст"
+            
+            echo ""
+            echo "🔍 Проверяю процессы бота:"
+            ps aux | grep -E 'tsx|node.*index' | grep -v grep || echo "⚠️ Процесс не найден"
+          EOF
+
