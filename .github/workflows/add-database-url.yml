@@ -1,0 +1,86 @@
+name: Add DATABASE_URL
+
+on:
+  workflow_dispatch:
+    inputs:
+      database_url:
+        description: 'PostgreSQL Database URL'
+        required: true
+        type: string
+
+jobs:
+  add-database-url:
+    name: Add DATABASE_URL to .env
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts || true
+
+      - name: Add DATABASE_URL to .env
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+          DATABASE_URL: ${{ github.event.inputs.database_url }}
+        run: |
+          sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} << 'EOF'
+            cd /root/geodrive_n8n-agents
+            
+            echo "📝 Добавляю DATABASE_URL в .env..."
+            
+            # Создаем backup
+            if [ -f .env ]; then
+              cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
+            fi
+            
+            # Удаляем старую DATABASE_URL если есть
+            if grep -q "^DATABASE_URL=" .env; then
+              echo "Обновляю существующий DATABASE_URL..."
+              sed -i '/^DATABASE_URL=/d' .env
+            fi
+            
+            # Добавляем новую DATABASE_URL
+            echo "DATABASE_URL=$DATABASE_URL" >> .env
+            
+            echo "✅ DATABASE_URL добавлен"
+            echo ""
+            echo "🔄 Перезапускаю бота..."
+            pkill -9 -f "tsx.*index.ts" || pkill -9 -f "node.*dist/index.js" || true
+            sleep 3
+            
+            # Загружаем окружение
+            export PATH="/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH"
+            if [ -f ~/.bashrc ]; then source ~/.bashrc; fi
+            if [ -f ~/.profile ]; then source ~/.profile; fi
+            
+            # Удаляем webhook
+            source .env 2>/dev/null || true
+            if [ ! -z "\$TELEGRAM_BOT_TOKEN" ]; then
+              curl -s "https://api.telegram.org/bot\${TELEGRAM_BOT_TOKEN}/deleteWebhook?drop_pending_updates=true" > /dev/null
+            fi
+            
+            # Перезапускаем бота
+            rm -f /root/bot.log
+            nohup bash -c "cd /root/geodrive_n8n-agents && export PATH='/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH' && [ -f ~/.bashrc ] && source ~/.bashrc; [ -f ~/.profile ] && source ~/.profile; npm run dev" > /root/bot.log 2>&1 &
+            
+            echo "⏳ Жду запуска..."
+            sleep 8
+            
+            echo ""
+            echo "📋 Последние 20 строк логов:"
+            tail -n 20 /root/bot.log || echo "Лог пуст"
+            
+            echo ""
+            echo "🔍 Проверяю подключение к БД:"
+            # Проверяем наличие DATABASE_URL в логах (без показа значения)
+            if grep -q "DATABASE_URL" .env; then
+              echo "✅ DATABASE_URL установлен"
+            else
+              echo "❌ DATABASE_URL не найден"
+            fi
+          EOF
+
