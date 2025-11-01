@@ -44,32 +44,51 @@ jobs:
             echo "🧹 Очищаю логи..."
             rm -f /root/bot.log
             
-            echo "🔍 Проверяю Node.js и npm..."
-            source ~/.bashrc 2>/dev/null || true
-            source ~/.profile 2>/dev/null || true
+            echo "🔍 Проверяю окружение и пути..."
             
-            # Ищем node и npm
-            NODE_PATH=$(which node 2>/dev/null || find /usr /opt /root -name "node" -type f 2>/dev/null | head -1 || echo "")
-            NPM_PATH=$(which npm 2>/dev/null || find /usr /opt /root -name "npm" -type f 2>/dev/null | head -1 || echo "")
+            # Загружаем окружение
+            if [ -f ~/.bashrc ]; then source ~/.bashrc; fi
+            if [ -f ~/.profile ]; then source ~/.profile; fi
+            if [ -f ~/.bash_profile ]; then source ~/.bash_profile; fi
+            export PATH="/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:$PATH"
             
-            if [ -z "$NPM_PATH" ] && [ -d "/root/.nvm" ]; then
+            # Если есть nvm
+            if [ -d "/root/.nvm" ]; then
               export NVM_DIR="/root/.nvm"
               [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-              NPM_PATH=$(which npm)
             fi
             
-            echo "Node.js: ${NODE_PATH:-не найден}"
-            echo "npm: ${NPM_PATH:-не найден}"
+            # Проверяем node и npm
+            NODE_CMD=$(command -v node || echo "")
+            NPM_CMD=$(command -v npm || echo "")
             
-            if [ -z "$NPM_PATH" ]; then
-              echo "❌ npm не найден! Проверьте установку Node.js на сервере"
+            # Если не найдены, пробуем через npx или tsx напрямую
+            if [ -z "$NODE_CMD" ]; then
+              echo "⚠️ Node.js не найден в PATH, пробую через npx/tsx..."
+              # Проверяем есть ли node_modules/.bin
+              if [ -f "/root/geodrive_n8n-agents/node_modules/.bin/tsx" ]; then
+                echo "✅ Найден tsx в node_modules"
+                NODE_CMD="node"  # tsx сам найдет node
+              fi
+            fi
+            
+            echo "Node: ${NODE_CMD:-не найден}"
+            echo "npm: ${NPM_CMD:-не найден}"
+            
+            # Запуск бота
+            cd /root/geodrive_n8n-agents
+            
+            if [ ! -z "$NPM_CMD" ]; then
+              echo "🚀 Запускаю через npm..."
+              nohup bash -c "cd /root/geodrive_n8n-agents && export PATH='/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH' && [ -f ~/.bashrc ] && source ~/.bashrc; [ -f ~/.profile ] && source ~/.profile; npm run dev" > /root/bot.log 2>&1 &
+            elif [ -f "node_modules/.bin/tsx" ]; then
+              echo "🚀 Запускаю через tsx напрямую..."
+              nohup bash -c "cd /root/geodrive_n8n-agents && export PATH='/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:\$PATH' && [ -f ~/.bashrc ] && source ~/.bashrc; ./node_modules/.bin/tsx watch src/index.ts" > /root/bot.log 2>&1 &
+            else
+              echo "❌ npm и tsx не найдены. Проверьте установку Node.js на сервере."
+              echo "💡 Выполните на сервере: curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs"
               exit 1
             fi
-            
-            echo "🚀 Запускаю бота через: $NPM_PATH..."
-            cd /root/geodrive_n8n-agents
-            export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:$PATH"
-            nohup bash -c "source ~/.bashrc 2>/dev/null; source ~/.profile 2>/dev/null; cd /root/geodrive_n8n-agents && $NPM_PATH run dev" > /root/bot.log 2>&1 &
             
             echo "⏳ Жду запуска..."
             sleep 5
