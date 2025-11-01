@@ -20,13 +20,28 @@ interface TokenCache {
 const tokenCache: Map<BranchName, TokenCache> = new Map();
 
 /**
- * Парсинг JSON конфигурации с fallback
+ * Парсинг JSON конфигурации с fallback и улучшенной обработкой ошибок
  */
 function parseJsonConfig<T>(jsonStr: string | undefined, defaultVal: T): T {
-  if (!jsonStr) return defaultVal;
+  if (!jsonStr) {
+    logger.warn('JSON config string is empty');
+    return defaultVal;
+  }
+  
+  // Убираем лишние пробелы и экранирование
+  const cleaned = jsonStr.trim();
+  if (!cleaned) {
+    logger.warn('JSON config string is empty after trim');
+    return defaultVal;
+  }
+  
   try {
-    return JSON.parse(jsonStr) as T;
-  } catch {
+    const parsed = JSON.parse(cleaned) as T;
+    logger.debug('JSON config parsed successfully');
+    return parsed;
+  } catch (error) {
+    logger.error(`Failed to parse JSON config: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    logger.debug(`JSON string was: ${cleaned.substring(0, 200)}${cleaned.length > 200 ? '...' : ''}`);
     return defaultVal;
   }
 }
@@ -42,15 +57,22 @@ function getBranchKeys(): Record<BranchName, string> {
     'service-center': '',
   };
   
+  if (!config.rentprogBranchKeys) {
+    logger.error('RENTPROG_BRANCH_KEYS не установлен в конфигурации');
+    throw new Error('RENTPROG_BRANCH_KEYS: отсутствует в конфигурации');
+  }
+  
   const keys = parseJsonConfig<Record<BranchName, string>>(config.rentprogBranchKeys, emptyKeys);
   const requiredBranches: BranchName[] = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];
   
   for (const branch of requiredBranches) {
-    if (!keys[branch]) {
+    if (!keys[branch] || keys[branch].trim() === '') {
+      logger.error(`RENTPROG_BRANCH_KEYS: отсутствует или пустой ключ для филиала ${branch}`);
       throw new Error(`RENTPROG_BRANCH_KEYS: отсутствует ключ для филиала ${branch}`);
     }
   }
   
+  logger.debug('All branch keys loaded successfully');
   return keys;
 }
 
