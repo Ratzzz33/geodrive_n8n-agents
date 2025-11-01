@@ -45,26 +45,31 @@ jobs:
             rm -f /root/bot.log
             
             echo "🔍 Проверяю Node.js и npm..."
-            which node || echo "Node.js не найден"
-            which npm || echo "npm не найден"
+            source ~/.bashrc 2>/dev/null || true
+            source ~/.profile 2>/dev/null || true
             
-            # Ищем npm в стандартных местах
-            NPM_CMD="npm"
-            if ! command -v npm &> /dev/null; then
-              if [ -f /usr/bin/npm ]; then
-                NPM_CMD="/usr/bin/npm"
-              elif [ -f /usr/local/bin/npm ]; then
-                NPM_CMD="/usr/local/bin/npm"
-              elif [ -d "$HOME/.nvm" ]; then
-                export NVM_DIR="$HOME/.nvm"
-                [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-                NPM_CMD="npm"
-              fi
+            # Ищем node и npm
+            NODE_PATH=$(which node 2>/dev/null || find /usr /opt /root -name "node" -type f 2>/dev/null | head -1 || echo "")
+            NPM_PATH=$(which npm 2>/dev/null || find /usr /opt /root -name "npm" -type f 2>/dev/null | head -1 || echo "")
+            
+            if [ -z "$NPM_PATH" ] && [ -d "/root/.nvm" ]; then
+              export NVM_DIR="/root/.nvm"
+              [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+              NPM_PATH=$(which npm)
             fi
             
-            echo "🚀 Запускаю бота через: $NPM_CMD..."
+            echo "Node.js: ${NODE_PATH:-не найден}"
+            echo "npm: ${NPM_PATH:-не найден}"
+            
+            if [ -z "$NPM_PATH" ]; then
+              echo "❌ npm не найден! Проверьте установку Node.js на сервере"
+              exit 1
+            fi
+            
+            echo "🚀 Запускаю бота через: $NPM_PATH..."
             cd /root/geodrive_n8n-agents
-            nohup $NPM_CMD run dev > /root/bot.log 2>&1 &
+            export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:$PATH"
+            nohup bash -c "source ~/.bashrc 2>/dev/null; source ~/.profile 2>/dev/null; cd /root/geodrive_n8n-agents && $NPM_PATH run dev" > /root/bot.log 2>&1 &
             
             echo "⏳ Жду запуска..."
             sleep 5
