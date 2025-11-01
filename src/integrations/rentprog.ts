@@ -336,7 +336,8 @@ export async function healthCheck(): Promise<{
  * Старая функция для обратной совместимости
  */
 export async function getAuthToken(apiKey: string): Promise<string> {
-  return getBranchToken(apiKey);
+  const { token } = await getBranchTokenWithExpiry(apiKey);
+  return token;
 }
 
 /**
