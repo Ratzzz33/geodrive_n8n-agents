@@ -8,43 +8,25 @@ import { z } from 'zod';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
-// Определяем путь к .env файлу
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const envPath = join(__dirname, '../../.env');
+// Загружаем .env из корня проекта (cwd - это директория, откуда запущен процесс)
+// На сервере процесс запускается из /root/geodrive_n8n-agents, поэтому .env должен быть там
+const envPath = join(process.cwd(), '.env');
+const dotenvResult = dotenv.config({ path: envPath });
 
-// Для логирования создаем logger здесь (избегаем циклических зависимостей)
-const debugLog = process.env.DEBUG === 'true' || process.env.LOG_LEVEL === 'debug';
-
-// Пробуем несколько путей для .env
-const possiblePaths = [
-  envPath, // Относительно скомпилированного файла
-  join(process.cwd(), '.env'), // От корня проекта (cwd)
-  '.env', // Текущая директория
-];
-
-let envLoaded = false;
-for (const envFile of possiblePaths) {
-  if (debugLog) {
-    console.log(`[DEBUG] Пробую загрузить .env из: ${envFile}`);
-  }
-  const result = dotenv.config({ path: envFile });
-  if (!result.error) {
-    envLoaded = true;
-    if (debugLog) {
-      console.log(`[DEBUG] ✅ .env загружен из: ${envFile}`);
-      console.log(`[DEBUG] DATABASE_URL установлен: ${!!process.env.DATABASE_URL}`);
-      if (process.env.DATABASE_URL) {
-        const masked = process.env.DATABASE_URL.replace(/:[^:@]+@/, ':***@');
-        console.log(`[DEBUG] DATABASE_URL: ${masked.substring(0, 50)}...`);
-      }
-    }
-    break;
-  }
+// Если не удалось загрузить из cwd, пробуем текущую директорию
+if (dotenvResult.error) {
+  dotenv.config(); // Пробуем без указания пути
 }
 
-if (!envLoaded) {
-  console.warn('[WARN] Не удалось загрузить .env файл из стандартных мест');
+// Логируем результат только если включен debug
+if (process.env.DEBUG === 'true' || process.env.LOG_LEVEL === 'debug') {
+  console.log(`[DEBUG] CWD: ${process.cwd()}`);
+  console.log(`[DEBUG] Пробовал загрузить .env из: ${envPath}`);
+  console.log(`[DEBUG] DATABASE_URL установлен: ${!!process.env.DATABASE_URL}`);
+  if (process.env.DATABASE_URL) {
+    const masked = process.env.DATABASE_URL.replace(/:[^:@]+@/, ':***@');
+    console.log(`[DEBUG] DATABASE_URL: ${masked.substring(0, 50)}...`);
+  }
 }
 
 const configSchema = z.object({
