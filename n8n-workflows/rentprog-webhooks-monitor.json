@@ -8,7 +8,8 @@
         "responseMode": "responseNode",
         "options": {
           "productionUrl": "https://webhook.rentflow.rentals"
-        }
+        },
+        "onError": "continueRegularOutput"
       },
       "id": "webhook-node",
       "name": "Webhook",
@@ -16,6 +17,26 @@
       "typeVersion": 1,
       "position": [250, 300],
       "webhookId": "rentprog-webhook-monitor"
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "=🔔 DEBUG: Webhook получен от RentProg\n\nВремя: {{ $now }}\nBranch: {{ $json.query && $json.query.branch ? $json.query.branch : ($json.body && $json.body.branch ? $json.body.branch : 'unknown') }}\nType: {{ $json.body && $json.body.type ? $json.body.type : ($json.body && $json.body.event ? $json.body.event : 'unknown') }}\n\nПолный запрос:\n{{ JSON.stringify($json, null, 2) }}",
+        "additionalFields": {}
+      },
+      "id": "debug-telegram-node",
+      "name": "Debug: Webhook Received",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [450, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot"
+        }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -28,11 +49,11 @@
           "conditions": [
             {
               "id": "validation-error",
-              "leftValue": "={{ $json.body.ok }}",
-              "rightValue": false,
+              "leftValue": "={{ $json.body && $json.body.ok }}",
+              "rightValue": true,
               "operator": {
                 "type": "boolean",
-                "operation": "not"
+                "operation": "equals"
               }
             }
           ],
@@ -44,16 +65,62 @@
       "name": "If Error",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [450, 300]
+      "position": [650, 300],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "branch",
+              "name": "branch",
+              "value": "={{ $json.query && $json.query.branch ? $json.query.branch : ($json.body && $json.body.branch ? $json.body.branch : 'unknown') }}",
+              "type": "stringValue"
+            },
+            {
+              "id": "type",
+              "name": "type",
+              "value": "={{ $json.body && $json.body.event ? $json.body.event : ($json.body && $json.body.type ? $json.body.type : 'unknown') }}",
+              "type": "stringValue"
+            },
+            {
+              "id": "ext_id",
+              "name": "ext_id",
+              "value": "={{ 'unknown' }}",
+              "type": "stringValue"
+            },
+            {
+              "id": "ok",
+              "name": "ok",
+              "value": "={{ $json.body && $json.body.ok !== false ? true : false }}",
+              "type": "booleanValue"
+            },
+            {
+              "id": "reason",
+              "name": "reason",
+              "value": "={{ $json.body && $json.body.error ? $json.body.error : ($json.body && $json.body.reason ? $json.body.reason : 'ok') }}",
+              "type": "stringValue"
+            }
+          ]
+        },
+        "options": {
+          "dotNotation": true
+        }
+      },
+      "id": "set-params-node",
+      "name": "Set Query Params",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [500, 208]
     },
     {
       "parameters": {
         "operation": "executeQuery",
         "query": "INSERT INTO events (ts, branch, type, ext_id, ok, reason, processed)\nVALUES (NOW(), $1, $2, $3, $4, $5, FALSE)\nON CONFLICT (branch, type, ext_id) DO NOTHING\nRETURNING id",
-        "additionalFields": {
-          "queryParameters": "={{ [\n  $json.query?.branch || $json.body?.branch || 'unknown',\n  $json.body?.type || $json.body?.event || 'unknown',\n  $json.body?.payload?.id || $json.body?.payload?.rentprog_id || 'unknown',\n  $json.body?.ok !== false,\n  $json.body?.error || $json.body?.reason || 'ok'\n] }}"
-        },
-        "options": {}
+        "options": {
+          "queryReplacement": "={{ $json.branch }},={{ $json.type }},={{ $json.ext_id }},={{ $json.ok }},={{ $json.reason }}"
+        }
       },
       "id": "data-table-node",
       "name": "Save Event",
@@ -69,8 +136,9 @@
     },
     {
       "parameters": {
+        "operation": "sendMessage",
         "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
-        "text": "=🚨 RentProg Webhook Error\n\nBranch: {{ $json.query.branch }}\nType: {{ $json.body.type || $json.body.event }}\nError: {{ $json.body.error || 'Unknown error' }}",
+        "text": "=🚨 RentProg Webhook Error\n\nBranch: {{ $json.query && $json.query.branch ? $json.query.branch : ($json.body && $json.body.branch ? $json.body.branch : 'unknown') }}\nType: {{ $json.body && $json.body.type ? $json.body.type : ($json.body && $json.body.event ? $json.body.event : 'unknown') }}\nError: {{ $json.body && $json.body.error ? $json.body.error : ($json.body && $json.body.reason ? $json.body.reason : 'Unknown error') }}",
         "additionalFields": {}
       },
       "id": "telegram-node",
@@ -83,7 +151,8 @@
           "id": "telegram-credentials",
           "name": "Telegram Bot"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -100,18 +169,27 @@
   ],
   "connections": {
     "Webhook": {
-      "main": [[{ "node": "If Error", "type": "main", "index": 0 }]]
+      "main": [[
+        { "node": "Debug: Webhook Received", "type": "main", "index": 0 },
+        { "node": "If Error", "type": "main", "index": 0 }
+      ]]
+    },
+    "Debug: Webhook Received": {
+      "main": [[]]
     },
     "If Error": {
       "main": [
         [
-          { "node": "Save Event", "type": "main", "index": 0 }
+          { "node": "Set Query Params", "type": "main", "index": 0 }
         ],
         [
           { "node": "Telegram Alert", "type": "main", "index": 0 },
-          { "node": "Save Event", "type": "main", "index": 0 }
+          { "node": "Set Query Params", "type": "main", "index": 0 }
         ]
       ]
+    },
+    "Set Query Params": {
+      "main": [[{ "node": "Save Event", "type": "main", "index": 0 }]]
     },
     "Save Event": {
       "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
