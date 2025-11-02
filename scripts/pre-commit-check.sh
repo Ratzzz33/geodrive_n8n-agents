@@ -9,39 +9,38 @@ echo "=========================================="
 
 ERRORS=0
 
-# Проверка 1: YAML синтаксис workflow
+# Проверка 1: Валидация ВСЕХ GitHub Actions workflow файлов
 echo ""
-echo "1. Проверка YAML синтаксиса .github/workflows/ci.yml..."
-if [ -f ".github/workflows/ci.yml" ]; then
-    # Проверка базовой структуры YAML
-    if grep -q "^name:" .github/workflows/ci.yml && grep -q "^on:" .github/workflows/ci.yml && grep -q "^jobs:" .github/workflows/ci.yml; then
-        echo "✅ YAML структура выглядит корректной"
-    else
-        echo "⚠️ Возможны проблемы с YAML структурой workflow"
-    fi
-    
-    # Детальная проверка через Python (если доступен с PyYAML)
+echo "1. Проверка GitHub Actions workflow файлов..."
+if [ -d ".github/workflows" ]; then
     if command -v python3 &> /dev/null; then
-        if python3 -c "import yaml" 2>/dev/null; then
-            if python3 -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))" 2>/dev/null; then
-                echo "✅ YAML синтаксис валидирован через PyYAML"
-            else
-                echo "❌ Ошибка YAML синтаксиса в .github/workflows/ci.yml"
-                python3 -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))" 2>&1 | head -5
-                ERRORS=$((ERRORS + 1))
-            fi
+        echo "   Запускаю setup/validate_workflows.py..."
+        if python3 setup/validate_workflows.py; then
+            echo "✅ Все workflow файлы валидны"
+        else
+            echo "❌ Ошибки в workflow файлах"
+            echo ""
+            echo "💡 Исправьте ошибки и попробуйте снова."
+            echo "   Для подробностей: python3 setup/validate_workflows.py --verbose"
+            ERRORS=$((ERRORS + 1))
         fi
     elif command -v python &> /dev/null; then
-        if python -c "import yaml" 2>/dev/null; then
-            if python -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))" 2>/dev/null; then
-                echo "✅ YAML синтаксис валидирован через PyYAML"
-            else
-                echo "❌ Ошибка YAML синтаксиса в .github/workflows/ci.yml"
-                python -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))" 2>&1 | head -5
-                ERRORS=$((ERRORS + 1))
-            fi
+        echo "   Запускаю setup/validate_workflows.py..."
+        if python setup/validate_workflows.py; then
+            echo "✅ Все workflow файлы валидны"
+        else
+            echo "❌ Ошибки в workflow файлах"
+            echo ""
+            echo "💡 Исправьте ошибки и попробуйте снова."
+            echo "   Для подробностей: python setup/validate_workflows.py --verbose"
+            ERRORS=$((ERRORS + 1))
         fi
+    else
+        echo "⚠️ Python не найден, пропускаем валидацию workflow"
+        echo "   Рекомендуется установить Python 3 для полной проверки"
     fi
+else
+    echo "ℹ️  Директория .github/workflows не найдена, пропускаем"
 fi
 
 # Проверка 2: Синтаксис bash скриптов

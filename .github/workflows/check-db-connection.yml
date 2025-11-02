@@ -34,6 +34,9 @@ jobs:
               exit 1
             fi
             
+            # Экспортируем для Node.js скрипта
+            export DATABASE_URL
+            
             # Маскируем пароль для вывода
             MASKED_URL=$(echo "$DATABASE_URL" | sed 's/:[^:@]*@/:***@/')
             echo "DATABASE_URL: $MASKED_URL"
@@ -47,51 +50,7 @@ jobs:
             
             echo ""
             echo "🔍 Тестирую подключение к БД через Node.js..."
-            node << NODE_SCRIPT
-              const postgres = require('postgres');
-              const url = process.env.DATABASE_URL || '';
-              
-              console.log('Длина DATABASE_URL:', url.length);
-              console.log('Начинается с:', url.substring(0, 20));
-              
-              if (!url) {
-                console.error('❌ DATABASE_URL пустой');
-                process.exit(1);
-              }
-              
-              // Проверяем наличие sslmode
-              const hasSslMode = url.includes('sslmode=');
-              console.log('sslmode в URL:', hasSslMode ? 'есть' : 'нет');
-              
-              const options = {
-                max: 1,
-              };
-              
-              if (!hasSslMode) {
-                options.ssl = { rejectUnauthorized: false };
-                console.log('Добавляю SSL опцию');
-              }
-              
-              console.log('Пробую подключиться...');
-              
-              (async () => {
-                try {
-                  const sql = postgres(url, options);
-                  await sql\`SELECT 1\`;
-                  console.log('✅ Подключение к БД успешно!');
-                  await sql.end();
-                  process.exit(0);
-                } catch (error) {
-                  console.error('❌ Ошибка подключения:', error.message);
-                  if (error.stack) {
-                    console.error('Stack:', error.stack);
-                  }
-                  if (error.cause) {
-                    console.error('Cause:', error.cause);
-                  }
-                  process.exit(1);
-                }
-              })();
-NODE_SCRIPT
+            # Запускаем внешний скрипт вместо heredoc
+            node scripts/node/test-db-connection.js
           EOF
 

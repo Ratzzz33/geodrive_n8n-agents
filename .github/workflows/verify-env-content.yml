@@ -56,34 +56,7 @@ jobs:
             
             echo ""
             echo "🔍 Тестирую загрузку через Node.js dotenv:"
-            node << NODE_SCRIPT
-              const dotenv = require('dotenv');
-              const fs = require('fs');
-              
-              console.log('Текущая директория:', process.cwd());
-              console.log('Файл .env существует:', fs.existsSync('.env'));
-              
-              if (fs.existsSync('.env')) {
-                const envContent = fs.readFileSync('.env', 'utf8');
-                const dbLine = envContent.split('\n').find(line => line.startsWith('DATABASE_URL='));
-                console.log('Строка DATABASE_URL из файла:', dbLine ? dbLine.substring(0, 80) + '...' : 'не найдена');
-                
-                const result = dotenv.config();
-                if (result.error) {
-                  console.error('❌ Ошибка dotenv:', result.error.message);
-                } else {
-                  console.log('✅ dotenv.config() успешно');
-                }
-                
-                console.log('process.env.DATABASE_URL установлен:', !!process.env.DATABASE_URL);
-                if (process.env.DATABASE_URL) {
-                  const masked = process.env.DATABASE_URL.replace(/:[^:@]+@/, ':***@');
-                  console.log('Значение (первые 50 символов):', masked.substring(0, 50) + '...');
-                  console.log('Длина значения:', process.env.DATABASE_URL.length);
-                } else {
-                  console.log('❌ process.env.DATABASE_URL не установлен');
-                }
-              }
-NODE_SCRIPT
+            # Запускаем внешний скрипт вместо heredoc
+            node scripts/node/check-env-dotenv.js
           EOF
 
