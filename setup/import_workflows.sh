@@ -37,7 +37,7 @@ if echo "$POSTGRES_CRED_RESPONSE" | grep -q '"id"'; then
   POSTGRES_CRED_ID=$(echo "$POSTGRES_CRED_RESPONSE" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
   echo "  ✅ PostgreSQL credential создан: $POSTGRES_CRED_ID"
 elif echo "$POSTGRES_CRED_RESPONSE" | grep -q "already exists\|409"; then
-  echo "  ℹ️  PostgreSQL credential уже существует, получаю ID..."
+  echo "  INFO: PostgreSQL credential уже существует, получаю ID..."
   EXISTING_CREDS=$(curl -s -X GET "$N8N_HOST/credentials" \
     -H "X-N8N-API-KEY: $N8N_API_KEY" \
     -H "Content-Type: application/json")
@@ -46,7 +46,7 @@ elif echo "$POSTGRES_CRED_RESPONSE" | grep -q "already exists\|409"; then
     echo "  ✅ Используем существующий: $POSTGRES_CRED_ID"
   fi
 else
-  echo "  ⚠️  Ошибка создания credential: $POSTGRES_CRED_RESPONSE"
+  echo "  WARNING: Ошибка создания credential: $POSTGRES_CRED_RESPONSE"
   POSTGRES_CRED_ID=""
 fi
 
@@ -81,10 +81,10 @@ for WORKFLOW_FILE in "${WORKFLOWS[@]}"; do
   WORKFLOW_JSON=$(cat "$WORKFLOW_FILE")
   WORKFLOW_NAME_FROM_JSON=$(echo "$WORKFLOW_JSON" | grep -o '"name":"[^"]*"' | head -1 | cut -d'"' -f4)
   
-  EXISTING_ID=$(echo "$EXISTING_WORKFLOWS" | grep -o "\"name\":\"$WORKFLOW_NAME_FROM_JSON\"[^}]*\"id\":\"[^"]*\"" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+  EXISTING_ID=$(echo "$EXISTING_WORKFLOWS" | grep -B5 -A5 "\"name\":\"$WORKFLOW_NAME_FROM_JSON\"" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
   
   if [ -n "$EXISTING_ID" ]; then
-    echo "    ℹ️  Workflow уже существует (ID: $EXISTING_ID), обновляю..."
+    echo "    INFO: Workflow уже существует, ID: $EXISTING_ID, обновляю..."
     
     # Получаем существующий workflow для сохранения credentials
     EXISTING_WORKFLOW=$(curl -s -X GET "$N8N_HOST/workflows/$EXISTING_ID" \
@@ -108,7 +108,7 @@ for WORKFLOW_FILE in "${WORKFLOWS[@]}"; do
     WORKFLOW_ID="$EXISTING_ID"
     echo "    ✅ Workflow обновлен"
   else
-    echo "    ℹ️  Создаю новый workflow..."
+    echo "    INFO: Создаю новый workflow..."
     RESPONSE=$(curl -s -X POST "$N8N_HOST/workflows" \
       -H "X-N8N-API-KEY: $N8N_API_KEY" \
       -H "Content-Type: application/json" \
@@ -119,7 +119,7 @@ for WORKFLOW_FILE in "${WORKFLOWS[@]}"; do
       echo "    ❌ Ошибка создания: $RESPONSE"
       continue
     fi
-    echo "    ✅ Workflow создан (ID: $WORKFLOW_ID)"
+    echo "    ✅ Workflow создан, ID: $WORKFLOW_ID"
   fi
   
   CREATED_WORKFLOWS+=("$WORKFLOW_ID")
@@ -143,7 +143,7 @@ for WORKFLOW_FILE in "${WORKFLOWS[@]}"; do
       UPDATED_NODES="$CURRENT_WORKFLOW"
     fi
     
-    if echo "$UPDATED_NODES" | grep -q "\"id\":\"$POSTGRES_CRED_ID\""; then
+    if echo "$UPDATED_NODES" | grep -q '"id":"'"$POSTGRES_CRED_ID"'"'; then
       curl -s -X PUT "$N8N_HOST/workflows/$WORKFLOW_ID" \
         -H "X-N8N-API-KEY: $N8N_API_KEY" \
         -H "Content-Type: application/json" \
@@ -169,7 +169,7 @@ for WF_ID in "${CREATED_WORKFLOWS[@]}"; do
         -d "{}" > /dev/null
       echo "  ✅ Workflow активирован: $WF_ID"
     else
-      echo "  ℹ️  Workflow уже активен: $WF_ID"
+      echo "  INFO: Workflow уже активен: $WF_ID"
     fi
   fi
 done
