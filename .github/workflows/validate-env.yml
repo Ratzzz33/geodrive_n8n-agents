@@ -1,0 +1,57 @@
+name: Validate Environment Variables
+
+on:
+  push:
+    paths:
+      - 'config/n8n-variables.yaml'
+      - 'docker-compose.yml'
+      - 'setup/validate_env_sync.py'
+      - '.github/workflows/validate-env.yml'
+  pull_request:
+    paths:
+      - 'config/n8n-variables.yaml'
+      - 'docker-compose.yml'
+      - 'setup/validate_env_sync.py'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate n8n Variables
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml
+      
+      - name: Run validation
+        run: |
+          python setup/validate_env_sync.py
+      
+      - name: Check for discrepancies
+        run: |
+          python setup/validate_env_sync.py --strict
+      
+      - name: Generate report
+        if: always()
+        run: |
+          python setup/validate_env_sync.py --report > validation_report.txt
+          cat validation_report.txt
+      
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report
+          path: validation_report.txt
+          retention-days: 30
+

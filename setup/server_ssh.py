@@ -129,6 +129,61 @@ class ServerSSH:
         if self.ssh:
             self.ssh.close()
             self.ssh = None
+    
+    def update_docker_compose_variable(self, name: str, value: str) -> bool:
+        """Обновить переменную в docker-compose.yml на сервере"""
+        result = self.execute("find /root /opt /home -name docker-compose.yml -type f 2>/dev/null | head -1")
+        if not result or result[2] != 0:
+            return False
+        
+        compose_file = result[0].strip()
+        if not compose_file:
+            return False
+        
+        self.execute(f"cp {compose_file} {compose_file}.backup.$(date +%Y%m%d_%H%M%S)")
+        value_escaped = value.replace('/', '\\/')
+        cmd = f"sed -i 's|{name}=.*|{name}={value}|g' {compose_file}"
+        result = self.execute(cmd)
+        
+        return result and result[2] == 0
+    
+    def restart_container(self, container_name: str) -> bool:
+        """Перезапустить Docker контейнер"""
+        return self.execute_multiple([
+            f"docker compose stop {container_name} 2>/dev/null || docker stop {container_name}",
+            f"docker compose up -d {container_name} 2>/dev/null || docker start {container_name}"
+        ])
+    
+    def validate_variables(self) -> Dict[str, str]:
+        """Проверить переменные на сервере"""
+        result = self.execute("docker exec n8n printenv")
+        variables = {}
+        if result and result[2] == 0:
+            for line in result[0].strip().split('\n'):
+                if '=' in line:
+                    name, value = line.split('=', 1)
+                    variables[name] = value
+        return variables
+    
+    def sync_variables_from_config(self, config_path: str) -> bool:
+        """Синхронизировать переменные из YAML конфигурации"""
+        try:
+            import yaml
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f)
+                if not config:
+                    return False
+                
+                system_vars = config.get('system_variables', {})
+                for name, value in system_vars.items():
+                    if not self.update_docker_compose_variable(name, value):
+                        print(f"⚠️ Не удалось обновить {name}")
+                        return False
+                
+                return self.restart_container('n8n')
+        except Exception as e:
+            print(f"❌ Ошибка синхронизации: {e}")
+            return False
 
 
 def run_command_on_server(command: str, show_output: bool = True) -> bool:

@@ -1,0 +1,65 @@
+# Конфигурация переменных n8n
+# Центральное хранилище всех переменных окружения
+
+# Системные переменные (требуют перезапуск контейнера Docker)
+# После изменения: docker compose stop n8n && docker compose up -d n8n
+system_variables:
+  # Webhook URLs
+  WEBHOOK_URL: https://webhook.rentflow.rentals
+  N8N_WEBHOOK_URL: https://webhook.rentflow.rentals
+  WEBHOOK_TEST_URL: https://webhook-test.rentflow.rentals
+  
+  # n8n Host настройки
+  N8N_HOST: 46.224.17.15
+  N8N_PORT: 5678
+  N8N_PROTOCOL: http
+  N8N_EDITOR_BASE_URL: http://46.224.17.15:5678
+  
+  # Шифрование
+  N8N_ENCRYPTION_KEY: ''  # Задается автоматически при первом запуске
+  
+  # PostgreSQL (основная БД)
+  POSTGRES_HOST: ep-rough-heart-ahnybmq0-pooler.c-3.us-east-1.aws.neon.tech
+  POSTGRES_PORT: 5432
+  POSTGRES_DB: neondb
+  POSTGRES_USER: neondb_owner
+  POSTGRES_PASSWORD: npg_cHIT9Kxfk1Am
+  POSTGRES_NON_ROOT_USER: neondb_owner
+  POSTGRES_NON_ROOT_PASSWORD: npg_cHIT9Kxfk1Am
+
+# Пользовательские переменные (можно изменять через n8n Settings API)
+# Доступны в workflow как: {{ $env.VARIABLE_NAME }}
+user_variables:
+  # API endpoints
+  RENTPROG_HEALTH_URL: http://46.224.17.15:3000/rentprog/health
+  ORCHESTRATOR_URL: http://46.224.17.15:3000
+  API_BASE_URL: https://api.rentflow.rentals
+  SYNC_STATUS_URL: https://geodrive.netlify.app/api/sync/status
+  
+  # Telegram
+  TELEGRAM_ALERT_CHAT_ID: '-5004140602'
+  
+  # Дополнительные переменные
+  # Раскомментируйте и настройте при необходимости:
+  # STRIPE_API_KEY: ''
+  # UMNICO_API_KEY: ''
+  # AMOCRM_API_KEY: ''
+  # YOUGILE_API_KEY: ''
+  # ROISTAT_API_KEY: ''
+
+# Метаданные
+metadata:
+  last_updated: '2025-11-02'
+  updated_by: 'cursor_agent'
+  version: '1.0.0'
+  notes: |
+    Этот файл является центральным источником правды для всех переменных окружения n8n.
+    
+    Изменения в этом файле требуют синхронизации:
+    1. Для системных переменных: python setup/manage_n8n_variables.py sync
+    2. Для пользовательских: обновляются автоматически при следующем запуске или через API
+    
+    Проверка текущих значений:
+    - python setup/manage_n8n_variables.py list
+    - python setup/check_env_sync.py (проверка несоответствий)
+
