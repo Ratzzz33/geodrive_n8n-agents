@@ -207,12 +207,14 @@ def validate_workflow(file_path: Path, verbose: bool = False) -> bool:
             print(error)
         else:
             # Показываем только первые несколько строк
-            lines = error.split('\n')[:5]
+            error_lines = error.split('\n')
+            lines = error_lines[:5]
             for line in lines:
                 if line.strip():
                     print(f"      {line}")
-            if len(error.split('\n')) > 5:
-                print(f"      ... (еще {len(error.split('\n')) - 5} строк)")
+            remaining_lines = len(error_lines) - 5
+            if remaining_lines > 0:
+                print(f"      ... (еще {remaining_lines} строк)")
     else:
         print(f"   ℹ️  {error}")
     
