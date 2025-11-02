@@ -6,7 +6,9 @@
         "httpMethod": "POST",
         "path": "rentprog-webhook",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {
+          "productionUrl": "https://webhook.rentflow.rentals"
+        }
       },
       "id": "webhook-node",
       "name": "Webhook",
@@ -46,18 +48,10 @@
     },
     {
       "parameters": {
-        "operation": "insert",
-        "tableId": "events",
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "ts": "={{ $now }}",
-            "branch": "={{ $json.query.branch || 'unknown' }}",
-            "type": "={{ $json.body.type || $json.body.event || 'unknown' }}",
-            "ext_id": "={{ $json.body.payload.id || $json.body.payload.rentprog_id || 'unknown' }}",
-            "ok": "={{ $json.body.ok || true }}",
-            "reason": "={{ $json.body.error || 'ok' }}"
-          }
+        "operation": "executeQuery",
+        "query": "INSERT INTO events (ts, branch, type, ext_id, ok, reason, processed)\nVALUES (NOW(), $1, $2, $3, $4, $5, FALSE)\nON CONFLICT (branch, type, ext_id) DO NOTHING\nRETURNING id",
+        "additionalFields": {
+          "queryParameters": "={{ [\n  $json.query?.branch || $json.body?.branch || 'unknown',\n  $json.body?.type || $json.body?.event || 'unknown',\n  $json.body?.payload?.id || $json.body?.payload?.rentprog_id || 'unknown',\n  $json.body?.ok !== false,\n  $json.body?.error || $json.body?.reason || 'ok'\n] }}"
         },
         "options": {}
       },

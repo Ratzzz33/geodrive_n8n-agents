@@ -10,10 +10,10 @@ services:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=admin
       - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-changeme}
-      - N8N_HOST=${N8N_HOST:-0.0.0.0}
+      - N8N_HOST=${N8N_HOST:-n8n.rentflow.rentals}
       - N8N_PORT=5678
       - N8N_PROTOCOL=https
-      - WEBHOOK_URL=https://geodrive.netlify.app/
+      - WEBHOOK_URL=https://webhook.rentflow.rentals/
       
       # Подключение к базе данных Neon PostgreSQL
       - DB_TYPE=postgresdb
@@ -69,8 +69,9 @@ services:
       - N8N_SECURITY_AUDIT_ENABLED=false
       
       # Webhook настройки (без ограничений)
-      - WEBHOOK_URL=${WEBHOOK_URL:-https://geodrive.netlify.app/}
-      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://46.224.17.15:5678/}
+      - WEBHOOK_URL=${WEBHOOK_URL:-https://webhook.rentflow.rentals/}
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-https://webhook.rentflow.rentals/}
+      - WEBHOOK_TEST_URL=${WEBHOOK_TEST_URL:-https://webhook-test.rentflow.rentals/}
       
       # Пользовательские переменные для использования в workflow через $env
       # Эти переменные доступны в workflow как {{ $env.VARIABLE_NAME }}

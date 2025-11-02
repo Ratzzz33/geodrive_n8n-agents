@@ -29,11 +29,12 @@
    - **SSL:** Enable SSL (reject unauthorized = false)
 5. Назовите: **PostgreSQL**
 
-**Telegram Bot Credential:**
+**Telegram Bot Credential (для алертов):**
 1. **Credentials** → **New Credential**
 2. Выберите **Telegram**
-3. Введите токен бота `@n8n_alert_geodrive_bot`
-4. Назовите: **Telegram Bot**
+3. Введите токен бота `@n8n_alert_geodrive_bot` (НЕ основной бот!)
+4. Назовите: **Telegram Bot** (или **Telegram Alert Bot** для ясности)
+5. ⚠️ **Важно:** Это бот специально для алертов, не путать с основным ботом `@test_geodrive_check_bot`
 
 ### 2. Импорт Workflow
 

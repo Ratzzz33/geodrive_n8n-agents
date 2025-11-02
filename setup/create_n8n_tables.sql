@@ -8,12 +8,22 @@ CREATE TABLE IF NOT EXISTS events (
   type TEXT,
   ext_id TEXT,
   ok BOOLEAN DEFAULT TRUE,
-  reason TEXT
+  reason TEXT,
+  processed BOOLEAN DEFAULT FALSE
 );
+
+-- Уникальный constraint для предотвращения дубликатов
+-- Дубликаты пропускаются на уровне INSERT с ON CONFLICT DO NOTHING
+ALTER TABLE events 
+  DROP CONSTRAINT IF EXISTS events_branch_type_ext_id_unique;
+ALTER TABLE events 
+  ADD CONSTRAINT events_branch_type_ext_id_unique 
+  UNIQUE (branch, type, ext_id);
 
 CREATE INDEX IF NOT EXISTS idx_events_ts ON events(ts);
 CREATE INDEX IF NOT EXISTS idx_events_branch ON events(branch);
 CREATE INDEX IF NOT EXISTS idx_events_type ON events(type);
+CREATE INDEX IF NOT EXISTS idx_events_processed ON events(processed) WHERE processed = FALSE;
 
 -- Прогресс синхронизации
 CREATE TABLE IF NOT EXISTS sync_runs (

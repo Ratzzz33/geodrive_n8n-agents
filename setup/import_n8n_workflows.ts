@@ -18,6 +18,7 @@ const WORKFLOW_FILES = [
   'rentprog-webhooks-monitor.json',
   'sync-progress.json',
   'health-status.json',
+  'rentprog-upsert-processor.json',
 ];
 
 async function importWorkflow(fileName: string) {

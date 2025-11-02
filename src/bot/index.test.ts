@@ -11,12 +11,10 @@ vi.mock('../config', async () => {
     config: {
       telegramBotToken: 'test_token_123',
       rentprogPollSinceDays: 14,
-      netlifySite: 'https://test.netlify.app',
     },
     getConfig: vi.fn(() => ({
       telegramBotToken: 'test_token_123',
       rentprogPollSinceDays: 14,
-      netlifySite: 'https://test.netlify.app',
     })),
   };
 });

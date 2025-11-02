@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "n8n": {
+      "command": "C:\\Program Files\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\33pok\\geodrive_n8n-agents\\mcp-server\\n8n-mcp-server.js"
+      ],
+      "cwd": "C:\\Users\\33pok\\geodrive_n8n-agents",
+      "env": {
+        "N8N_BASE_URL": "https://n8n.rentflow.rentals",
+        "N8N_API_KEY": "ваш_api_ключ_здесь"
+      }
+    }
+  }
+}
+

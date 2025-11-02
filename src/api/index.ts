@@ -46,16 +46,16 @@ export function initApiServer(port: number = 3000): void {
     }
   });
 
-  // Endpoint для получения вебхуков от Netlify Functions
+  // Endpoint для получения вебхуков от RentProg (через Nginx)
   app.post('/webhook/rentprog', async (req, res) => {
     try {
       const { normalizeRentProgWebhook } = await import('../integrations/rentprog-webhook-parser');
       const { route } = await import('../orchestrator/index');
       
-      const { branch, type, payload, timestamp } = req.body;
+      const { type, payload, timestamp } = req.body;
       
       // Нормализуем вебхук в событие системы
-      const systemEvent = normalizeRentProgWebhook(branch, {
+      const systemEvent = normalizeRentProgWebhook({
         event: type,
         id: payload?.id,
         payload: payload,
@@ -72,6 +72,46 @@ export function initApiServer(port: number = 3000): void {
       res.json({ ok: true, processed: true });
     } catch (error) {
       logger.error('Webhook handler error:', error);
+      res.status(500).json({ ok: false, error: 'Internal server error' });
+    }
+  });
+
+  // Endpoint для обработки событий из n8n (upsert processor)
+  app.post('/process-event', async (req, res) => {
+    try {
+      const { normalizeRentProgWebhook } = await import('../integrations/rentprog-webhook-parser');
+      const { handleRentProgEvent } = await import('../orchestrator/rentprog-handler');
+      
+      const { type, ext_id, eventId } = req.body;
+      
+      if (!type || !ext_id) {
+        res.status(400).json({ ok: false, error: 'Missing required fields: type, ext_id' });
+        return;
+      }
+      
+      // Создаем событие для обработки
+      const systemEvent = normalizeRentProgWebhook({
+        event: type,
+        id: ext_id,
+        payload: { id: ext_id },
+      });
+      
+      if (!systemEvent) {
+        res.status(400).json({ ok: false, error: 'Could not normalize event' });
+        return;
+      }
+      
+      // Обрабатываем событие (auto-fetch + upsert)
+      const result = await handleRentProgEvent(systemEvent);
+      
+      res.json({ 
+        ok: result.ok, 
+        processed: result.processed,
+        entityIds: result.entityIds,
+        error: result.error 
+      });
+    } catch (error) {
+      logger.error('Process event error:', error);
       res.status(500).json({ ok: false, error: 'Internal server error' });
     }
   });

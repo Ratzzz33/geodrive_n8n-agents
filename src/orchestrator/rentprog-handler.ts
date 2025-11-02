@@ -123,11 +123,10 @@ export async function handleRentProgEvent(event: SystemEvent): Promise<{
   error?: string;
 }> {
   const payload = event.payload as any;
-  const branch = (payload.branch || event.source) as BranchName;
-
-  if (!['tbilisi', 'batumi', 'kutaisi', 'service-center'].includes(branch)) {
-    return { ok: false, processed: false, error: 'Invalid branch' };
-  }
+  
+  // Branch берется из payload если есть, иначе используется значение по умолчанию
+  // Так как компания одна, branch используется только для API вызовов к RentProg
+  const branch = (payload.branch || 'tbilisi') as BranchName;
 
   // Определяем тип сущности и ID из payload
   const extId = String(payload.rentprog_id || payload.id || payload.booking_id || payload.car_id || payload.client_id || '');
@@ -135,16 +134,16 @@ export async function handleRentProgEvent(event: SystemEvent): Promise<{
     return { ok: false, processed: false, error: 'No external ID in payload' };
   }
 
-  // Дедупликация
-  const timeBucket = new Date().toISOString().slice(0, 16); // Минутная гранулярность
-  const dedupHash = generateDedupHash('rentprog', branch, event.type, extId, timeBucket);
+  // Дедупликация (без branch в hash, так как филиал не важен для определения источника)
+  const timeBucket = new Date().toISOString().slice(0, 16);
+  const dedupHash = generateDedupHash('rentprog', '', event.type, extId, timeBucket);
 
   const isDuplicate = await checkWebhookDedup('rentprog', dedupHash);
   if (isDuplicate) {
     logger.debug(`Duplicate webhook skipped: ${dedupHash}`);
     await sendEventToN8n({
       ts: new Date().toISOString(),
-      branch,
+      branch: '',  // branch не важен
       type: event.type,
       ext_id: extId,
       ok: true,

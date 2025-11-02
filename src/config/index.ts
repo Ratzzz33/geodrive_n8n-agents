@@ -54,9 +54,6 @@ const configSchema = z.object({
   rentprogTimeoutMs: z.coerce.number().optional(),
   rentprogPageLimit: z.coerce.number().optional(),
   rentprogPollSinceDays: z.coerce.number().optional(),
-  // Netlify
-  netlifySite: z.string().url().optional(),
-  netlifyAuthToken: z.string().optional(),
   // Neon API
   neonApiKey: z.string().optional(),
   // n8n интеграция
@@ -101,9 +98,6 @@ export function getConfig(): Config {
       rentprogTimeoutMs: process.env.RENTPROG_TIMEOUT_MS,
       rentprogPageLimit: process.env.RENTPROG_PAGE_LIMIT,
       rentprogPollSinceDays: process.env.RENTPROG_POLL_SINCE_DAYS,
-      // Netlify
-      netlifySite: process.env.NETLIFY_SITE,
-      netlifyAuthToken: process.env.NETLIFY_AUTH_TOKEN,
       // Neon API
       neonApiKey: process.env.NEON_API_KEY,
       // n8n

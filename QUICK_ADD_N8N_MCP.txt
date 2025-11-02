@@ -1,0 +1,32 @@
+БЫСТРАЯ ИНСТРУКЦИЯ: Как добавить n8n MCP сервер
+
+1. В Cursor откройте: Settings (Ctrl+,) → Tools & MCP
+2. Нажмите "+ New MCP Server"
+3. Заполните:
+   
+   Name: n8n
+   
+   Command: C:\Program Files\nodejs\node.exe
+   
+   Args: C:\Users\33pok\geodrive_n8n-agents\mcp-server\n8n-mcp-server.js
+   
+   cwd: C:\Users\33pok\geodrive_n8n-agents
+   
+   Env:
+     N8N_BASE_URL = https://n8n.rentflow.rentals
+     N8N_API_KEY = ваш_api_ключ
+
+4. Сохраните и перезапустите Cursor
+
+Если открывается JSON редактор, вставьте:
+
+{
+  "command": "C:\\Program Files\\nodejs\\node.exe",
+  "args": ["C:\\Users\\33pok\\geodrive_n8n-agents\\mcp-server\\n8n-mcp-server.js"],
+  "cwd": "C:\\Users\\33pok\\geodrive_n8n-agents",
+  "env": {
+    "N8N_BASE_URL": "https://n8n.rentflow.rentals",
+    "N8N_API_KEY": "ваш_api_ключ"
+  }
+}
+

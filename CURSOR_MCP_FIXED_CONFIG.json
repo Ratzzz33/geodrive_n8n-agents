@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\33pok\\geodrive_n8n-agents\\mcp-server\\chrome-devtools-server.js"
+      ],
+      "cwd": "C:\\Users\\33pok\\geodrive_n8n-agents"
+    },
+    "n8n": {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\33pok\\geodrive_n8n-agents\\mcp-server\\n8n-mcp-server.js"
+      ],
+      "cwd": "C:\\Users\\33pok\\geodrive_n8n-agents",
+      "env": {
+        "N8N_BASE_URL": "https://n8n.rentflow.rentals",
+        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZDYyYjM3My0yMDFiLTQ3ZjMtODU5YS1jZGM2OWRkZWE0NGEiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYyMDg0MjY4LCJleHAiOjE3NjQ2NTE2MDB9.gsdxltowlQShNi9mil074-cMhnuJJLI5lN6MP7FQEcI"
+      }
+    }
+  }
+}

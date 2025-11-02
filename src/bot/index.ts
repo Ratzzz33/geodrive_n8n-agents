@@ -383,16 +383,12 @@ export async function startBot(): Promise<void> {
     throw error;
   }
   
-  // Выводим URL вебхуков в логи
-  const netlifySite = config.netlifySite || 'https://geodrive.netlify.app';
-  const branches: BranchName[] = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];
+  // Выводим URL вебхука в логи
+  const webhookUrl = 'https://webhook.rentflow.rentals/';
   
-  logger.info('🔗 RentProg Webhook URLs (для настройки в RentProg UI):');
-  logger.info('   ⚠️  RentProg отправляет JSON без секретов, просто укажите URL ниже');
-  for (const branch of branches) {
-    const url = `${netlifySite}/webhooks/rentprog/${branch}`;
-    logger.info(`  ${branch}: ${url}`);
-  }
+  logger.info('🔗 RentProg Webhook URL (для настройки в RentProg UI):');
+  logger.info('   ⚠️  Используйте один адрес для всех филиалов:');
+  logger.info(`  ${webhookUrl}`);
 
   // Graceful shutdown
   process.once('SIGINT', () => {

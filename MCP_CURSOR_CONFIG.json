@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "C:\\Program Files\\nodejs\\node.exe",
+      "args": ["mcp-server/chrome-devtools-server.js"],
+      "cwd": "C:\\Users\\33pok\\geodrive_n8n-agents"
+    }
+  }
+}
+

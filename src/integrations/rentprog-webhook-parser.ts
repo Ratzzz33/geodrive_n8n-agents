@@ -117,7 +117,6 @@ function determineEventType(event: string | undefined, action: string | undefine
  * Нормализация вебхука в событие системы
  */
 export function normalizeRentProgWebhook(
-  branch: BranchName,
   rawWebhook: RentProgWebhookPayload
 ): SystemEvent | null {
   try {
@@ -140,7 +139,7 @@ export function normalizeRentProgWebhook(
       payload: {
         ...payload,
         rentprog_id: rawWebhook.id || payload.id,
-        branch,
+        // branch удален - не нужен для определения источника
         raw_event: rawWebhook.event || rawWebhook.type || rawWebhook.name,
         raw_action: rawWebhook.action,
       },
@@ -149,8 +148,9 @@ export function normalizeRentProgWebhook(
     // Дополнительная нормализация для специфичных событий
     if (eventType === 'car.moved') {
       systemEvent.payload.car_id = rawWebhook.id || payload.car_id || payload.id;
+      // from_branch и to_branch остаются в payload если есть
       systemEvent.payload.from_branch = payload.from_branch || payload.branch;
-      systemEvent.payload.to_branch = branch;
+      systemEvent.payload.to_branch = payload.to_branch || payload.branch;
     }
     
     if (eventType.startsWith('booking.')) {

@@ -2,7 +2,15 @@
 # Creates credentials and imports workflows
 
 $N8N_HOST = "http://46.224.17.15:5678/api/v1"
-$N8N_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZDYyYjM3My0yMDFiLTQ3ZjMtODU5YS1jZGM2OWRkZWE0NGEiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYxOTUzNjIzLCJleHAiOjE3NjQ0Nzg4MDB9.RJQy3rXOo0_x_S41IFEGFfAhlVvPaB5dNBYKheP_csM"
+# API ключ можно переопределить через переменную окружения: $env:N8N_API_KEY
+$N8N_API_KEY = $env:N8N_API_KEY
+if (-not $N8N_API_KEY) {
+    # Текущий ключ (действителен до 2025-12-02)
+    # Получить новый: http://46.224.17.15:5678 -> Settings -> API -> Create API Key
+    $N8N_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZDYyYjM3My0yMDFiLTQ3ZjMtODU5YS1jZGM2OWRkZWE0NGEiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYyMDg0MjY4LCJleHAiOjE3NjQ2NTE2MDB9.gsdxltowlQShNi9mil074-cMhnuJJLI5lN6MP7FQEcI"
+    Write-Host "Info: Using default API key (expires 2025-12-02)" -ForegroundColor Yellow
+    Write-Host "To override: `$env:N8N_API_KEY = 'your_key'" -ForegroundColor Yellow
+}
 
 $headers = @{
     "X-N8N-API-KEY" = $N8N_API_KEY
@@ -99,7 +107,8 @@ Write-Host "Importing workflows..." -ForegroundColor Cyan
 $workflows = @(
     "n8n-workflows/rentprog-webhooks-monitor.json",
     "n8n-workflows/sync-progress.json",
-    "n8n-workflows/health-status.json"
+    "n8n-workflows/health-status.json",
+    "n8n-workflows/rentprog-upsert-processor.json"
 )
 
 $createdWorkflows = @()

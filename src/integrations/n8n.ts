@@ -108,11 +108,13 @@ export async function sendSyncProgressToN8n(data: {
 
 /**
  * Отправка алерта в Telegram через n8n бот
+ * Использует @n8n_alert_geodrive_bot для отправки уведомлений об ошибках
+ * (не основной бот, специально для алертов)
  */
 export async function sendTelegramAlert(message: string): Promise<void> {
   const botToken = config.n8nAlertsTelegramBotToken;
   if (!botToken) {
-    logger.debug('N8N_ALERTS_TELEGRAM_BOT_TOKEN not configured');
+    logger.debug('N8N_ALERTS_TELEGRAM_BOT_TOKEN not configured (bot: @n8n_alert_geodrive_bot)');
     return;
   }
 

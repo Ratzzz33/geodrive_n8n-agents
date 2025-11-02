@@ -16,6 +16,26 @@ Jarvis - это единый интерфейс для сотрудников а
 
 Подробнее см. [ARCHITECTURE.md](./ARCHITECTURE.md), [ORCHESTRATOR.md](./ORCHESTRATOR.md), [AGENTS.md](./AGENTS.md)
 
+## 📚 Документация
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - Архитектура системы
+- [ORCHESTRATOR.md](./ORCHESTRATOR.md) - Описание оркестратора
+- [AGENTS.md](./AGENTS.md) - Описание агентов
+- [docs/N8N_WORKFLOW_IMPORT_GUIDE.md](./docs/N8N_WORKFLOW_IMPORT_GUIDE.md) - ⚠️ **ОБЯЗАТЕЛЬНАЯ инструкция** по работе с n8n workflow
+- [docs/AGENT_INSTRUCTIONS.md](./docs/AGENT_INSTRUCTIONS.md) - Инструкции для агента Cursor
+- [docs/DATABASE_MIGRATIONS.md](./docs/DATABASE_MIGRATIONS.md) - Руководство по миграциям БД
+- [.github/secrets.md](./.github/secrets.md) - GitHub Secrets для CI/CD
+- [SETUP_GITHUB_SECRETS.md](./SETUP_GITHUB_SECRETS.md) - Пошаговая настройка secrets
+- [IMPORT_COMPLETE_2025-01-15.md](./IMPORT_COMPLETE_2025-01-15.md) - ✅ **ИМПОРТ ЗАВЕРШЕН** - изменения в n8n применены
+- [VERIFICATION_COMPLETE.md](./VERIFICATION_COMPLETE.md) - ✅ Верификация Production URL
+- [FINAL_WEBHOOKS_UPDATE_2025-01-15.md](./FINAL_WEBHOOKS_UPDATE_2025-01-15.md) - 📊 Итоговый отчет
+- [WEBHOOK_TEST_DOMAIN_SETUP.md](./WEBHOOK_TEST_DOMAIN_SETUP.md) - ⚠️ Настройка тестового домена (опционально)
+- [WEBHOOKS_UPDATE_REPORT_2025-01-15.md](./WEBHOOKS_UPDATE_REPORT_2025-01-15.md) - 📊 Полный отчет о проделанной работе
+- [WEBHOOKS_UPDATE_SUMMARY.md](./WEBHOOKS_UPDATE_SUMMARY.md) - 📌 Краткий отчет об обновлении вебхуков
+- [WEBHOOKS_SETUP_GUIDE.md](./WEBHOOKS_SETUP_GUIDE.md) - 🔗 Инструкция по настройке вебхуков в RentProg
+- [WEBHOOK_URLS_UPDATE.md](./WEBHOOK_URLS_UPDATE.md) - 📖 Техническое руководство по новым адресам
+- [WEBHOOKS_CHANGE_LOG_2025-01-15.md](./WEBHOOKS_CHANGE_LOG_2025-01-15.md) - 📅 Changelog (v1.x → v2.0)
+
 ## 🚀 Быстрый старт
 
 ### Требования
@@ -99,31 +119,43 @@ src/
 - **Health check**: per-branch проверка доступности API
 - **Webhooks**: обработка событий через Netlify Functions
 
-#### RentProg Webhooks (Netlify)
+#### RentProg Webhooks
 
-Вебхуки настроены через Netlify Functions и доступны по URL:
-
+**Продакшн адрес (Production):**
 ```
-https://geodrive.netlify.app/webhooks/rentprog/{branch}
+https://webhook.rentflow.rentals
 ```
 
-Где `{branch}` - один из филиалов: `tbilisi`, `batumi`, `kutaisi`, `service-center`
+**Тестовый адрес (Testing):**
+```
+https://webhook-test.rentflow.rentals
+```
+⚠️ **Требует настройки:** см. [WEBHOOK_TEST_DOMAIN_SETUP.md](./WEBHOOK_TEST_DOMAIN_SETUP.md)
 
-**Обработка вебхуков:**
-- RentProg отправляет JSON без секретов
-- Netlify Function делает быстрый ACK (200 OK)
-- Асинхронно вызывает оркестратор через HTTP (`ORCHESTRATOR_URL`)
-- Оркестратор: дедупликация → auto-fetch полных данных → upsert в БД
+**Архитектура обработки:**
+- RentProg → Nginx (webhook.rentflow.rentals) → n8n webhook
+- n8n сохраняет событие в PostgreSQL таблицу `events` (с дедупликацией через unique constraint)
+- Быстрый ACK (< 100ms) возвращается RentProg
+- Отдельный cron workflow (каждые 5 минут) обрабатывает необработанные события
+- Jarvis API выполняет auto-fetch из RentProg и upsert в БД
+
+**Настройка в RentProg:**
+Для всех филиалов (Tbilisi, Batumi, Kutaisi, Rustavi) используется один общий адрес:
+```
+https://webhook.rentflow.rentals
+```
 
 **Настройка переменных окружения:**
-
 ```env
-NETLIFY_SITE=https://geodrive.netlify.app
-RENTPROG_BASE_URL=https://api.rentprog.example
-RENTPROG_BRANCH_KEYS={"tbilisi":"...","batumi":"...","kutaisi":"...","service-center":"..."}
-ORCHESTRATOR_URL=http://localhost:3000
-DEDUP_TTL_MINUTES=15
+WEBHOOK_URL=https://webhook.rentflow.rentals/
+WEBHOOK_TEST_URL=https://webhook-test.rentflow.rentals/
+N8N_WEBHOOK_URL=https://webhook.rentflow.rentals/
+ORCHESTRATOR_URL=http://46.224.17.15:3000
 ```
+
+📋 **Документация:**
+- [WEBHOOK_TEST_DOMAIN_SETUP.md](./WEBHOOK_TEST_DOMAIN_SETUP.md) - ⚠️ Настройка тестового домена
+- [WEBHOOK_URLS_UPDATE.md](./WEBHOOK_URLS_UPDATE.md) - Техническое руководство
 
 Подробнее см. [docs/RENTPROG_COMPLETE_GUIDE.md](./docs/RENTPROG_COMPLETE_GUIDE.md)
 

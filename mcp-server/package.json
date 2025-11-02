@@ -1,15 +1,23 @@
 {
   "name": "n8n-mcp-server",
   "version": "1.0.0",
-  "description": "MCP Server for n8n",
+  "description": "MCP Server for n8n and Chrome DevTools",
+  "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "start:chrome": "node chrome-devtools-server.js",
+    "start:n8n": "node n8n-mcp-server.js"
   },
   "dependencies": {
+    "@browsermcp/mcp": "^0.1.0",
+    "@modelcontextprotocol/sdk": "^1.20.2",
+    "axios": "^1.13.1",
+    "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "axios": "^1.6.0",
-    "dotenv": "^16.3.1"
+    "puppeteer": "^24.15.0"
+  },
+  "devDependencies": {
+    "n8n-mcp": "^2.22.8"
   }
 }
-
