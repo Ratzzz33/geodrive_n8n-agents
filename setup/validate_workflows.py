@@ -98,8 +98,16 @@ def check_workflow_structure(file_path: Path) -> Tuple[bool, Optional[str]]:
         if not isinstance(data, dict):
             return False, "Workflow должен быть YAML объектом"
         
-        required_fields = ['name', 'on', 'jobs']
+        # В YAML 'on' может быть зарезервированным словом, поэтому yaml.safe_load 
+        # может преобразовать его в True (boolean). Проверяем оба варианта.
+        required_fields = ['name', 'jobs']
         missing = [f for f in required_fields if f not in data]
+        
+        # Проверяем наличие 'on' или его boolean эквивалента (True)
+        has_on_field = 'on' in data or True in data
+        
+        if not has_on_field:
+            missing.append('on')
         
         if missing:
             return False, f"Отсутствуют обязательные поля: {', '.join(missing)}"
