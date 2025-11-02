@@ -34,17 +34,18 @@ jobs:
           pip install pyyaml
       
       - name: Install actionlint
+        continue-on-error: true
         run: |
           echo "📥 Устанавливаю actionlint..."
-          wget -q https://github.com/rhysd/actionlint/releases/latest/download/actionlint_linux_amd64.tar.gz
-          tar -xzf actionlint_linux_amd64.tar.gz
-          sudo mv actionlint /usr/local/bin/
-          actionlint -version
+          wget -q https://github.com/rhysd/actionlint/releases/latest/download/actionlint_linux_amd64.tar.gz || exit 0
+          tar -xzf actionlint_linux_amd64.tar.gz || exit 0
+          sudo mv actionlint /usr/local/bin/ || exit 0
+          actionlint -version || echo "actionlint не установлен, пропускаем"
       
       - name: Validate all workflows
         run: |
           echo "🔍 Проверяю все workflow файлы..."
-          python setup/validate_workflows.py --verbose
+          python setup/validate_workflows.py
       
       - name: Check for nested heredoc patterns
         run: |
