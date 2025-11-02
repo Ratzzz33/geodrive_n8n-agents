@@ -50,12 +50,22 @@ jobs:
         run: |
           echo "🔍 Проверяю наличие вложенных heredoc..."
           
-          # Ищем паттерны вложенных heredoc
-          if grep -r "<<.*EOF" .github/workflows/*.yml | grep -q "<<.*NODE_SCRIPT"; then
-            echo "❌ Обнаружены вложенные heredoc!"
-            echo ""
-            echo "Файлы с проблемами:"
-            grep -l "<<.*NODE_SCRIPT" .github/workflows/*.yml || true
+          # Ищем паттерны вложенных heredoc (исключая этот файл)
+          FOUND=0
+          for file in .github/workflows/*.yml; do
+            # Пропускаем сам валидатор, чтобы избежать самореференции
+            if [ "$file" = ".github/workflows/validate-workflows.yml" ]; then
+              continue
+            fi
+            
+            # Проверяем наличие вложенных heredoc
+            if grep -q "<<.*EOF" "$file" && grep -q "<<.*NODE_SCRIPT" "$file"; then
+              echo "❌ Обнаружены вложенные heredoc в $file"
+              FOUND=1
+            fi
+          done
+          
+          if [ $FOUND -eq 1 ]; then
             echo ""
             echo "💡 Рекомендация: вынесите JavaScript код в scripts/node/"
             exit 1

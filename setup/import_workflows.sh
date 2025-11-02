@@ -91,9 +91,14 @@ for WORKFLOW_FILE in "${WORKFLOWS[@]}"; do
       -H "X-N8N-API-KEY: $N8N_API_KEY" \
       -H "Content-Type: application/json")
     
-    # Обновляем workflow
-    UPDATED_WORKFLOW=$(echo "$WORKFLOW_JSON" | jq --arg id "$EXISTING_ID" --argjson existing "$EXISTING_WORKFLOW" \
-      '.id = $id | .active = ($existing.data.active // false)')
+    # Обновляем workflow (проверяем наличие jq)
+    if command -v jq &> /dev/null; then
+      UPDATED_WORKFLOW=$(echo "$WORKFLOW_JSON" | jq --arg id "$EXISTING_ID" --argjson existing "$EXISTING_WORKFLOW" \
+        '.id = $id | .active = ($existing.data.active // false)')
+    else
+      # Если jq нет, просто используем исходный JSON
+      UPDATED_WORKFLOW="$WORKFLOW_JSON"
+    fi
     
     RESPONSE=$(curl -s -X PUT "$N8N_HOST/workflows/$EXISTING_ID" \
       -H "X-N8N-API-KEY: $N8N_API_KEY" \
@@ -126,13 +131,17 @@ for WORKFLOW_FILE in "${WORKFLOWS[@]}"; do
       -H "Content-Type: application/json")
     
     UPDATED=false
-    UPDATED_NODES=$(echo "$CURRENT_WORKFLOW" | jq --arg cred_id "$POSTGRES_CRED_ID" \
-      '.data.nodes |= map(
-        if .credentials.postgres then 
-          .credentials.postgres.id = $cred_id | . 
-        else . 
-        end
-      )')
+    if command -v jq &> /dev/null; then
+      UPDATED_NODES=$(echo "$CURRENT_WORKFLOW" | jq --arg cred_id "$POSTGRES_CRED_ID" \
+        '.data.nodes |= map(
+          if .credentials.postgres then 
+            .credentials.postgres.id = $cred_id | . 
+          else . 
+          end
+        )')
+    else
+      UPDATED_NODES="$CURRENT_WORKFLOW"
+    fi
     
     if echo "$UPDATED_NODES" | grep -q "\"id\":\"$POSTGRES_CRED_ID\""; then
       curl -s -X PUT "$N8N_HOST/workflows/$WORKFLOW_ID" \

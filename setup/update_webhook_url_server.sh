@@ -31,7 +31,7 @@ echo ""
 echo "3. Обновляем docker-compose.yml..."
 
 # Создаем резервную копию
-cp "$COMPOSE_FILE" "${COMPOSE_FILE}.backup.$(date +%Y%m%d_%H%M%S)""
+cp "$COMPOSE_FILE" "${COMPOSE_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
 
 # Заменяем старое значение на новое
 sed -i 's|WEBHOOK_URL=https://geodrive\.netlify\.app/|WEBHOOK_URL=https://webhook.rentflow.rentals/|g' "$COMPOSE_FILE"
