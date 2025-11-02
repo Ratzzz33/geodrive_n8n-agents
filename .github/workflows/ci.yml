@@ -3,8 +3,34 @@ name: CI
 on:
   push:
     branches: [ master, main ]
+    paths-ignore:
+      # Игнорировать документацию
+      - '**.md'
+      - 'docs/**'
+      
+      # Игнорировать отчеты
+      - 'IMPROVEMENTS_COMPLETE.md'
+      - 'FINAL_*.md'
+      - 'SESSION_*.md'
+      - 'WEBHOOK_*.md'
+      - 'MCP_*.md'
+      - '*_COMPLETE.md'
+      - '*_REPORT*.md'
+      - '*_GUIDE.md'
+      - 'CLEANUP_*.md'
+      
+      # Игнорировать workflow файлы (чтобы избежать рекурсии)
+      - '.github/workflows/*.yml'
+      
+      # Игнорировать другие документы
+      - '*.txt'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.cursorignore'
+      
   pull_request:
     branches: [ master, main ]
+    
   workflow_dispatch:
     inputs:
       deploy:

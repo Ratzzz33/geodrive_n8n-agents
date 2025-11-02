@@ -3,6 +3,17 @@
 
 # Не используем set -e в начале, ошибки обрабатываются явно
 
+# Проверка наличия docker и docker compose
+if ! command -v docker &> /dev/null; then
+    echo "⚠️  SKIP: Docker не установлен, пропускаем тесты docker-compose"
+    exit 0
+fi
+
+if ! docker compose version &> /dev/null && ! docker-compose --version &> /dev/null; then
+    echo "⚠️  SKIP: Docker Compose не установлен, пропускаем тесты"
+    exit 0
+fi
+
 # Подготовка окружения для docker compose (создаем временный .env при необходимости)
 TEMP_ENV_FILE=""
 COMPOSE_ARGS=()
