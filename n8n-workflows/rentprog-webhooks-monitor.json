@@ -24,7 +24,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Полный парсинг и валидация формата вебхука с обработкой ошибок\r\ntry {\r\n  const body = $input.item.json.body || {};\r\n  const payloadStr = body.payload || '';\r\n  const rawEvent = body.event || body.type || 'unknown';\r\n\r\n  let rentprogId = 'unknown';\r\n  let isKnownFormat = false;\r\n  let parsedPayload = {};\r\n  let validationErrors = [];\r\n  let eventType = 'unknown';\r\n  let entityType = 'unknown';\r\n  let operation = 'unknown';\r\n  let parseError = false;\r\n  let errorMessage = '';\r\n\r\n  // ========== ШАГ 1: Парсинг payload ==========\r\n  try {\r\n    if (typeof payloadStr === 'string' && payloadStr.length > 0) {\r\n      try {\r\n        parsedPayload = JSON.parse(payloadStr);\r\n      } catch (e) {\r\n        // Пробуем Ruby hash формат\r\n        try {\r\n          let jsonStr = payloadStr\r\n            .replace(/=>/g, ':')\r\n            .replace(/([{, ])([a-zA-Z_][a-zA-Z0-9_]*):/g, '$1\"$2\":')\r\n            .replace(/nil/g, 'null')\r\n            .replace(/\\\\s+/g, ' ');\r\n          parsedPayload = JSON.parse(jsonStr);\r\n        } catch (e2) {\r\n          validationErrors.push('Не удалось распарсить payload: ' + e2.message);\r\n        }\r\n      }\r\n    } else if (typeof payloadStr === 'object' && payloadStr !== null) {\r\n      parsedPayload = payloadStr;\r\n    }\r\n  } catch (e) {\r\n    validationErrors.push('Ошибка обработки payload: ' + e.message);\r\n  }\r\n\r\n  // ========== ШАГ 2: Извлечение rentprog_id ==========\r\n  if (parsedPayload && Object.keys(parsedPayload).length > 0) {\r\n    if (parsedPayload.id !== undefined && parsedPayload.id !== null) {\r\n      rentprogId = String(parsedPayload.id);\r\n    } else if (typeof payloadStr === 'string') {\r\n      // Пробуем regex если не распарсилось\r\n      const idMatch = payloadStr.match(/[\"']?id[\"']?\\\\s*=>\\\\s*(\\\\d+)/i);\r\n      if (idMatch) {\r\n        rentprogId = idMatch[1];\r\n      } else {\r\n        validationErrors.push('Не найден ID в payload');\r\n      }\r\n    } else {\r\n      validationErrors.push('Не найден ID в payload');\r\n    }\r\n  } else {\r\n    validationErrors.push('Payload пуст или не распарсен');\r\n  }\r\n\r\n  // ========== ШАГ 3: Определение типа события ==========\r\n  // Все известные типы событий\r\n  const knownEventTypes = [\r\n    'booking_update', 'booking_create', 'booking_delete',\r\n    'car_update', 'car_create', 'car_delete',\r\n    'client_update', 'client_create', 'client_delete'\r\n  ];\r\n\r\n  const eventLower = rawEvent.toLowerCase().replace(/[._]/g, '');\r\n  if (knownEventTypes.includes(rawEvent)) {\r\n    eventType = rawEvent;\r\n  } else {\r\n    // Проверяем варианты: car_update, carupdate, car.update\r\n    const matchedType = knownEventTypes.find(t => {\r\n      const tLower = t.replace(/[._]/g, '');\r\n      return eventLower.includes(tLower) || tLower.includes(eventLower);\r\n    });\r\n    if (matchedType) {\r\n      eventType = matchedType;\r\n    } else {\r\n      validationErrors.push(`Неизвестный тип события: ${rawEvent}`);\r\n    }\r\n  }\r\n\r\n  // ========== ШАГ 4: Определение типа сущности и операции ==========\r\n  if (eventType.startsWith('car') || eventType.includes('car') || eventType.includes('автомоб')) {\r\n    entityType = 'car';\r\n  } else if (eventType.startsWith('booking') || eventType.includes('booking') || eventType.includes('бронир')) {\r\n    entityType = 'booking';\r\n  } else if (eventType.startsWith('client') || eventType.includes('client') || eventType.includes('клиент')) {\r\n    entityType = 'client';\r\n  } else if (eventType !== 'unknown') {\r\n    validationErrors.push(`Не удалось определить тип сущности для события: ${eventType}`);\r\n  }\r\n\r\n  // Определяем операцию (update/create/delete)\r\n  if (eventType.includes('update')) {\r\n    operation = 'update';\r\n  } else if (eventType.includes('create')) {\r\n    operation = 'create';\r\n  } else if (eventType.includes('delete')) {\r\n    operation = 'delete';\r\n  } else if (eventType !== 'unknown') {\r\n    validationErrors.push(`Не удалось определить операцию для события: ${eventType}`);\r\n  }\r\n\r\n  // ========== ШАГ 5: Валидация обязательных полей ==========\r\n  if (entityType !== 'unknown' && rentprogId === 'unknown') {\r\n    validationErrors.push(`Отсутствует обязательное поле id для ${entityType}`);\r\n  }\r\n\r\n  // ========== ИТОГОВАЯ ПРОВЕРКА ==========\r\n  // Формат известен, если все проверки пройдены\r\n  // ВАЖНО: Если есть validationErrors или любое поле = 'unknown', формат НЕИЗВЕСТЕН\r\n  if (\r\n    Object.keys(parsedPayload).length > 0 &&\r\n    rentprogId !== 'unknown' &&\r\n    eventType !== 'unknown' &&\r\n    entityType !== 'unknown' &&\r\n    operation !== 'unknown' &&\r\n    validationErrors.length === 0\r\n  ) {\r\n    isKnownFormat = true;\r\n  } else {\r\n    // Явно устанавливаем false для всех неизвестных форматов\r\n    isKnownFormat = false;\r\n  }\r\n\r\n  return {\r\n    json: {\r\n      ...$input.item.json,\r\n      rentprogId: rentprogId,\r\n      eventType: eventType,\r\n      entityType: entityType,\r\n      operation: operation,\r\n      companyId: parsedPayload.company_id || null,\r\n      isKnownFormat: isKnownFormat,\r\n      parsedPayload: parsedPayload,\r\n      validationErrors: validationErrors,\r\n      rawEvent: rawEvent,\r\n      parseError: parseError,\r\n      errorMessage: errorMessage\r\n    }\r\n  };\r\n} catch (error) {\r\n  // Критическая ошибка парсинга - возвращаем структуру с ошибкой\r\n  const body = $input.item.json.body || {};\r\n  const rawEvent = body.event || body.type || 'unknown';\r\n  \r\n  return {\r\n    json: {\r\n      ...$input.item.json,\r\n      rentprogId: 'unknown',\r\n      eventType: 'unknown',\r\n      entityType: 'unknown',\r\n      operation: 'unknown',\r\n      companyId: null,\r\n      isKnownFormat: false,\r\n      parsedPayload: {},\r\n      validationErrors: ['Критическая ошибка парсинга: ' + (error.message || String(error))],\r\n      rawEvent: rawEvent,\r\n      parseError: true,\r\n      errorMessage: error.message || String(error),\r\n      errorStack: error.stack || ''\r\n    }\r\n  };\r\n}\r\n\r\n"
+        "jsCode": "// Полный парсинг и валидация формата вебхука с обработкой ошибок\r\nconst crypto = require('crypto');\r\n\r\ntry {\r\n  const body = $input.item.json.body || {};\r\n  const headers = $input.item.json.headers || {};\r\n  const payloadStr = body.payload || '';\r\n  const rawEvent = body.event || body.type || 'unknown';\r\n\r\n  // Генерация request_id\r\n  const requestId = headers['x-request-id'] || headers['x-webhook-id'] || headers['x-event-id'] || \r\n                    (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString());\r\n\r\n  let rentprogId = 'unknown';\r\n  let isKnownFormat = false;\r\n  let parsedPayload = {};\r\n  let validationErrors = [];\r\n  let eventType = 'unknown';\r\n  let entityType = 'unknown';\r\n  let operation = 'unknown';\r\n  let parseError = false;\r\n  let errorMessage = '';\r\n  let eventHash = '';\r\n\r\n  // ========== ШАГ 0: Генерация event_hash для дедупликации ==========\r\n  try {\r\n    const hashData = JSON.stringify({\r\n      'x-webhook-id': headers['x-webhook-id'] || '',\r\n      'x-event-id': headers['x-event-id'] || '',\r\n      'x-delivery-id': headers['x-delivery-id'] || '',\r\n      timestamp: headers['x-timestamp'] || headers['timestamp'] || '',\r\n      payload: payloadStr || ''\r\n    });\r\n    eventHash = crypto.createHash('sha256').update(hashData).digest('hex');\r\n  } catch (e) {\r\n    // Если не удалось создать hash, используем fallback\r\n    eventHash = crypto.createHash('sha256')\r\n      .update((payloadStr || '') + (rawEvent || '') + Date.now())\r\n      .digest('hex');\r\n  }\r\n\r\n  // ========== ШАГ 1: Парсинг payload ==========\r\n  try {\r\n    if (typeof payloadStr === 'string' && payloadStr.length > 0) {\r\n      try {\r\n        parsedPayload = JSON.parse(payloadStr);\r\n      } catch (e) {\r\n        // Пробуем Ruby hash формат\r\n        try {\r\n          let jsonStr = payloadStr\r\n            .replace(/=>/g, ':')\r\n            .replace(/([{, ])([a-zA-Z_][a-zA-Z0-9_]*):/g, '$1\"$2\":')\r\n            .replace(/nil/g, 'null')\r\n            .replace(/\\\\s+/g, ' ');\r\n          parsedPayload = JSON.parse(jsonStr);\r\n        } catch (e2) {\r\n          validationErrors.push('Не удалось распарсить payload: ' + e2.message);\r\n        }\r\n      }\r\n    } else if (typeof payloadStr === 'object' && payloadStr !== null) {\r\n      parsedPayload = payloadStr;\r\n    }\r\n  } catch (e) {\r\n    validationErrors.push('Ошибка обработки payload: ' + e.message);\r\n  }\r\n\r\n  // ========== ШАГ 2: Извлечение rentprog_id ==========\r\n  if (parsedPayload && Object.keys(parsedPayload).length > 0) {\r\n    if (parsedPayload.id !== undefined && parsedPayload.id !== null) {\r\n      rentprogId = String(parsedPayload.id);\r\n    } else if (typeof payloadStr === 'string') {\r\n      // Пробуем regex если не распарсилось\r\n      const idMatch = payloadStr.match(/[\"']?id[\"']?\\\\s*=>\\\\s*(\\\\d+)/i);\r\n      if (idMatch) {\r\n        rentprogId = idMatch[1];\r\n      } else {\r\n        validationErrors.push('Не найден ID в payload');\r\n      }\r\n    } else {\r\n      validationErrors.push('Не найден ID в payload');\r\n    }\r\n  } else {\r\n    validationErrors.push('Payload пуст или не распарсен');\r\n  }\r\n\r\n  // ========== ШАГ 3: Определение типа события ==========\r\n  // Все известные типы событий\r\n  const knownEventTypes = [];  // Пусто - все вебхуки считаются неизвестными\r\n\r\n  const eventLower = rawEvent.toLowerCase().replace(/[._]/g, '');\r\n  if (knownEventTypes.includes(rawEvent)) {\r\n    eventType = rawEvent;\r\n  } else {\r\n    // Проверяем варианты: car_update, carupdate, car.update\r\n    const matchedType = knownEventTypes.find(t => {\r\n      const tLower = t.replace(/[._]/g, '');\r\n      return eventLower.includes(tLower) || tLower.includes(eventLower);\r\n    });\r\n    if (matchedType) {\r\n      eventType = matchedType;\r\n    } else {\r\n      validationErrors.push(`Неизвестный тип события: ${rawEvent}`);\r\n    }\r\n  }\r\n\r\n  // ========== ШАГ 4: Определение типа сущности и операции ==========\r\n  if (eventType.startsWith('car') || eventType.includes('car') || eventType.includes('автомоб')) {\r\n    entityType = 'car';\r\n  } else if (eventType.startsWith('booking') || eventType.includes('booking') || eventType.includes('бронир')) {\r\n    entityType = 'booking';\r\n  } else if (eventType.startsWith('client') || eventType.includes('client') || eventType.includes('клиент')) {\r\n    entityType = 'client';\r\n  } else if (eventType !== 'unknown') {\r\n    validationErrors.push(`Не удалось определить тип сущности для события: ${eventType}`);\r\n  }\r\n\r\n  // Определяем операцию (update/create/delete)\r\n  if (eventType.includes('update')) {\r\n    operation = 'update';\r\n  } else if (eventType.includes('create')) {\r\n    operation = 'create';\r\n  } else if (eventType.includes('delete')) {\r\n    operation = 'delete';\r\n  } else if (eventType !== 'unknown') {\r\n    validationErrors.push(`Не удалось определить операцию для события: ${eventType}`);\r\n  }\r\n\r\n  // ========== ШАГ 5: Валидация обязательных полей ==========\r\n  if (entityType !== 'unknown' && rentprogId === 'unknown') {\r\n    validationErrors.push(`Отсутствует обязательное поле id для ${entityType}`);\r\n  }\r\n\r\n  // ========== ИТОГОВАЯ ПРОВЕРКА ==========\r\n  // Формат известен, если все проверки пройдены\r\n  // ВАЖНО: Если есть validationErrors или любое поле = 'unknown', формат НЕИЗВЕСТЕН\r\n  if (\r\n    Object.keys(parsedPayload).length > 0 &&\r\n    rentprogId !== 'unknown' &&\r\n    eventType !== 'unknown' &&\r\n    entityType !== 'unknown' &&\r\n    operation !== 'unknown' &&\r\n    validationErrors.length === 0\r\n  ) {\r\n    isKnownFormat = true;\r\n  } else {\r\n    // Явно устанавливаем false для всех неизвестных форматов\r\n    isKnownFormat = false;\r\n  }\r\n\r\n  return {\r\n    json: {\r\n      ...$input.item.json,\r\n      requestId: requestId,\r\n      eventHash: eventHash,\r\n      rentprogId: rentprogId,\r\n      eventType: eventType,\r\n      entityType: entityType,\r\n      operation: operation,\r\n      companyId: parsedPayload.company_id || null,\r\n      isKnownFormat: isKnownFormat,\r\n      parsedPayload: parsedPayload,\r\n      validationErrors: validationErrors,\r\n      rawEvent: rawEvent,\r\n      parseError: parseError,\r\n      errorMessage: errorMessage\r\n    }\r\n  };\r\n} catch (error) {\r\n  // Критическая ошибка парсинга - возвращаем структуру с ошибкой\r\n  const body = $input.item.json.body || {};\r\n  const headers = $input.item.json.headers || {};\r\n  const rawEvent = body.event || body.type || 'unknown';\r\n  \r\n  // Генерация event_hash даже при ошибке\r\n  let eventHash = '';\r\n  try {\r\n    const hashData = JSON.stringify({\r\n      'x-webhook-id': headers['x-webhook-id'] || '',\r\n      'x-event-id': headers['x-event-id'] || '',\r\n      timestamp: Date.now().toString(),\r\n      payload: JSON.stringify(body)\r\n    });\r\n    eventHash = crypto.createHash('sha256').update(hashData).digest('hex');\r\n  } catch {\r\n    eventHash = crypto.createHash('sha256')\r\n      .update((JSON.stringify(body) || '') + Date.now())\r\n      .digest('hex');\r\n  }\r\n  \r\n  return {\r\n    json: {\r\n      ...$input.item.json,\r\n      requestId: headers['x-request-id'] || Date.now().toString(),\r\n      eventHash: eventHash,\r\n      rentprogId: 'unknown',\r\n      eventType: 'unknown',\r\n      entityType: 'unknown',\r\n      operation: 'unknown',\r\n      companyId: null,\r\n      isKnownFormat: false,\r\n      parsedPayload: {},\r\n      validationErrors: ['Критическая ошибка парсинга: ' + (error.message || String(error))],\r\n      rawEvent: rawEvent,\r\n      parseError: true,\r\n      errorMessage: error.message || String(error),\r\n      errorStack: error.stack || ''\r\n    }\r\n  };\r\n}\r\n\r\n"
       },
       "id": "parse-validate-node",
       "name": "Parse & Validate Format",
@@ -227,6 +227,30 @@
     },
     {
       "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO webhook_error_log (ts, phase, kind, error, payload, meta, request_id, event_hash, company_id, event_type, rentprog_id)\nVALUES (NOW(), $1, $2, $3, $4::jsonb, $5::jsonb, NULLIF($6, ''), NULLIF($7, ''), $8, NULLIF($9, ''), NULLIF($10, ''))\nRETURNING id",
+        "options": {
+          "queryReplacement": "={{ $json.parseError ? 'parse' : ($json.errorMessage ? 'sync' : ($json.validationErrors && $json.validationErrors.length > 0 ? 'validation' : 'unknown')) }},={{ $json.parseError ? 'error' : ($json.validationErrors && $json.validationErrors.length > 0 ? 'warn' : 'info') }},={{ $json.errorMessage || ($json.validationErrors && $json.validationErrors.length > 0 ? $json.validationErrors.join('; ') : 'Unknown error') }},={{ JSON.stringify($json.body || {}) }},={{ JSON.stringify({ validationErrors: $json.validationErrors || [], errorStack: $json.errorStack || '', rawEvent: $json.rawEvent || '' }) }},={{ $json.requestId || '' }},={{ $json.eventHash || '' }},={{ $json.companyId || null }},={{ $json.rawEvent || 'unknown' }},={{ $json.rentprogId || 'unknown' }}"
+        }
+      },
+      "id": "log-error-node",
+      "name": "Log Error to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        650,
+        700
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
         "assignments": {
           "assignments": [
             {
@@ -259,12 +283,24 @@
               "value": "={{ $json.parseError ? ('Критическая ошибка парсинга: ' + ($json.errorMessage || 'Unknown error')) : ($json.validationErrors && $json.validationErrors.length > 0 ? $json.validationErrors.join('; ') : ($json.body && $json.body.error ? $json.body.error : ($json.body && $json.body.reason ? $json.body.reason : 'ok'))) }}",
               "type": "stringValue"
             },
-            {
-              "id": "processed",
-              "name": "processed",
-              "value": "={{ $json.parseError ? false : false }}",
-              "type": "booleanValue"
-            }
+              {
+                "id": "processed",
+                "name": "processed",
+                "value": "={{ $json.parseError ? false : false }}",
+                "type": "booleanValue"
+              },
+              {
+                "id": "event_hash",
+                "name": "event_hash",
+                "value": "={{ $json.eventHash || '' }}",
+                "type": "stringValue"
+              },
+              {
+                "id": "request_id",
+                "name": "request_id",
+                "value": "={{ $json.requestId || '' }}",
+                "type": "stringValue"
+              }
           ]
         },
         "options": {
@@ -283,10 +319,10 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO events (ts, company_id, type, rentprog_id, ok, reason, processed)\nVALUES (NOW(), $1, $2, $3, $4, $5, $6)\nON CONFLICT (company_id, type, rentprog_id) DO NOTHING\nRETURNING id",
-        "options": {
-          "queryReplacement": "={{ $json.company_id }},={{ $json.type }},={{ $json.rentprog_id }},={{ $json.ok }},={{ $json.reason }},={{ $json.processed }}"
-        }
+          "query": "INSERT INTO events (ts, company_id, type, rentprog_id, ok, reason, processed, event_hash)\nVALUES (NOW(), $1, $2, $3, $4, $5, $6, NULLIF($7, ''))\nON CONFLICT (company_id, type, rentprog_id) DO NOTHING\nRETURNING id",
+          "options": {
+            "queryReplacement": "={{ $json.company_id }},={{ $json.type }},={{ $json.rentprog_id }},={{ $json.ok }},={{ $json.reason }},={{ $json.processed }},={{ $json.event_hash || '' }}"
+          }
       },
       "id": "data-table-node",
       "name": "Save Event",
@@ -303,22 +339,6 @@
         }
       }
     },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { \"ok\": true, \"received\": true, \"processed\": $json.processed || false } }}",
-        "options": {}
-      },
-      "id": "respond-node",
-      "name": "Respond",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [
-        1850,
-        400
-      ],
-      "onError": "continueRegularOutput"
-    }
   ],
   "connections": {
     "Webhook": {
@@ -392,7 +412,7 @@
       "error": [
         [
           {
-            "node": "Alert: Parse Error",
+            "node": "Log Error to DB",
             "type": "main",
             "index": 0
           }
@@ -430,7 +450,7 @@
       "error": [
         [
           {
-            "node": "Alert: Parse Error",
+            "node": "Log Error to DB",
             "type": "main",
             "index": 0
           }
@@ -452,7 +472,7 @@
       "main": [
         [
           {
-            "node": "Set Query Params",
+            "node": "Log Error to DB",
             "type": "main",
             "index": 0
           }
@@ -472,13 +492,24 @@
     },
     "Save Event": {
       "main": [
+        []
+      ],
+      "error": [
         [
           {
-            "node": "Respond",
+            "node": "Log Error to DB",
             "type": "main",
             "index": 0
           }
         ]
+      ]
+    },
+    "Log Error to DB": {
+      "main": [
+        []
+      ],
+      "error": [
+        []
       ]
     }
   },
