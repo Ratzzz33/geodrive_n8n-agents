@@ -29,10 +29,10 @@
 | `N8N_WEBHOOK_URL` | Системная | ✅ Да | `https://webhook.rentflow.rentals` | Альтернативный webhook URL |
 | `WEBHOOK_TEST_URL` | Системная | ✅ Да | `https://webhook-test.rentflow.rentals` | URL для тестовых webhook |
 | **n8n Host настройки** |||||
-| `N8N_HOST` | Системная | ✅ Да | `46.224.17.15` | IP адрес сервера n8n |
+| `N8N_HOST` | Системная | ✅ Да | `n8n.rentflow.rentals` | Домен n8n |
 | `N8N_PORT` | Системная | ✅ Да | `5678` | Порт n8n |
-| `N8N_PROTOCOL` | Системная | ✅ Да | `http` | Протокол (http/https) |
-| `N8N_EDITOR_BASE_URL` | Системная | ✅ Да | `http://46.224.17.15:5678` | Базовый URL редактора |
+| `N8N_PROTOCOL` | Системная | ✅ Да | `https` | Протокол (http/https) |
+| `N8N_EDITOR_BASE_URL` | Системная | ✅ Да | `https://n8n.rentflow.rentals` | Базовый URL редактора |
 | **Безопасность** |||||
 | `N8N_ENCRYPTION_KEY` | Системная | ✅ Да | (автоматически) | Ключ шифрования данных |
 | **База данных** |||||
@@ -45,7 +45,7 @@
 | `RENTPROG_HEALTH_URL` | Пользовательская | ⚠️ Рекомендуется | `http://46.224.17.15:3000/rentprog/health` | URL для health check RentProg |
 | `ORCHESTRATOR_URL` | Пользовательская | ⚠️ Рекомендуется | `http://46.224.17.15:3000` | URL оркестратора |
 | `API_BASE_URL` | Пользовательская | ⚠️ Рекомендуется | `https://api.rentflow.rentals` | Базовый URL API |
-| `SYNC_STATUS_URL` | Пользовательская | ⚠️ Рекомендуется | `https://geodrive.netlify.app/api/sync/status` | URL для проверки статуса синхронизации |
+| `SYNC_STATUS_URL` | Пользовательская | ⚠️ Рекомендуется | `http://46.224.17.15:3000/sync/status` | URL для проверки статуса синхронизации |
 | **Интеграции** |||||
 | `TELEGRAM_ALERT_CHAT_ID` | Пользовательская | ❌ Нет | `-5004140602` | ID чата для алертов в Telegram |
 
@@ -228,6 +228,6 @@ environment:
 
 ---
 
-**Последнее обновление:** 2025-11-02  
-**Версия:** 1.0.0
+**Последнее обновление:** 2025-11-03  
+**Версия:** 1.0.1
 

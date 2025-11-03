@@ -10,10 +10,10 @@ system_variables:
   WEBHOOK_TEST_URL: https://webhook-test.rentflow.rentals
   
   # n8n Host настройки
-  N8N_HOST: 46.224.17.15
+  N8N_HOST: n8n.rentflow.rentals
   N8N_PORT: 5678
-  N8N_PROTOCOL: http
-  N8N_EDITOR_BASE_URL: http://46.224.17.15:5678
+  N8N_PROTOCOL: https
+  N8N_EDITOR_BASE_URL: https://n8n.rentflow.rentals
   
   # Шифрование
   N8N_ENCRYPTION_KEY: ''  # Задается автоматически при первом запуске
@@ -34,7 +34,7 @@ user_variables:
   RENTPROG_HEALTH_URL: http://46.224.17.15:3000/rentprog/health
   ORCHESTRATOR_URL: http://46.224.17.15:3000
   API_BASE_URL: https://api.rentflow.rentals
-  SYNC_STATUS_URL: https://geodrive.netlify.app/api/sync/status
+  SYNC_STATUS_URL: http://46.224.17.15:3000/sync/status
   
   # Telegram
   TELEGRAM_ALERT_CHAT_ID: '-5004140602'
@@ -49,9 +49,9 @@ user_variables:
 
 # Метаданные
 metadata:
-  last_updated: '2025-11-02'
+  last_updated: '2025-11-03'
   updated_by: 'cursor_agent'
-  version: '1.0.0'
+  version: '1.0.1'
   notes: |
     Этот файл является центральным источником правды для всех переменных окружения n8n.
     
