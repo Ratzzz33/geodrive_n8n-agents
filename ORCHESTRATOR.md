@@ -7,9 +7,9 @@
 ## Основные функции
 
 ### 1. Прием событий
-- Webhooks от внешних систем (RentProg, Umnico, Stripe)
+- HTTP вебхуки через Nginx → n8n (RentProg, Umnico, Stripe)
 - Сообщения в Telegram от сотрудников
-- Результаты периодических проверок (cron)
+- Результаты периодических проверок (n8n cron + внутренний scheduler)
 - Результаты браузерной автоматизации (Starline, Greenway)
 
 ### 2. Классификация
@@ -34,18 +34,22 @@
 
 ## Типы событий
 
-### События от RentProg (Webhooks → Нормализация → Оркестратор)
+### События от RentProg (Nginx → n8n → Jarvis API → Оркестратор)
 
-События приходят через Netlify Functions, нормализуются в `src/integrations/rentprog-webhook-parser.ts` и передаются в оркестратор:
+Поток обработки:
+1. RentProg отправляет webhook на `https://webhook.rentflow.rentals`
+2. Nginx проксирует запрос в n8n `RentProg Webhooks Monitor`
+3. Workflow парсит payload (Ruby hash → JSON), определяет `companyId`, `entityType`, `operation` и сохраняет запись в таблицу `events` (`processed=false`)
+4. Каждые 5 минут workflow `RentProg Upsert Processor` выбирает необработанные события и вызывает Jarvis API `/process-event`
+5. Jarvis API auto-fetch’ит полные данные из RentProg, выполняет upsert/архивацию, обновляет `events.processed=true` и эмитит нормализованное событие в оркестратор
 
-- `booking.issue.planned` - запланированная выдача авто
-- `booking.return.planned` - запланированная приемка авто
-- `booking.created` - новая бронь создана
-- `booking.updated` - изменение брони
-- `booking.issued` - выдача авто выполнена
-- `booking.returned` - приемка авто выполнена
-- `car.moved` - перемещение авто между филиалами
-- `cash.collected` - инкассация
+Поддерживаемые типы событий (после нормализации):
+- `booking.issue.planned`, `booking.return.planned`
+- `booking.created`, `booking.updated`, `booking.cancelled`
+- `booking.issued`, `booking.returned`
+- `car.updated`, `car.moved`
+- `client.updated`
+- `cash.collected` и другие финансовые события
 
 **Формат внутренних событий от RentProg:**
 
@@ -54,26 +58,21 @@
   type: 'booking.issue.planned' | 'booking.return.planned' | ...,
   timestamp: Date,
   source: 'rentprog',
+  operation: 'create' | 'update' | 'delete',
+  companyId: 9247 | 9248 | 9506 | 11163,
   payload: {
-    rentprog_id: number,        // ID из RentProg
-    branch: 'tbilisi' | 'batumi' | 'kutaisi' | 'service-center',
-    booking_id?: number,
-    car_id?: number,
-    client_id?: number,
-    raw_event?: string,           // Исходное название события
-    raw_action?: string,          // Исходное действие
-    // ... другие поля из payload вебхука
+    rentprogId: string,
+    entityType: 'booking' | 'car' | 'client',
+    data: Record<string, unknown>,
   }
 }
 ```
 
-**Обработка вебхуков:**
-1. Netlify Function получает вебхук: `/webhooks/rentprog/{branch}?t={secret}`
-2. Валидация токена/подписи
-3. Быстрый ACK (200 OK) ≤ 100ms
-4. Нормализация через `normalizeRentProgWebhook()`
-5. Асинхронный вызов `orchestrator.route(event)`
-6. Оркестратор маршрутизирует к соответствующим агентам
+**Ключевые особенности:**
+1. **Идемпотентность:** `events` имеет `UNIQUE (company_id, type, rentprog_id)` и флаг `processed`
+2. **Уточнение филиала:** используется `companyId → branch` из `src/config/company-branch-mapping.ts`
+3. **Операция:** `operation` помогает агентам различать upsert/архивирование
+4. **Алерты:** неизвестные payload уходят в Telegram для обучения
 
 ### События от Umnico
 - `message.incoming` - сообщение от клиента
@@ -94,17 +93,17 @@
 ## Примеры маршрутизации
 
 ### Выдача авто (от RentProg webhook)
-1. Webhook от RentProg: `booking_update` с данными о приближающейся выдаче
-2. Нормализация: `normalizeRentProgWebhook()` → `booking.issue.planned`
-3. Событие передается в оркестратор: `orchestrator.route(event)`
+1. RentProg шлёт `booking_update` → n8n сохраняет в `events`
+2. Jarvis API `/process-event` выполняет auto-fetch, помечает `processed=true`, эмитит `booking.issue.planned`
+3. Оркестратор получает событие через `eventBus`
 4. Оркестратор вызывает:
    - Агент контролер броней (напоминание ответственному)
    - Агент помощник по выдаче (проверка готовности, чеклист)
 
 ### Приемка авто (от RentProg webhook)
-1. Webhook от RentProg: `booking_update` с данными о приближающейся приемке
-2. Нормализация: `normalizeRentProgWebhook()` → `booking.return.planned`
-3. Событие передается в оркестратор: `orchestrator.route(event)`
+1. RentProg шлёт `booking_update` → n8n сохраняет в `events`
+2. Jarvis API `/process-event` выполняет auto-fetch, эмитит `booking.return.planned`
+3. Оркестратор получает событие через `eventBus`
 4. Оркестратор вызывает:
    - Агент контролер броней (напоминание ответственному)
    - Агент помощник по приемке (ожидание материалов, проверка чеклиста)

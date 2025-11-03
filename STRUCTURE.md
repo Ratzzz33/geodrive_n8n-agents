@@ -3,30 +3,24 @@
 ## Интеграции с внешними системами
 
 ### RentProg v1
-- **API**: REST API с токенами (временные токены через ключи филиалов)
-- **Multi-branch**: Поддержка 4 филиалов (tbilisi, batumi, kutaisi, service-center)
-- **Аутентификация**: 
-  - Company token (постоянный ключ филиала) → Request token (временный, TTL ~240 сек)
-  - Автоматическое кэширование и обновление токенов
-  - Backoff на 401/429 ошибки
+- **API**: REST API с временными токенами (company token → request token, TTL ≈ 240 сек)
+- **Multi-branch**: 4 филиала (`tbilisi`, `batumi`, `kutaisi`, `service-center`)
+- **Аутентификация**:
+  - `RENTPROG_BRANCH_KEYS` в n8n → `getBranchToken()` (кэш, автообновление)
+  - Retry + backoff для 401/429
 - **API функции**:
-  - `getBranchToken()` - получение токена для филиала
-  - `apiFetch()` - выполнение запросов с retry и таймаутами
-  - `paginate()` - автоматическая пагинация (по 10-20 сущностей)
-  - `healthCheck()` - per-branch проверка доступности
-- **Webhooks**: 
-  - Netlify Functions на `https://geodrive.netlify.app/webhooks/rentprog/{branch}?t={secret}`
-  - Валидация: query токен (`?t=`) или HMAC подпись (`X-Rentprog-Signature`)
-  - Быстрый ACK (200 OK) и асинхронная обработка через оркестратор
-  - Нормализация событий: `booking.issue.planned`, `booking.return.planned`, `car.moved`, и др.
-- **Ограничения**: Пагинация по 10-20 сущностей, требуется итеративная загрузка
-- **База знаний**: `rp_capture` (PostgreSQL на localhost:5434)
-  - `rp_pages` - снимки страниц с HTML и текстом
-  - `rp_api_calls` - перехваченные API вызовы
-  - `rp_entities` - извлеченные сущности
-  - `rp_docs` и `rp_doc_chunks` - документы и чанки для эмбеддингов
-- **Подключение**: `postgresql://rp_user:rp_pass_123@127.0.0.1:5434/rp_capture`
-- **pgAdmin**: http://localhost:5052 (admin@local / admin123)
+  - `apiFetch()` — обёртка с таймаутами и логированием
+  - `paginate()` — автоматическая выгрузка по 10–20 сущностей
+  - `healthCheck()` — per-branch проверка (используется workflow `Health & Status`)
+- **Webhooks**:
+  - Единый адрес: `https://webhook.rentflow.rentals`
+  - Nginx → n8n `RentProg Webhooks Monitor` → таблица `events` (`processed=false`)
+  - Cron workflow `RentProg Upsert Processor` вызывает Jarvis API `/process-event`
+  - Авто-fetch данных из RentProg + upsert/архивирование (operation: `create/update/delete`)
+  - Telegram alert для неизвестных форматов (ручное обучение)
+- **Ограничения RentProg**: пагинация, rate limit 60 GET/мин, company_id вместо branch в payload
+- **База знаний**: `rp_capture` (PostgreSQL на localhost:5434) — используется агентом-инструктором/LLM
+  - `rp_pages`, `rp_api_calls`, `rp_entities`, `rp_docs`, `rp_doc_chunks`
 - **Документация**: [docs/RENTPROG_COMPLETE_GUIDE.md](./docs/RENTPROG_COMPLETE_GUIDE.md)
 
 ### Umnico
@@ -66,7 +60,7 @@
 
 Система использует **наши UUID как первичные ключи**, а внешние ID хранятся как ссылки в `external_refs`.
 
-#### Базовые таблицы
+#### Базовые таблицы (core)
 
 **branches** - Филиалы
 - `id` (UUID PK)
@@ -98,6 +92,31 @@
 - `start_at`, `end_at`, `status`
 - `created_at`, `updated_at`
 
+#### Таблицы мониторинга событий
+
+**events**
+- `id BIGSERIAL PK`
+- `ts TIMESTAMPTZ DEFAULT now()`
+- `company_id INTEGER` — идентификатор филиала из RentProg
+- `type TEXT` — нормализованный тип события
+- `rentprog_id TEXT` (в `payload` → хранится в `ext_id` для дедупликации)
+- `ok BOOLEAN DEFAULT TRUE`
+- `reason TEXT`
+- `processed BOOLEAN DEFAULT FALSE`
+- `UNIQUE (company_id, type, rentprog_id)`
+- Индексы: `idx_events_processed`, `idx_events_company_id`
+
+**sync_runs**
+- Лог загрузок snapshot’ов (`branch`, `entity`, `page`, `added`, `updated`, `ok`, `msg`)
+
+**health**
+- Результаты health-check (периодический workflow)
+- Поля: `branch`, `ok`, `reason`, `ts`
+
+**webhook_dedup**
+- `source`, `dedup_hash`, `received_at`
+- Используется для дедупликации нестандартных источников (Umnico и др.)
+
 #### Внешние ссылки (external_refs)
 
 Универсальная таблица для связи наших UUID с внешними системами:
@@ -114,13 +133,6 @@
 **Индексы:**
 - `UNIQUE(system, external_id)` - уникальность по системе и внешнему ID
 - Индексы на `(entity_type, entity_id)`, `(system, external_id)`
-
-#### Дедупликация вебхуков (webhook_dedup)
-
-- `id` (BIGSERIAL PK)
-- `source` (text) - источник: `'rentprog'|'umnico'|...`
-- `dedup_hash` (text, unique) - SHA256 hash для дедупликации
-- `received_at` (timestamptz)
 
 ### Пример работы с external_refs
 
@@ -186,4 +198,7 @@ cars/{car_id}/damages/{damage_id}/{photos}
 - **Работа**: Полный-полный бак
 - **Эскалация**: По иерархии (сотрудник → руководитель филиала → руководитель подразделения → директор)
 - **SLA ответов**: Настраиваемые пороги по каналам
+- **Конфигурация**: Источник правды `config/n8n-variables.yaml` → синхронизация с `docker-compose.yml` и сервером
+- **Дедупликация**: `events` + `webhook_dedup` обеспечивают идемпотентность, повторная обработка проходит через `processed=false`
+- **Мониторинг**: n8n workflows + Telegram-алерты, переход к Grafana/Prometheus в Q2 2026 (см. roadmap)
 
