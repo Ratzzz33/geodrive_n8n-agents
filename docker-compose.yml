@@ -37,18 +37,24 @@ services:
       - N8N_SECURE_COOKIE=false
       - NODE_ENV=production
       
-      # Настройки выполнения (максимальные возможности, без ограничений)
+      # Настройки выполнения (оптимизировано для параллельной работы вебхуков)
       - EXECUTIONS_PROCESS=main
       - EXECUTIONS_MODE=regular
-      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
-      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
-      - EXECUTIONS_DATA_MAX_AGE=168  # Сохранять выполнения 7 дней (168 часов)
+      # ВАЖНО: Сохраняем только структуру данных (schema), а не полное содержимое
+      # Это значительно снижает использование памяти при большом количестве вебхуков
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=schema  # Только структура для ошибок
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=schema  # Только структура для успешных выполнений
+      - EXECUTIONS_DATA_MAX_AGE=24  # Сохранять выполнения только 24 часа (было 168)
       - EXECUTIONS_DATA_PRUNE=true   # Автоматическая очистка старых выполнений
+      - EXECUTIONS_DATA_PRUNE_MAX_COUNT=100  # Максимум 100 выполнений в истории
       
       # Убрать ограничения на количество выполнений и workflow
       # В Community Edition нет лимитов, но настраиваем для максимальной производительности
       - EXECUTIONS_TIMEOUT=3600  # Таймаут выполнения 1 час
       - EXECUTIONS_TIMEOUT_MAX=7200  # Максимальный таймаут 2 часа
+      
+      # Оптимизация памяти Node.js для работы с большим количеством вебхуков
+      - NODE_OPTIONS=--max-old-space-size=3584  # 3.5GB heap для Node.js (из 4GB доступной памяти)
       
       # Настройки производительности и мониторинга
       - N8N_METRICS=true
@@ -98,13 +104,13 @@ services:
       - n8n_data:/home/node/.n8n
     networks:
       - n8n-network
-    # Ресурсы для максимальной производительности
+    # Ресурсы для бесперебойной параллельной работы вебхуков
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 4G  # Увеличено с 2G до 4G для параллельной обработки вебхуков
         reservations:
-          memory: 512M
+          memory: 1G  # Увеличено с 512M до 1G
 
 volumes:
   n8n_data:
