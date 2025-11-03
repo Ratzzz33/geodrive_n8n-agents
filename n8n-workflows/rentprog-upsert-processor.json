@@ -3,78 +3,28 @@
   "nodes": [
     {
       "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "minutes",
-              "minutesInterval": 5
-            }
-          ]
-        }
-      },
-      "id": "cron-node",
-      "name": "Cron",
-      "type": "n8n-nodes-base.cron",
-      "typeVersion": 1,
-      "position": [250, 300]
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT id, ts, branch, type, ext_id, ok, reason FROM events WHERE ok = true AND processed = false ORDER BY ts ASC LIMIT 50",
+        "httpMethod": "POST",
+        "path": "upsert-processor",
+        "responseMode": "responseNode",
         "options": {}
       },
-      "id": "get-events-node",
-      "name": "Get Unprocessed Events",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2,
-      "position": [450, 300],
-      "credentials": {
-        "postgres": {
-          "id": "postgres-credentials",
-          "name": "PostgreSQL"
-        }
-      }
+      "id": "webhook-trigger-node",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "rentprog-upsert-processor"
     },
     {
       "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "// Определение типа сущности и подготовка данных для upsert\nconst eventType = $input.item.json.type || '';\nconst extId = $input.item.json.ext_id || '';\nconst branch = $input.item.json.branch || 'unknown';\nconst eventId = $input.item.json.id;\n\nlet entityType = 'unknown';\nlet needsUpsert = false;\n\n// Определяем тип сущности по типу события\nif (eventType.includes('car') || eventType.includes('vehicle') || eventType.includes('auto')) {\n  entityType = 'car';\n  needsUpsert = true;\n} else if (eventType.includes('client') || eventType.includes('customer')) {\n  entityType = 'client';\n  needsUpsert = true;\n} else if (eventType.includes('booking') || eventType.includes('order') || eventType.includes('rent')) {\n  entityType = 'booking';\n  needsUpsert = true;\n}\n\nreturn {\n  json: {\n    eventId: eventId,\n    branch: branch,\n    type: eventType,\n    ext_id: extId,\n    entityType: entityType,\n    needsUpsert: needsUpsert,\n    originalEvent: $input.item.json\n  }\n};"
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Подготовка данных для upsert из webhook\nconst body = $input.all()[0].json.body || $input.all()[0].json;\n\nconst rentprogId = body.rentprog_id || body.rentprogId || '';\nconst eventType = body.event || body.type || '';\nconst branch = body.branch || 'unknown';\nconst entityType = body.entity_type || body.entityType || 'unknown';\n\n// Определяем тип сущности если не передан\nlet finalEntityType = entityType;\nif (entityType === 'unknown' && eventType) {\n  if (eventType.includes('car') || eventType.includes('vehicle') || eventType.includes('auto')) {\n    finalEntityType = 'car';\n  } else if (eventType.includes('client') || eventType.includes('customer')) {\n    finalEntityType = 'client';\n  } else if (eventType.includes('booking') || eventType.includes('order') || eventType.includes('rent')) {\n    finalEntityType = 'booking';\n  }\n}\n\nreturn {\n  json: {\n    rentprog_id: rentprogId,\n    type: eventType,\n    branch: branch,\n    entityType: finalEntityType\n  }\n};"
       },
-      "id": "determine-entity-node",
-      "name": "Determine Entity Type",
+      "id": "prepare-data-node",
+      "name": "Prepare Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [650, 300]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "needs-upsert",
-              "leftValue": "={{ $json.needsUpsert }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "if-needs-upsert-node",
-      "name": "If Needs Upsert",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [850, 300]
+      "position": [450, 300]
     },
     {
       "parameters": {
@@ -92,12 +42,8 @@
               "value": "={{ $json.type }}"
             },
             {
-              "name": "ext_id",
-              "value": "={{ $json.ext_id }}"
-            },
-            {
-              "name": "eventId",
-              "value": "={{ $json.eventId }}"
+              "name": "rentprog_id",
+              "value": "={{ $json.rentprog_id }}"
             }
           ]
         },
@@ -113,50 +59,54 @@
       "name": "Process Event via Jarvis",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1050, 200]
+      "position": [650, 300],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE events SET processed = true WHERE id = $1",
-        "additionalFields": {
-          "queryParameters": "={{ [$('Get Unprocessed Events').item.json.id] }}"
-        },
-        "options": {}
+        "query": "UPDATE events SET processed = true WHERE branch = $1 AND type = $2 AND rentprog_id = $3",
+        "options": {
+          "queryReplacement": "={{ $('Prepare Data').item.json.branch }},={{ $('Prepare Data').item.json.type }},={{ $('Prepare Data').item.json.rentprog_id }}"
+        }
       },
       "id": "mark-processed-node",
       "name": "Mark Event as Processed",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2,
-      "position": [1650, 200],
+      "position": [850, 300],
       "credentials": {
         "postgres": {
           "id": "postgres-credentials",
           "name": "PostgreSQL"
         }
       }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"processed\": $('Process Event via Jarvis').item.json.ok || false } }}",
+        "options": {}
+      },
+      "id": "respond-node",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 300]
     }
   ],
   "connections": {
-    "Cron": {
-      "main": [[{ "node": "Get Unprocessed Events", "type": "main", "index": 0 }]]
+    "Webhook Trigger": {
+      "main": [[{ "node": "Prepare Data", "type": "main", "index": 0 }]]
     },
-    "Get Unprocessed Events": {
-      "main": [[{ "node": "Determine Entity Type", "type": "main", "index": 0 }]]
-    },
-    "Determine Entity Type": {
-      "main": [[{ "node": "If Needs Upsert", "type": "main", "index": 0 }]]
-    },
-    "If Needs Upsert": {
-      "main": [
-        [
-          { "node": "Fetch Full Data from RentProg", "type": "main", "index": 0 }
-        ],
-        []
-      ]
+    "Prepare Data": {
+      "main": [[{ "node": "Process Event via Jarvis", "type": "main", "index": 0 }]]
     },
     "Process Event via Jarvis": {
       "main": [[{ "node": "Mark Event as Processed", "type": "main", "index": 0 }]]
+    },
+    "Mark Event as Processed": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
     }
   },
   "pinData": {},
@@ -169,4 +119,3 @@
   "updatedAt": "2025-01-15T00:00:00.000Z",
   "versionId": "1"
 }
-

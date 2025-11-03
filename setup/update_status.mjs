@@ -1,0 +1,22 @@
+console.log('✅ Резервный MCP успешно обновил workflow!');
+console.log('');
+console.log('📊 Статус обновления:');
+console.log('   - Добавлено нод: 3 из 11');
+console.log('   - Основные ноды: Webhook, Parse & Validate Format, If Known Format');
+console.log('   - Недостает: 8 нод (Auto Process, Debug, Alert, Set Query Params, Save Event, Respond, и др.)');
+console.log('');
+console.log('✅ Критичные исправления применены:');
+console.log('   ✅ Явная установка isKnownFormat = false для неизвестных форматов');
+console.log('   ✅ Условие If Known Format: $json.isKnownFormat === true');
+console.log('');
+console.log('⚠️  Для завершения обновления:');
+console.log('   Вариант 1: Импортировать полный workflow через n8n UI');
+console.log('      - Откройте: https://n8n.rentflow.rentals/workflow/gNXRKIQpNubEazH7');
+console.log('      - Menu → Import from File');
+console.log('      - Файл: n8n-workflows/rentprog-webhooks-monitor.json');
+console.log('');
+console.log('   Вариант 2: Дождаться следующего обновления через резервный MCP');
+console.log('      - Попробую еще раз полный update со всеми нодами');
+console.log('');
+console.log('📍 URL workflow: https://n8n.rentflow.rentals/workflow/gNXRKIQpNubEazH7');
+

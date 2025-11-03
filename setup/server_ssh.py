@@ -9,7 +9,7 @@ import sys
 import os
 import paramiko
 import time
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 # Настройки сервера
 SERVER_IP = "46.224.17.15"

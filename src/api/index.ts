@@ -76,16 +76,159 @@ export function initApiServer(port: number = 3000): void {
     }
   });
 
+  // Endpoint для обработки известных вебхуков из n8n (быстрая обработка)
+  app.post('/process-webhook', async (req, res) => {
+    try {
+      const { normalizeRentProgWebhook } = await import('../integrations/rentprog-webhook-parser');
+      const { handleRentProgEvent } = await import('../orchestrator/rentprog-handler');
+      const { quickUpdateEntity } = await import('./quick-update');
+      
+      const { event, payload, rentprog_id, company_id, entity_type, operation } = req.body;
+      
+      if (!event || !rentprog_id) {
+        res.status(400).json({ ok: false, error: 'Missing required fields: event, rentprog_id' });
+        return;
+      }
+      
+      // Парсинг payload если строка
+      let parsedPayload = payload;
+      if (typeof payload === 'string') {
+        try {
+          parsedPayload = JSON.parse(payload);
+        } catch (e) {
+          res.status(400).json({ ok: false, error: 'Invalid payload format' });
+          return;
+        }
+      }
+      
+      // Нормализация вебхука
+      const systemEvent = normalizeRentProgWebhook({
+        event: event,
+        id: rentprog_id,
+        payload: parsedPayload,
+      });
+      
+      if (!systemEvent) {
+        res.status(400).json({ ok: false, error: 'Could not normalize webhook' });
+        return;
+      }
+      
+      // Проверка существования сущности
+      const { resolveByExternalRef } = await import('../db/upsert');
+      const existingEntityId = await resolveByExternalRef('rentprog', rentprog_id);
+      
+      // Обработка в зависимости от операции
+      if (operation === 'delete') {
+        // DELETE - архивация сущности
+        if (existingEntityId) {
+          const { archiveEntity } = await import('../db/archive');
+          await archiveEntity(entity_type, existingEntityId);
+          
+          res.json({ 
+            ok: true, 
+            processed: true,
+            archived: true,
+            entityId: existingEntityId
+          });
+        } else {
+          // Сущности нет, нечего архивировать
+          res.json({ 
+            ok: true, 
+            processed: true,
+            archived: false,
+            message: 'Entity not found'
+          });
+        }
+      } else if (operation === 'create') {
+        // CREATE - всегда создаем полную запись из payload
+        // Отправляем на полный upsert через Upsert Processor
+        res.json({ 
+          ok: true, 
+          processed: false,
+          needsUpsert: true,
+          rentprog_id: rentprog_id,
+          event: event,
+          company_id: company_id,
+          entity_type: entity_type
+        });
+      } else if (operation === 'update') {
+        // UPDATE - проверяем существование
+        if (existingEntityId) {
+          // Быстрый update только измененных полей из вебхука
+          const updateResult = await quickUpdateEntity(
+            entity_type || systemEvent.type.split('.')[0],
+            existingEntityId,
+            parsedPayload,
+            systemEvent.type
+          );
+          
+          res.json({ 
+            ok: true, 
+            processed: true,
+            updated: true,
+            entityId: existingEntityId,
+            changes: updateResult.changes
+          });
+        } else {
+          // Сущности нет - нужно делать полный upsert через Upsert Processor
+          // Возвращаем needsUpsert=true, чтобы workflow запустил Upsert Processor
+          res.json({ 
+            ok: true, 
+            processed: false,
+            needsUpsert: true,
+            rentprog_id: rentprog_id,
+            event: event,
+            company_id: company_id,
+            entity_type: entity_type
+          });
+        }
+      } else {
+        // Неизвестная операция - обрабатываем как update (backward compatibility)
+        if (existingEntityId) {
+          const updateResult = await quickUpdateEntity(
+            entity_type || systemEvent.type.split('.')[0],
+            existingEntityId,
+            parsedPayload,
+            systemEvent.type
+          );
+          
+          res.json({ 
+            ok: true, 
+            processed: true,
+            updated: true,
+            entityId: existingEntityId,
+            changes: updateResult.changes
+          });
+        } else {
+          res.json({ 
+            ok: true, 
+            processed: false,
+            needsUpsert: true,
+            rentprog_id: rentprog_id,
+            event: event,
+            company_id: company_id,
+            entity_type: entity_type
+          });
+        }
+      }
+    } catch (error) {
+      logger.error('Process webhook error:', error);
+      res.status(500).json({ ok: false, error: 'Internal server error' });
+    }
+  });
+
   // Endpoint для обработки событий из n8n (upsert processor)
   app.post('/process-event', async (req, res) => {
     try {
       const { normalizeRentProgWebhook } = await import('../integrations/rentprog-webhook-parser');
       const { handleRentProgEvent } = await import('../orchestrator/rentprog-handler');
       
-      const { type, ext_id, eventId } = req.body;
+      const { type, rentprog_id, eventId } = req.body;
+      // Поддержка старого формата ext_id для обратной совместимости
+      const ext_id = req.body.rentprog_id || req.body.ext_id;
       
       if (!type || !ext_id) {
-        res.status(400).json({ ok: false, error: 'Missing required fields: type, ext_id' });
+        res.status(400).json({ ok: false, error: 'Missing required fields: type, rentprog_id' });
         return;
       }
       

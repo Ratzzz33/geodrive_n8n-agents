@@ -21,7 +21,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.RENTPROG_HEALTH_URL || 'https://geodrive.netlify.app/.netlify/functions/rentprog-health' }}",
+        "url": "={{ $env.RENTPROG_HEALTH_URL || 'http://46.224.17.15:3000/rentprog/health' }}",
         "options": {}
       },
       "id": "http-node",
