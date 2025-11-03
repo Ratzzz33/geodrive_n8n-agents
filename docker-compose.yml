@@ -13,15 +13,23 @@ services:
       - N8N_HOST=${N8N_HOST:-n8n.rentflow.rentals}
       - N8N_PORT=5678
       - N8N_PROTOCOL=https
-      - WEBHOOK_URL=https://webhook.rentflow.rentals/
+      - N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL:-https://n8n.rentflow.rentals}
+      - WEBHOOK_URL=https://webhook.rentflow.rentals
       
       # Подключение к базе данных Neon PostgreSQL
       - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=${NEON_HOST}
+      - POSTGRES_HOST=${POSTGRES_HOST:-ep-rough-heart-ahnybmq0-pooler.c-3.us-east-1.aws.neon.tech}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-neondb}
+      - POSTGRES_USER=${POSTGRES_USER:-neondb_owner}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-npg_cHIT9Kxfk1Am}
+      - POSTGRES_NON_ROOT_USER=${POSTGRES_NON_ROOT_USER:-neondb_owner}
+      - POSTGRES_NON_ROOT_PASSWORD=${POSTGRES_NON_ROOT_PASSWORD:-npg_cHIT9Kxfk1Am}
+      - DB_POSTGRESDB_HOST=${NEON_HOST:-ep-rough-heart-ahnybmq0-pooler.c-3.us-east-1.aws.neon.tech}
       - DB_POSTGRESDB_PORT=${NEON_PORT:-5432}
-      - DB_POSTGRESDB_DATABASE=${NEON_DATABASE}
-      - DB_POSTGRESDB_USER=${NEON_USER}
-      - DB_POSTGRESDB_PASSWORD=${NEON_PASSWORD}
+      - DB_POSTGRESDB_DATABASE=${NEON_DATABASE:-neondb}
+      - DB_POSTGRESDB_USER=${NEON_USER:-neondb_owner}
+      - DB_POSTGRESDB_PASSWORD=${NEON_PASSWORD:-npg_cHIT9Kxfk1Am}
       - DB_POSTGRESDB_SSL_ENABLED=true
       - DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false
       
@@ -69,15 +77,17 @@ services:
       - N8N_SECURITY_AUDIT_ENABLED=false
       
       # Webhook настройки (без ограничений)
-      - WEBHOOK_URL=${WEBHOOK_URL:-https://webhook.rentflow.rentals/}
-      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-https://webhook.rentflow.rentals/}
-      - WEBHOOK_TEST_URL=${WEBHOOK_TEST_URL:-https://webhook-test.rentflow.rentals/}
+      - WEBHOOK_URL=${WEBHOOK_URL:-https://webhook.rentflow.rentals}
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-https://webhook.rentflow.rentals}
+      - WEBHOOK_TEST_URL=${WEBHOOK_TEST_URL:-https://webhook-test.rentflow.rentals}
       
       # Пользовательские переменные для использования в workflow через $env
       # Эти переменные доступны в workflow как {{ $env.VARIABLE_NAME }}
       - RENTPROG_HEALTH_URL=http://46.224.17.15:3000/rentprog/health
       - TELEGRAM_ALERT_CHAT_ID=-5004140602
-      - API_BASE_URL=${API_BASE_URL:-https://api.example.com}
+      - API_BASE_URL=${API_BASE_URL:-https://api.rentflow.rentals}
+      - ORCHESTRATOR_URL=${ORCHESTRATOR_URL:-http://46.224.17.15:3000}
+      - SYNC_STATUS_URL=${SYNC_STATUS_URL:-http://46.224.17.15:3000/sync/status}
       # Примеры дополнительных переменных (раскомментируйте при необходимости):
       # - RENTPROG_BASE_URL=https://api.rentprog.example
       # - ENABLE_ALERTS=true
