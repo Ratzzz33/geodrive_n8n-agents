@@ -312,10 +312,11 @@ https://geodrive.netlify.app/webhook/rentprog-webhook
 4. Настроить алерты при длительных ошибках
 
 ### В будущем (по roadmap)
-- IP whitelist для RentProg
-- HSTS в Nginx
-- Rate limiting
-- Grafana + Prometheus мониторинг
+- Запустить Jarvis API как сервис и подтвердить автообработку событий (RentProg → n8n → БД)
+- Боевые тесты вебхуков после настройки в RentProg (проверка `processed = true`)
+- Настроить постоянный мониторинг/алерты в n8n + Telegram
+- IP whitelist и HSTS в Nginx, rate limiting
+- Grafana + Prometheus для метрик вебхуков и n8n dashboards
 
 ---
 
