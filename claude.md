@@ -459,7 +459,7 @@ $wf=[ordered]@{name="Test";nodes=@();connections=@{};settings=@{executionOrder="
 
 **Последнее обновление:** 2025-11-02  
 **Проверено и работает:** ✅  
-**Используемая версия n8n:** 1.x (https://n8n.rentflow.rentals)
+**Используемая версия n8n:** 1.117.3 (https://n8n.rentflow.rentals)
 
 ---
 
