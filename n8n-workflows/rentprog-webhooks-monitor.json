@@ -339,6 +339,22 @@
         }
       }
     },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"received\": true, \"timestamp\": $now.toISO() } }}",
+        "options": {}
+      },
+      "id": "respond-node",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        450,
+        550
+      ],
+      "webhookId": "rentprog-webhook-monitor"
+    },
   ],
   "connections": {
     "Webhook": {
@@ -346,6 +362,11 @@
         [
           {
             "node": "Parse & Validate Format",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond to Webhook",
             "type": "main",
             "index": 0
           }
@@ -509,6 +530,11 @@
         []
       ],
       "error": [
+        []
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
         []
       ]
     }
