@@ -158,3 +158,63 @@ await axios.post(config.n8nEventsUrl, {
 }).catch(err => logger.error('Failed to send sync progress', err));
 ```
 
+---
+
+## 🆕 Service Center Webhook Handler (добавлен 2025-11-04)
+
+**Файл:** `service-center-webhook.json`
+
+**Описание:**
+Специальный обработчик вебхуков от филиала service-center с расширенной диагностикой и логированием.
+
+**Endpoint:** `https://n8n.rentflow.rentals/webhook/service-center-webhook`
+
+**Функции:**
+- ✅ Логирование всех входящих вебхуков с timestamp и request_id
+- ✅ Сохранение в таблицу `webhook_log` для анализа
+- ✅ Форвардинг в основной процессор (`rentprog-webhook`)
+- ✅ Telegram алерты при ошибках
+- ✅ Детальное логирование headers и payload
+- ✅ Всегда возвращает 200 OK для RentProg
+
+**Таблица `webhook_log`:**
+```sql
+CREATE TABLE IF NOT EXISTS webhook_log (
+  id SERIAL PRIMARY KEY,
+  ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  branch TEXT NOT NULL,
+  event TEXT NOT NULL,
+  payload JSONB NOT NULL,
+  headers JSONB,
+  request_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_webhook_log_ts ON webhook_log(ts DESC);
+CREATE INDEX idx_webhook_log_branch ON webhook_log(branch);
+CREATE INDEX idx_webhook_log_request_id ON webhook_log(request_id);
+CREATE INDEX idx_webhook_log_event ON webhook_log(event);
+```
+
+**Миграция:** `/workspace/migrations/create_webhook_log.sql`
+
+**Credentials:**
+- PostgreSQL (для сохранения в БД)
+- Telegram Bot API (для алертов)
+
+**Документация:** [SERVICE_CENTER_WEBHOOK_SETUP.md](./SERVICE_CENTER_WEBHOOK_SETUP.md)
+
+**Мониторинг:**
+```bash
+# Статистика
+/workspace/scripts/monitor-webhooks.sh --stats
+
+# Реальное время
+/workspace/scripts/monitor-webhooks.sh service-center
+
+# Анализ проблем
+/workspace/scripts/analyze-webhook-issues.sh
+```
+
+**Быстрый старт:** [QUICKSTART_WEBHOOK_FIX.md](../QUICKSTART_WEBHOOK_FIX.md)
+

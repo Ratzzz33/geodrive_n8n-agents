@@ -1,0 +1,189 @@
+{
+  "name": "Service Center Webhook Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "service-center-webhook",
+        "responseMode": "responseNode",
+        "options": {
+          "productionUrl": "https://n8n.rentflow.rentals"
+        }
+      },
+      "id": "service-center-webhook-node",
+      "name": "Service Center Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "service-center-webhook-handler"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Логирование входящего вебхука от service-center\nconst body = $input.item.json.body || {};\nconst headers = $input.item.json.headers || {};\nconst query = $input.item.json.query || {};\n\nconst timestamp = new Date().toISOString();\nconst requestId = headers['x-request-id'] || headers['x-webhook-id'] || Date.now().toString();\n\nconsole.log(`[${timestamp}] Service-Center webhook received:`, {\n  requestId,\n  event: body.event || 'unknown',\n  hasPayload: !!body.payload,\n  headers: Object.keys(headers)\n});\n\nreturn {\n  json: {\n    ...body,\n    timestamp,\n    requestId,\n    branch: 'service-center',\n    headers,\n    query\n  }\n};"
+      },
+      "id": "log-webhook-node",
+      "name": "Log Webhook",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO webhook_log (ts, branch, event, payload, headers, request_id) VALUES (NOW(), 'service-center', $1, $2::jsonb, $3::jsonb, $4) RETURNING id",
+        "options": {
+          "queryReplacement": "={{ $json.event || 'unknown' }},={{ JSON.stringify($json) }},={{ JSON.stringify($json.headers || {}) }},={{ $json.requestId }}"
+        }
+      },
+      "id": "save-to-db-node",
+      "name": "Save to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [650, 300],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/rentprog-webhook",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 5000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "forward-to-processor-node",
+      "name": "Forward to Main Processor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [850, 300],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"requestId\": $json.requestId, \"timestamp\": $json.timestamp, \"message\": \"Service-center webhook received and forwarded\" } }}"
+      },
+      "id": "response-node",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID || '-5004140602' }}",
+        "text": "⚠️ Service-Center webhook ERROR\n\nВремя: {{ $now.toISO() }}\nRequest ID: {{ $('Log Webhook').item.json.requestId }}\nEvent: {{ $('Log Webhook').item.json.event || 'unknown' }}\n\nError node: {{ $json.node }}\nError: {{ $json.message }}\n\nPayload:\n{{ JSON.stringify($('Log Webhook').item.json, null, 2) }}"
+      },
+      "id": "error-alert-node",
+      "name": "Alert on Error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [650, 500],
+      "credentials": {
+        "telegramApi": {
+          "id": "1tKryXxL5Gq395nN",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Service Center Webhook": {
+      "main": [
+        [
+          {
+            "node": "Log Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Webhook": {
+      "main": [
+        [
+          {
+            "node": "Save to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to DB": {
+      "main": [
+        [
+          {
+            "node": "Forward to Main Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Alert on Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Forward to Main Processor": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Alert on Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert on Error": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["service-center", "webhook", "diagnostics"],
+  "triggerCount": 0,
+  "updatedAt": "2025-11-04T14:00:00.000Z",
+  "versionId": "1"
+}
