@@ -1,0 +1,300 @@
+{
+  "name": "Company Cash Register Parser",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "branch",
+              "value": "tbilisi"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "branch-tbilisi",
+      "name": "Branch: Tbilisi",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [460, 180]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "branch",
+              "value": "batumi"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "branch-batumi",
+      "name": "Branch: Batumi",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "branch",
+              "value": "kutaisi"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "branch-kutaisi",
+      "name": "Branch: Kutaisi",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [460, 420]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "branch",
+              "value": "service-center"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "branch-service",
+      "name": "Branch: Service Center",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [460, 540]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3001/scrape-company-cash",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"branch\": $json.branch } }}",
+        "options": {}
+      },
+      "id": "scrape-cash",
+      "name": "Scrape Company Cash (Playwright)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO payments (\n  branch_code,\n  payment_date,\n  employee_name,\n  payment_type,\n  payment_method,\n  amount,\n  currency,\n  comment,\n  raw_data\n)\nVALUES (\n  '{{ $json.branch }}',\n  '{{ $json.paymentDate }}',\n  '{{ $json.employeeName }}',\n  '{{ $json.paymentType }}',\n  '{{ $json.paymentMethod }}',\n  {{ $json.amount }},\n  '{{ $json.currency }}',\n  '{{ $json.comment }}',\n  '{{ JSON.stringify($json.rawData) }}'\n)\nON CONFLICT DO NOTHING\nRETURNING id",
+        "options": {}
+      },
+      "id": "insert-payment",
+      "name": "Insert Payment",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [900, 300],
+      "credentials": {
+        "postgres": {
+          "id": "neon-postgres-id",
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "inserted-check",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-inserted",
+      "name": "If Inserted",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "=💰 **Новый платеж в кассе**\n\n📍 Филиал: {{ $('Branch: Tbilisi').item.json.branch }}\n👤 Сотрудник: {{ $json.employeeName }}\n💵 Сумма: {{ $json.amount }} {{ $json.currency }}\n📝 Тип: {{ $json.paymentType }}\n💳 Метод: {{ $json.paymentMethod }}\n📄 Комментарий: {{ $json.comment }}\n⏰ Дата: {{ $json.paymentDate }}",
+        "additionalFields": {}
+      },
+      "id": "send-alert",
+      "name": "Send Payment Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1340, 180],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-id",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "no-new-payments",
+      "name": "No New Payments",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1340, 420]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Branch: Tbilisi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Branch: Batumi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Branch: Kutaisi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Branch: Service Center",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch: Tbilisi": {
+      "main": [
+        [
+          {
+            "node": "Scrape Company Cash (Playwright)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch: Batumi": {
+      "main": [
+        [
+          {
+            "node": "Scrape Company Cash (Playwright)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch: Kutaisi": {
+      "main": [
+        [
+          {
+            "node": "Scrape Company Cash (Playwright)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch: Service Center": {
+      "main": [
+        [
+          {
+            "node": "Scrape Company Cash (Playwright)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Company Cash (Playwright)": {
+      "main": [
+        [
+          {
+            "node": "Insert Payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Payment": {
+      "main": [
+        [
+          {
+            "node": "If Inserted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Inserted": {
+      "main": [
+        [
+          {
+            "node": "Send Payment Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No New Payments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+
