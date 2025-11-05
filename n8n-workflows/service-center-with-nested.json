@@ -1,0 +1,1012 @@
+{
+  "updatedAt": "2025-11-04T19:04:20.067Z",
+  "createdAt": "2025-11-04T07:04:20.721Z",
+  "id": "PbDKuU06H7s2Oem8",
+  "name": "Service Center Processor",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "service-center-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook (Service Center)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        400
+      ],
+      "webhookId": "service-center-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Парсинг вебхука от RentProg\nconst body = $input.item.json.body || $input.item.json;\n\n// Извлекаем event и payload\nconst eventName = body.event || 'unknown';\nlet payloadStr = body.payload || '{}';\nlet parsedPayload = {};\n\n// Парсим payload (может быть Ruby hash или JSON)\ntry {\n  if (typeof payloadStr === 'string') {\n    // Пробуем JSON\n    try {\n      parsedPayload = JSON.parse(payloadStr);\n    } catch {\n      // Конвертируем Ruby hash → JSON\n      let jsonStr = payloadStr\n        .replace(/=>/g, ':')\n        .replace(/([{, ])([a-zA-Z_][a-zA-Z0-9_]*):/g, '$1\"$2\":')\n        .replace(/nil/g, 'null');\n      parsedPayload = JSON.parse(jsonStr);\n    }\n  } else {\n    parsedPayload = payloadStr;\n  }\n} catch (e) {\n  parsedPayload = { error: 'Failed to parse payload', raw: payloadStr };\n}\n\n// Определяем entity_type и operation\nlet entityType = 'unknown';\nlet operation = 'unknown';\n\nif (eventName.includes('car')) entityType = 'car';\nelse if (eventName.includes('client')) entityType = 'client';\nelse if (eventName.includes('booking')) entityType = 'booking';\n\nif (eventName.includes('create')) operation = 'create';\nelse if (eventName.includes('update')) operation = 'update';\nelse if (eventName.includes('destroy')) operation = 'destroy';\n\n// Извлекаем rentprog_id\nconst rentprogId = parsedPayload.id ? String(parsedPayload.id) : 'unknown';\n\n// Генерируем event_hash (простая детерминированная строка)\nconst eventHash = `service-center_${eventName}_${rentprogId}_${body?.payload?.updated_at || body?.payload?.id || Date.now()}`;\n\nreturn {\n  json: {\n    event_name: eventName,\n    entity_type: entityType,\n    operation: operation,\n    rentprog_id: rentprogId,\n    company_id: 11163,\n    payload: parsedPayload,\n    metadata: {\n      source: 'webhook',\n      branch: 'service-center',\n      received_at: new Date().toISOString()\n    },\n    event_hash: eventHash\n  }\n};"
+      },
+      "id": "parse-webhook",
+      "name": "Parse Webhook",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO events (\n  event_name,\n  entity_type,\n  operation,\n  rentprog_id,\n  company_id,\n  type,\n  payload,\n  metadata,\n  event_hash,\n  processed\n)\nVALUES (\n  $1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, false\n)\nON CONFLICT (company_id, type, rentprog_id) \nDO UPDATE SET\n  event_name = EXCLUDED.event_name,\n  payload = EXCLUDED.payload,\n  metadata = EXCLUDED.metadata\nRETURNING *;",
+        "options": {
+          "queryReplacement": "={{ $json.event_name }},={{ $json.entity_type }},={{ $json.operation }},={{ $json.rentprog_id }},={{ $json.company_id }},={{ $json.operation }},={{ JSON.stringify($json.payload) }},={{ JSON.stringify($json.metadata) }},={{ $json.event_hash }}"
+        }
+      },
+      "id": "save-to-events",
+      "name": "Save to Events",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        640,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Передаем данные из Parse Webhook дальше\nconst parsed = $('Parse Webhook').first().json;\nreturn { json: parsed };"
+      },
+      "id": "pass-data",
+      "name": "Pass Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "create",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "create"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "update"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "destroy",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "destroy"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "switch-operation",
+      "name": "Switch by Operation",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        1040,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Подготовка данных для INSERT\nconst entityType = $json.entity_type;\nconst payload = $json.payload;\nconst rentprogId = $json.rentprog_id;\n\n// Определяем таблицу\nconst tableMap = {\n  'car': 'cars',\n  'client': 'clients',\n  'booking': 'bookings'\n};\n\nconst tableName = tableMap[entityType];\n\nif (!tableName) {\n  throw new Error(`Unknown entity_type: ${entityType}`);\n}\n\nreturn {\n  json: {\n    table_name: tableName,\n    rentprog_id: rentprogId,\n    company_id: 11163,\n    data: payload,\n    payload_json: JSON.stringify(payload)\n  }\n};"
+      },
+      "id": "prepare-create",
+      "name": "Prepare Create",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Динамический upsert с автосозданием колонок\nSELECT * FROM dynamic_upsert_entity(\n  $1::TEXT,  -- table_name\n  $2::TEXT,  -- rentprog_id  \n  $3::JSONB  -- data\n);",
+        "options": {
+          "queryReplacement": "={{ $json.table_name }},={{ $json.rentprog_id }},={{ $json.payload_json }}"
+        }
+      },
+      "id": "insert-entity",
+      "name": "Insert Entity",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1440,
+        -16
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Проверяем существование записи и всегда возвращаем результат\nSELECT \n  COALESCE(\n    (SELECT entity_id FROM external_refs WHERE system = 'rentprog' AND external_id = $1 LIMIT 1),\n    NULL\n  ) as entity_id,\n  EXISTS(SELECT 1 FROM external_refs WHERE system = 'rentprog' AND external_id = $1) as exists;",
+        "options": {
+          "queryReplacement": "={{ $json.rentprog_id }}"
+        }
+      },
+      "id": "check-exists",
+      "name": "Check Exists",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1248,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "exists-check",
+              "leftValue": "={{ $json.exists }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-exists",
+      "name": "If Exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Извлекаем последние значения из массивов [old, new]\nconst payload = $('Pass Data').first().json.payload;\nconst updates = {};\n\nfor (const [key, value] of Object.entries(payload)) {\n  if (Array.isArray(value) && value.length === 2) {\n    // Берём последнее значение\n    updates[key] = value[1];\n  } else if (key !== 'id') {\n    updates[key] = value;\n  }\n}\n\nconst entityId = $json.entity_id;\n\nreturn {\n  json: {\n    entity_id: entityId,\n    updates: updates,\n    updates_json: JSON.stringify(updates)\n  }\n};"
+      },
+      "id": "prepare-update",
+      "name": "Prepare Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1648,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Обновляем данные в external_refs\nUPDATE external_refs\nSET\n  data = data || $1::jsonb,\n  updated_at = NOW()\nWHERE entity_id = $2\nRETURNING entity_id;",
+        "options": {
+          "queryReplacement": "={{ $json.updates_json }},={{ $json.entity_id }}"
+        }
+      },
+      "id": "update-entity",
+      "name": "Update Entity",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1840,
+        256
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем токен для RentProg API\nconst companyToken = '5y4j4gcs75o9n5s1e2vrxx4a'; // service-center\nconst baseUrl = 'https://rentprog.net/api/v1/public';\n\ntry {\n  const tokenResponse = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `${baseUrl}/get_token`,\n    qs: { company_token: companyToken },\n    json: true,\n    timeout: 10000\n  });\n  \n  const requestToken = tokenResponse?.token;\n  \n  if (!requestToken) {\n    throw new Error('Failed to get token');\n  }\n  \n  const data = $('Pass Data').first().json;\n  \n  return {\n    json: {\n      request_token: requestToken,\n      entity_type: data.entity_type,\n      rentprog_id: data.rentprog_id,\n      payload: data.payload\n    }\n  };\n} catch (error) {\n  throw new Error(`Token error: ${error.message}`);\n}"
+      },
+      "id": "get-token",
+      "name": "Get RentProg Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.entity_type }}",
+                    "rightValue": "car",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "car"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.entity_type }}",
+                    "rightValue": "client",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "client"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.entity_type }}",
+                    "rightValue": "booking",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "booking"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "switch-entity",
+      "name": "Switch by Entity",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        1760,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://rentprog.net/api/v1/public/search_cars",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.rentprog_id }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.request_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-car",
+      "name": "Fetch Car",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2048,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://rentprog.net/api/v1/public/search_clients",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.rentprog_id }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.request_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-client",
+      "name": "Fetch Client",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2064,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://rentprog.net/api/v1/public/search_bookings",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.rentprog_id }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.request_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-booking",
+      "name": "Fetch Booking",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2064,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Извлекаем первый результат из поиска\nconst results = Array.isArray($json) ? $json : [$json];\nconst found = results.find(item => item.id == $('Get RentProg Token').first().json.rentprog_id);\n\nif (!found) {\n  throw new Error('Entity not found in RentProg');\n}\n\nconst data = $('Get RentProg Token').first().json;\n\n// Определяем table_name\nconst tableMap = {\n  'car': 'cars',\n  'client': 'clients',\n  'booking': 'bookings'\n};\n\nconst tableName = tableMap[data.entity_type] || data.entity_type + 's';\n\nreturn {\n  json: {\n    entity_type: data.entity_type,\n    rentprog_id: data.rentprog_id,\n    table_name: tableName,\n    data: found,\n    data_json: JSON.stringify(found)\n  }\n};"
+      },
+      "id": "extract-result",
+      "name": "Extract Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Динамический upsert с автосозданием колонок\nSELECT * FROM dynamic_upsert_entity(\n  $1::TEXT,  -- table_name  \n  $2::TEXT,  -- rentprog_id\n  $3::JSONB  -- data\n);",
+        "options": {
+          "queryReplacement": "={{ $json.table_name }},={{ $json.rentprog_id }},={{ $json.data_json }}"
+        }
+      },
+      "id": "insert-fetched",
+      "name": "Insert Fetched Entity",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        2448,
+        512
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Помечаем запись как удалённую\nUPDATE external_refs\nSET\n  data = jsonb_set(\n    COALESCE(data, '{}'::jsonb),\n    '{_deleted}',\n    'true'::jsonb\n  ),\n  updated_at = NOW()\nWHERE system = 'rentprog'\n  AND external_id = $1\nRETURNING entity_id;",
+        "options": {
+          "queryReplacement": "={{ $json.rentprog_id }}"
+        }
+      },
+      "id": "mark-deleted",
+      "name": "Mark as Deleted",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1216,
+        896
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, operation: $json.operation || 'completed', entity_id: $json.entity_id || null } }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2640,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обрабатываем вложенные car и client\nconst data = $json.data || $json;\nconst entityType = $json.entity_type;\n\nif (entityType !== 'booking') {\n  return {\n    json: {\n      skip_nested: true,\n      booking_entity_id: $json.entity_id\n    }\n  };\n}\n\nconst carData = data.car;\nconst clientData = data.client;\n\nif (!carData || !clientData) {\n  throw new Error('Booking missing car or client');\n}\n\nreturn {\n  json: {\n    booking_entity_id: $json.entity_id,\n    car_rentprog_id: String(carData.id),\n    car_data_json: JSON.stringify(carData),\n    client_rentprog_id: String(clientData.id),\n    client_data_json: JSON.stringify(clientData)\n  }\n};"
+      },
+      "id": "process-nested",
+      "name": "Process Nested",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2656,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM dynamic_upsert_entity('cars'::TEXT, $1::TEXT, $2::JSONB);",
+        "options": {
+          "queryReplacement": "={{ $json.car_rentprog_id }},={{ $json.car_data_json }}"
+        }
+      },
+      "id": "upsert-car",
+      "name": "Upsert Car",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        2848,
+        512
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM dynamic_upsert_entity('clients'::TEXT, $1::TEXT, $2::JSONB);",
+        "options": {
+          "queryReplacement": "={{ $json.client_rentprog_id }},={{ $json.client_data_json }}"
+        }
+      },
+      "id": "upsert-client",
+      "name": "Upsert Client",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        3040,
+        512
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const carResult = $('Upsert Car').first().json;\nconst clientResult = $('Upsert Client').first().json;\nconst nestedData = $('Process Nested').first().json;\n\nreturn {\n  json: {\n    booking_entity_id: nestedData.booking_entity_id,\n    car_uuid: carResult.entity_id,\n    client_uuid: clientResult.entity_id\n  }\n};"
+      },
+      "id": "merge-uuids",
+      "name": "Merge UUIDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3232,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE bookings SET car_id=$1::UUID, client_id=$2::UUID, updated_at=NOW() WHERE id=$3::UUID RETURNING id;",
+        "options": {
+          "queryReplacement": "={{ $json.car_uuid }},={{ $json.client_uuid }},={{ $json.booking_entity_id }}"
+        }
+      },
+      "id": "update-fkeys",
+      "name": "Update FKeys",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        3424,
+        512
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook (Service Center)": {
+      "main": [
+        [
+          {
+            "node": "Parse Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Webhook": {
+      "main": [
+        [
+          {
+            "node": "Save to Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Events": {
+      "main": [
+        [
+          {
+            "node": "Pass Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pass Data": {
+      "main": [
+        [
+          {
+            "node": "Switch by Operation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch by Operation": {
+      "main": [
+        [
+          {
+            "node": "Prepare Create",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Exists",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark as Deleted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Create": {
+      "main": [
+        [
+          {
+            "node": "Insert Entity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Entity": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Exists": {
+      "main": [
+        [
+          {
+            "node": "If Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Exists": {
+      "main": [
+        [
+          {
+            "node": "Prepare Update",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get RentProg Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Update": {
+      "main": [
+        [
+          {
+            "node": "Update Entity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Entity": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get RentProg Token": {
+      "main": [
+        [
+          {
+            "node": "Switch by Entity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch by Entity": {
+      "main": [
+        [
+          {
+            "node": "Fetch Car",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Client",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Car": {
+      "main": [
+        [
+          {
+            "node": "Extract Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Client": {
+      "main": [
+        [
+          {
+            "node": "Extract Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Booking": {
+      "main": [
+        [
+          {
+            "node": "Extract Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Result": {
+      "main": [
+        [
+          {
+            "node": "Insert Fetched Entity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Fetched Entity": {
+      "main": [
+        [
+          {
+            "node": "Process Nested",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark as Deleted": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Nested": {
+      "main": [
+        [
+          {
+            "node": "Upsert Car",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Car": {
+      "main": [
+        [
+          {
+            "node": "Upsert Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Client": {
+      "main": [
+        [
+          {
+            "node": "Merge UUIDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge UUIDs": {
+      "main": [
+        [
+          {
+            "node": "Update FKeys",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update FKeys": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "5884f130-d082-4619-aec6-36b61f2f04a1",
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2025-11-04T07:04:20.721Z",
+      "createdAt": "2025-11-04T07:04:20.721Z",
+      "role": "workflow:owner",
+      "workflowId": "PbDKuU06H7s2Oem8",
+      "projectId": "YeYimRJroeGbDN4w",
+      "project": {
+        "updatedAt": "2025-10-31T22:08:34.100Z",
+        "createdAt": "2025-10-31T21:59:17.618Z",
+        "id": "YeYimRJroeGbDN4w",
+        "name": "Aleksey Eliseev <33pokrov33@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-10-31T21:59:17.618Z",
+            "createdAt": "2025-10-31T21:59:17.618Z",
+            "userId": "7d62b373-201b-47f3-859a-cdc69ddea44a",
+            "projectId": "YeYimRJroeGbDN4w",
+            "user": {
+              "updatedAt": "2025-11-04T07:19:49.615Z",
+              "createdAt": "2025-10-31T21:58:30.097Z",
+              "id": "7d62b373-201b-47f3-859a-cdc69ddea44a",
+              "email": "33pokrov33@gmail.com",
+              "firstName": "Aleksey",
+              "lastName": "Eliseev",
+              "personalizationAnswers": {
+                "version": "v4",
+                "personalization_survey_submitted_at": "2025-10-31T22:14:18.419Z",
+                "personalization_survey_n8n_version": "1.117.3",
+                "companyIndustryExtended": [
+                  "physical-retail-or-services"
+                ],
+                "companySize": "<20",
+                "companyType": "other",
+                "role": "business-owner",
+                "reportedSource": "friend"
+              },
+              "settings": {
+                "userActivated": true,
+                "firstSuccessfulWorkflowId": "gNXRKIQpNubEazH7",
+                "userActivatedAt": 1762108796654
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2025-11-04",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": []
+}

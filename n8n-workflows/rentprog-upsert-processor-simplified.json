@@ -1,0 +1,252 @@
+{
+  "name": "RentProg Upsert Processor (Simplified)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "upsert-processor",
+        "responseMode": "responseNode",
+        "options": {},
+        "onError": "continueRegularOutput"
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        400
+      ],
+      "webhookId": "rentprog-upsert-processor"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "rentprog_id",
+              "name": "rentprog_id",
+              "value": "={{ $json.body.rentprog_id || $json.body.rentprogId || $json.rentprog_id || $json.rentprogId }}",
+              "type": "string"
+            },
+            {
+              "id": "entity_type",
+              "name": "entity_type",
+              "value": "={{ $json.body.entity_type || $json.body.entityType || $json.entity_type || $json.entityType }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "prepare-data",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        450,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Ищем сущность по всем филиалам\nconst branchKeys = {\n  \"tbilisi\": \"91b83b93963633649f29a04b612bab3f9fbb0471b5928622\",\n  \"batumi\": \"7ad345720f8d92f10c187122427c6a2c2bb9494c6bf14e8d\",\n  \"kutaisi\": \"5599ebb7b94827fdfd49ca3a5b7e259cfa99d8ea78edeb50\",\n  \"service-center\": \"5y4j4gcs75o9n5s1e2vrxx4a\"\n};\n\nconst baseUrl = 'https://rentprog.net/api/v1/public';\nconst rentprogId = $input.item.json.rentprog_id;\nconst entityType = $input.item.json.entity_type;\n\nconsole.log(`🔍 Поиск ${entityType} с ID ${rentprogId}`);\n\n// Мапинг типов на endpoints\nconst endpoints = {\n  'car': '/all_cars_full',\n  'client': '/all_clients',\n  'booking': '/search_bookings'\n};\n\nconst endpoint = endpoints[entityType];\nif (!endpoint) {\n  throw new Error(`Неизвестный тип сущности: ${entityType}`);\n}\n\n// Ищем по всем филиалам\nfor (const [branch, companyToken] of Object.entries(branchKeys)) {\n  try {\n    console.log(`  → Проверка филиала: ${branch}`);\n    \n    // Получаем токен\n    const tokenResponse = await this.helpers.httpRequest({\n      method: 'GET',\n      url: `${baseUrl}/get_token`,\n      qs: { company_token: companyToken },\n      json: true,\n      timeout: 10000\n    });\n    \n    const requestToken = tokenResponse?.token;\n    if (!requestToken) {\n      console.warn(`  ⚠️  Не удалось получить токен для ${branch}`);\n      continue;\n    }\n    \n    // Для bookings используем search с query параметром\n    let requestUrl = `${baseUrl}${endpoint}`;\n    let requestParams = {\n      method: 'GET',\n      url: requestUrl,\n      headers: { 'Authorization': `Bearer ${requestToken}` },\n      json: true,\n      timeout: 15000\n    };\n    \n    if (entityType === 'booking') {\n      // Для bookings: /search_bookings?query={id}\n      requestParams.qs = { query: rentprogId };\n      console.log(`  → URL: ${requestUrl}?query=${rentprogId}`);\n    } else {\n      console.log(`  → URL: ${requestUrl}`);\n    }\n    \n    // Загружаем сущности\n    const response = await this.helpers.httpRequest(requestParams);\n    \n    const items = Array.isArray(response) ? response : (response.data || []);\n    console.log(`  → Загружено: ${items.length} ${entityType}s`);\n    \n    // Ищем нужную сущность\n    const found = items.find(item => item.id == rentprogId);\n    \n    if (found) {\n      console.log(`  ✅ Найдено в ${branch}!`);\n      return [{\n        json: {\n          ok: true,\n          branch: branch,\n          entity_type: entityType,\n          rentprog_id: rentprogId,\n          data: found\n        }\n      }];\n    }\n    \n  } catch (error) {\n    console.error(`  ❌ Ошибка в ${branch}: ${error.message}`);\n  }\n}\n\n// Не найдено ни в одном филиале\nconsole.log('  ❌ Не найдено ни в одном филиале');\nreturn [{\n  json: {\n    ok: false,\n    error: 'Not found in any branch',\n    entity_type: entityType,\n    rentprog_id: rentprogId\n  }\n}];"
+      },
+      "id": "search-entity",
+      "name": "Search Entity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        650,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "found-check",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-found",
+      "name": "If Found",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        850,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO external_refs (entity_type, entity_id, system, external_id, created_at, updated_at)\\nSELECT $1, gen_random_uuid(), 'rentprog', $2, NOW(), NOW()\\nWHERE NOT EXISTS (\\n  SELECT 1 FROM external_refs WHERE system = 'rentprog' AND external_id = $2\\n)\\nON CONFLICT (system, external_id) DO UPDATE SET updated_at = NOW()\\nRETURNING entity_id",
+        "options": {
+          "queryReplacement": "={{ $json.entity_type }},={{ $json.rentprog_id }}"
+        }
+      },
+      "id": "save-data",
+      "name": "Save to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1050,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "{\"ok\":true}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "❌ Не удалось найти сущность ни в одном филиале!\\n\\nТип: {{ $json.entity_type }}\\nID: {{ $json.rentprog_id }}",
+        "operation": "sendMessage"
+      },
+      "id": "alert-not-found",
+      "name": "Alert Not Found",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        500
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1tKryXxL5Gq395nN",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\":false,\"error\":\"Not found in any branch\"}",
+        "options": {}
+      },
+      "id": "respond-not-found",
+      "name": "Respond Not Found",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        500
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [
+          {
+            "node": "Search Entity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Entity": {
+      "main": [
+        [
+          {
+            "node": "If Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Found": {
+      "main": [
+        [
+          {
+            "node": "Save to DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alert Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to DB": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Not Found": {
+      "main": [
+        [
+          {
+            "node": "Respond Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0
+}

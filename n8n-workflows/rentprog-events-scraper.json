@@ -1,0 +1,300 @@
+{
+  "name": "RentProg Events Scraper",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "branch1",
+              "name": "branch",
+              "value": "tbilisi",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-tbilisi",
+      "name": "Set Tbilisi",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [450, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "branch2",
+              "name": "branch",
+              "value": "batumi",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-batumi",
+      "name": "Set Batumi",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [450, 350]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "branch3",
+              "name": "branch",
+              "value": "kutaisi",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-kutaisi",
+      "name": "Set Kutaisi",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [450, 500]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "branch4",
+              "name": "branch",
+              "value": "service-center",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-service-center",
+      "name": "Set Service Center",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [450, 650]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Playwright script для парсинга страницы События\n// ВАЖНО: Нужны credentials (login/password) для каждого филиала\n\nconst branch = $input.item.json.branch;\n\n// TODO: Получить credentials из n8n Credentials\nconst credentials = {\n  tbilisi: { login: 'tbilisi_user', password: 'PASSWORD' },\n  batumi: { login: 'batumi_user', password: 'PASSWORD' },\n  kutaisi: { login: 'kutaisi_user', password: 'PASSWORD' },\n  'service-center': { login: 'service_user', password: 'PASSWORD' }\n};\n\nconst creds = credentials[branch];\n\n// Launch browser\nconst { chromium } = require('playwright');\nconst browser = await chromium.launch({ headless: true });\nconst page = await browser.newPage();\n\ntry {\n  // 1. Открыть страницу входа\n  await page.goto(`https://web.rentprog.ru/${branch}/login`);\n  \n  // 2. Авторизоваться\n  await page.fill('[name=\"email\"]', creds.login);\n  await page.fill('[name=\"password\"]', creds.password);\n  await page.click('button[type=\"submit\"]');\n  await page.waitForNavigation();\n  \n  // 3. Перейти на страницу События\n  await page.goto(`https://web.rentprog.ru/${branch}/events`);\n  await page.waitForLoadState('networkidle');\n  \n  // 4. Получить текущее время и 5 минут назад\n  const now = new Date();\n  const fiveMinutesAgo = new Date(now - 5 * 60 * 1000);\n  \n  // 5. Парсинг строк таблицы\n  const rows = await page.locator('table tbody tr').all();\n  const events = [];\n  \n  for (const row of rows) {\n    const dateText = await row.locator('td:nth-child(1)').textContent();\n    const descriptionText = await row.locator('td:nth-child(2)').textContent();\n    \n    // Парсинг даты: \"05 нояб. 25 18:46\"\n    const eventDate = parseDateFromRussian(dateText);\n    \n    // Только события за последние 5 минут\n    if (eventDate >= fiveMinutesAgo) {\n      events.push({\n        timestamp: eventDate.toISOString(),\n        rawDescription: descriptionText.trim(),\n        branch: branch\n      });\n    }\n  }\n  \n  await browser.close();\n  \n  return events;\n  \n} catch (error) {\n  await browser.close();\n  throw error;\n}\n\n// Helper: парсинг русской даты\nfunction parseDateFromRussian(dateStr) {\n  const monthMap = {\n    'янв': 0, 'февр': 1, 'мар': 2, 'апр': 3, 'май': 4, 'июн': 5,\n    'июл': 6, 'авг': 7, 'сент': 8, 'окт': 9, 'нояб': 10, 'дек': 11\n  };\n  \n  const match = dateStr.match(/(\\d{2})\\s+(\\w+)\\.\\s+(\\d{2})\\s+(\\d{2}):(\\d{2})/);\n  if (!match) return new Date();\n  \n  const [, day, monthRu, year, hour, minute] = match;\n  const month = monthMap[monthRu.toLowerCase()] ?? 0;\n  const fullYear = 2000 + parseInt(year, 10);\n  \n  return new Date(fullYear, month, parseInt(day, 10), parseInt(hour, 10), parseInt(minute, 10));\n}"
+      },
+      "id": "scrape-events",
+      "name": "Scrape Events (Playwright)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 400],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://46.224.17.15:3000/process-ui-event",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "call-jarvis-api",
+      "name": "Call Jarvis API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition1",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-error",
+      "name": "If Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "-5004140602",
+        "text": "=❌ Ошибка обработки UI события\\n\\n📋 Event: {{ $json.rawDescription }}\\n🏢 Branch: {{ $json.branch }}\\n\\n⚠️ Error: {{ $json.error }}",
+        "additionalFields": {}
+      },
+      "id": "send-error-alert",
+      "name": "Send Error Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1250, 500],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "no-op-success",
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Set Tbilisi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set Batumi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set Kutaisi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set Service Center",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Tbilisi": {
+      "main": [
+        [
+          {
+            "node": "Scrape Events (Playwright)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Batumi": {
+      "main": [
+        [
+          {
+            "node": "Scrape Events (Playwright)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Kutaisi": {
+      "main": [
+        [
+          {
+            "node": "Scrape Events (Playwright)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Service Center": {
+      "main": [
+        [
+          {
+            "node": "Scrape Events (Playwright)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Events (Playwright)": {
+      "main": [
+        [
+          {
+            "node": "Call Jarvis API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Jarvis API": {
+      "main": [
+        [
+          {
+            "node": "If Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error": {
+      "main": [
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+

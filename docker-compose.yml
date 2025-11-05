@@ -83,8 +83,8 @@ services:
       - N8N_SECURITY_AUDIT_ENABLED=false
       
       # Webhook настройки (без ограничений)
-      - WEBHOOK_URL=${WEBHOOK_URL:-https://webhook.rentflow.rentals}
-      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-https://webhook.rentflow.rentals}
+      - WEBHOOK_URL=${WEBHOOK_URL:-https://n8n.rentflow.rentals}
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-https://n8n.rentflow.rentals}
       - WEBHOOK_TEST_URL=${WEBHOOK_TEST_URL:-https://webhook-test.rentflow.rentals}
       
       # Пользовательские переменные для использования в workflow через $env

@@ -20,14 +20,16 @@
 
 ### 3. n8n (оркестр интеграций и наблюдаемость)
 - Визуальные workflow для приёма вебхуков и фоновых задач
-- Workflows: `RentProg Webhooks Monitor`, `RentProg Upsert Processor`, `Health & Status`, `Sync Progress`, а также 4 per-branch processor’а: `Tbilisi/Batumi/Kutaisi/Service Center Processor Rentprog`
-- Параллельные Telegram-алерты (Code → Telegram node) с Chat ID из `$env.TELEGRAM_ALERT_CHAT_ID`
+- Workflows: `RentProg Webhooks Monitor`, `RentProg Upsert Processor`, `Health & Status`, `Sync Progress`, а также 4 per-branch processor'а: `Tbilisi/Batumi/Kutaisi/Service Center Processor Rentprog`
+- **UI Events**: `RentProg Events Scraper` (Playwright парсинг страницы "События" каждые 5 минут), `Cash Register Reconciliation` (ночная сверка касс в 04:00)
+- Параллельные Telegram-алерты (Code → Telegram node) с Chat ID из `$env.TELEGRAM_ALERT_CHAT_ID` (-5004140602)
 - Двухэтапная обработка (быстрый ACK → отложенный upsert) и/или прямой upsert из processors (см. ниже)
 
 ### 4. Jarvis API (Express)
 - HTTP шлюз между n8n и бизнес-логикой
-- Эндпоинты: `/rentprog/health`, `/process-event`
+- Эндпоинты: `/rentprog/health`, `/process-event`, `/process-ui-event` (обработка UI событий из Playwright)
 - Выполняет auto-fetch, upsert и архивацию сущностей
+- Обработка UI событий: классификация, парсинг, обновление касс, создание задач
 - Планируется запуск как постоянно работающий сервис (сейчас запускается вручную)
 
 ### 5. Агенты (Microservices/Workers)

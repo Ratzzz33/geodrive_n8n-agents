@@ -1,0 +1,423 @@
+{
+  "name": "RentProg Upsert Processor (Cached)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "upsert-processor-cached",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-node",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 500],
+      "webhookId": "rentprog-upsert-processor-cached"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "rentprog_id",
+              "name": "rentprog_id",
+              "value": "={{ $json.body.rentprog_id || $json.body.rentprogId || $json.rentprog_id || $json.rentprogId }}",
+              "type": "string"
+            },
+            {
+              "id": "entity_type",
+              "name": "entity_type",
+              "value": "={{ $json.body.entity_type || $json.body.entityType || $json.entity_type || $json.entityType }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "prepare-data-node",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [450, 500]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT branch, company_id FROM entity_branch_cache WHERE entity_type = $1 AND rentprog_id = $2 AND last_seen_at > NOW() - INTERVAL '30 days' LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ $json.entity_type }},={{ $json.rentprog_id }}"
+        }
+      },
+      "id": "check-cache-node",
+      "name": "Check Cache",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [650, 500],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cache-hit-check",
+              "leftValue": "={{ $json.branch !== undefined && $json.branch !== null }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-cache-hit-node",
+      "name": "If Cache Hit",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [850, 500]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://rentprog.net/api/v1/public/{{ $('Prepare Data').item.json.entity_type }}s/{{ $('Prepare Data').item.json.rentprog_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "rentprogApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "branch",
+              "value": "={{ $json.branch }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "try-cached-branch-node",
+      "name": "Try Cached Branch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 400],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "success-check",
+              "leftValue": "={{ $json.id !== undefined && $json.id !== null }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-cached-success-node",
+      "name": "If Cached Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE entity_branch_cache SET last_seen_at = NOW() WHERE entity_type = $1 AND rentprog_id = $2",
+        "options": {
+          "queryReplacement": "={{ $('Prepare Data').item.json.entity_type }},={{ $('Prepare Data').item.json.rentprog_id }}"
+        }
+      },
+      "id": "update-cache-timestamp-node",
+      "name": "Update Cache Timestamp",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1450, 300],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Создаем 4 элемента для параллельных запросов (fallback)\nconst branches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];\n\nreturn branches.map(branch => ({\n  json: {\n    branch: branch,\n    rentprog_id: $('Prepare Data').item.json.rentprog_id,\n    entity_type: $('Prepare Data').item.json.entity_type\n  }\n}));"
+      },
+      "id": "create-fallback-items-node",
+      "name": "Create Fallback Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 600]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://rentprog.net/api/v1/public/{{ $json.entity_type }}s/{{ $json.rentprog_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "rentprogApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "branch",
+              "value": "={{ $json.branch }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "try-all-branches-fallback-node",
+      "name": "Try All Branches (Fallback)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 600],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "success-check",
+              "leftValue": "={{ $json.id !== undefined && $json.id !== null }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-fallback-success-node",
+      "name": "Filter Fallback Success",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [1450, 600]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Берем ПЕРВЫЙ успешный результат из fallback\nif ($input.all().length === 0) {\n  return {\n    json: {\n      found: false,\n      error: 'Not found in any branch'\n    }\n  };\n}\n\nconst first = $input.all()[0].json;\nconst branchItem = $('Create Fallback Items').all().find(item => {\n  // Находим соответствующий branch по индексу или другим критериям\n  return item.json.branch;\n});\n\nconst branch = branchItem?.json.branch || 'unknown';\n\nreturn {\n  json: {\n    ...first,\n    found: true,\n    branch: branch,\n    rentprog_id: first.id,\n    entity_type: $('Prepare Data').item.json.entity_type\n  }\n};"
+      },
+      "id": "get-fallback-first-success-node",
+      "name": "Get Fallback First Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 600]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "found-check",
+              "leftValue": "={{ $json.found }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-fallback-found-node",
+      "name": "If Fallback Found",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1850, 600]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO entity_branch_cache (entity_type, rentprog_id, branch, company_id, last_seen_at, created_at)\nVALUES ($1, $2, $3, $4, NOW(), NOW())\nON CONFLICT (entity_type, rentprog_id) \nDO UPDATE SET branch = EXCLUDED.branch, company_id = EXCLUDED.company_id, last_seen_at = NOW()",
+        "options": {
+          "queryReplacement": "={{ $json.entity_type }},={{ $json.rentprog_id }},={{ $json.branch }},={{ $json.company_id || null }}"
+        }
+      },
+      "id": "save-to-cache-node",
+      "name": "Save to Cache",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2050, 500],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO external_refs (entity_type, entity_id, system, external_id, created_at, updated_at)\nSELECT $1, gen_random_uuid(), 'rentprog', $2, NOW(), NOW()\nWHERE NOT EXISTS (\n  SELECT 1 FROM external_refs WHERE system = 'rentprog' AND external_id = $2\n)\nON CONFLICT (system, external_id) DO UPDATE SET updated_at = NOW()\nRETURNING entity_id",
+        "options": {
+          "queryReplacement": "={{ $('Prepare Data').item.json.entity_type }},={{ $('Prepare Data').item.json.rentprog_id }}"
+        }
+      },
+      "id": "save-data-node",
+      "name": "Save Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2250, 500],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "=❌ Не удалось найти {{ $('Prepare Data').item.json.entity_type }} с ID {{ $('Prepare Data').item.json.rentprog_id }} ни в одном филиале!\n\nПопытки:\n1. Кэш: {{ $('Check Cache').item.json.branch || 'промах' }}\n2. Все филиалы (fallback): не найдено\n\nВозможно, сущность была удалена или ID некорректен."
+      },
+      "id": "alert-not-found-node",
+      "name": "Alert: Not Found",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [2050, 700],
+      "credentials": {
+        "telegramApi": {
+          "id": "1tKryXxL5Gq395nN",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"processed\": true, \"branch\": $('Check Cache').item.json.branch, \"cached\": true } }}",
+        "options": {}
+      },
+      "id": "respond-cached-node",
+      "name": "Respond Cached",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"processed\": true, \"branch\": $json.branch, \"cached\": false } }}",
+        "options": {}
+      },
+      "id": "respond-success-node",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2450, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": false, \"error\": \"Not found in any branch\" } }}",
+        "options": {}
+      },
+      "id": "respond-not-found-node",
+      "name": "Respond Not Found",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2250, 700]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Prepare Data", "type": "main", "index": 0 }]]
+    },
+    "Prepare Data": {
+      "main": [[{ "node": "Check Cache", "type": "main", "index": 0 }]]
+    },
+    "Check Cache": {
+      "main": [[{ "node": "If Cache Hit", "type": "main", "index": 0 }]]
+    },
+    "If Cache Hit": {
+      "main": [
+        [{ "node": "Try Cached Branch", "type": "main", "index": 0 }],
+        [{ "node": "Create Fallback Items", "type": "main", "index": 0 }]
+      ]
+    },
+    "Try Cached Branch": {
+      "main": [[{ "node": "If Cached Success", "type": "main", "index": 0 }]]
+    },
+    "If Cached Success": {
+      "main": [
+        [{ "node": "Update Cache Timestamp", "type": "main", "index": 0 }],
+        [{ "node": "Create Fallback Items", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Cache Timestamp": {
+      "main": [[{ "node": "Respond Cached", "type": "main", "index": 0 }]]
+    },
+    "Create Fallback Items": {
+      "main": [[{ "node": "Try All Branches (Fallback)", "type": "main", "index": 0 }]]
+    },
+    "Try All Branches (Fallback)": {
+      "main": [[{ "node": "Filter Fallback Success", "type": "main", "index": 0 }]]
+    },
+    "Filter Fallback Success": {
+      "main": [[{ "node": "Get Fallback First Success", "type": "main", "index": 0 }]]
+    },
+    "Get Fallback First Success": {
+      "main": [[{ "node": "If Fallback Found", "type": "main", "index": 0 }]]
+    },
+    "If Fallback Found": {
+      "main": [
+        [{ "node": "Save to Cache", "type": "main", "index": 0 }],
+        [{ "node": "Alert: Not Found", "type": "main", "index": 0 }]
+      ]
+    },
+    "Save to Cache": {
+      "main": [[{ "node": "Save Data", "type": "main", "index": 0 }]]
+    },
+    "Save Data": {
+      "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]]
+    },
+    "Alert: Not Found": {
+      "main": [[{ "node": "Respond Not Found", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0
+}
+

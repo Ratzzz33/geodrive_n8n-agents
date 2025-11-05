@@ -1,0 +1,476 @@
+{
+  "name": "RentProg Upsert Processor",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "upsert-processor",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-node",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 500],
+      "webhookId": "rentprog-upsert-processor"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "rentprog_id",
+              "name": "rentprog_id",
+              "value": "={{ $json.body.rentprog_id || $json.body.rentprogId || $json.rentprog_id || $json.rentprogId }}",
+              "type": "string"
+            },
+            {
+              "id": "entity_type",
+              "name": "entity_type",
+              "value": "={{ $json.body.entity_type || $json.body.entityType || $json.entity_type || $json.entityType }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "prepare-data-node",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [450, 500]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://rentprog.net/api/v1/public/{{ $json.entity_type }}s/{{ $json.rentprog_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "rentprogApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "branch",
+              "value": "tbilisi"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "try-tbilisi-node",
+      "name": "Try Tbilisi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 300],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "success-check",
+              "leftValue": "={{ $json.id !== undefined && $json.id !== null }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-tbilisi-success",
+      "name": "If Tbilisi Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://rentprog.net/api/v1/public/{{ $('Prepare Data').item.json.entity_type }}s/{{ $('Prepare Data').item.json.rentprog_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "rentprogApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "branch",
+              "value": "batumi"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "try-batumi-node",
+      "name": "Try Batumi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [850, 500],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "success-check",
+              "leftValue": "={{ $json.id !== undefined && $json.id !== null }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-batumi-success",
+      "name": "If Batumi Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1050, 500]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://rentprog.net/api/v1/public/{{ $('Prepare Data').item.json.entity_type }}s/{{ $('Prepare Data').item.json.rentprog_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "rentprogApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "branch",
+              "value": "kutaisi"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "try-kutaisi-node",
+      "name": "Try Kutaisi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 700],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "success-check",
+              "leftValue": "={{ $json.id !== undefined && $json.id !== null }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-kutaisi-success",
+      "name": "If Kutaisi Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1250, 700]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://rentprog.net/api/v1/public/{{ $('Prepare Data').item.json.entity_type }}s/{{ $('Prepare Data').item.json.rentprog_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "rentprogApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "branch",
+              "value": "service-center"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "try-service-center-node",
+      "name": "Try Service Center",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 900],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "success-check",
+              "leftValue": "={{ $json.id !== undefined && $json.id !== null }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-service-center-success",
+      "name": "If Service Center Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1450, 900]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO external_refs (entity_type, entity_id, system, external_id, created_at, updated_at)\nSELECT $1, gen_random_uuid(), 'rentprog', $2, NOW(), NOW()\nWHERE NOT EXISTS (\n  SELECT 1 FROM external_refs WHERE system = 'rentprog' AND external_id = $2\n)\nON CONFLICT (system, external_id) DO UPDATE SET updated_at = NOW()\nRETURNING entity_id",
+        "options": {
+          "queryReplacement": "={{ $('Prepare Data').item.json.entity_type }},={{ $json.id }}"
+        }
+      },
+      "id": "save-tbilisi-node",
+      "name": "Save Tbilisi Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1050, 200],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO external_refs (entity_type, entity_id, system, external_id, created_at, updated_at)\nSELECT $1, gen_random_uuid(), 'rentprog', $2, NOW(), NOW()\nWHERE NOT EXISTS (\n  SELECT 1 FROM external_refs WHERE system = 'rentprog' AND external_id = $2\n)\nON CONFLICT (system, external_id) DO UPDATE SET updated_at = NOW()\nRETURNING entity_id",
+        "options": {
+          "queryReplacement": "={{ $('Prepare Data').item.json.entity_type }},={{ $json.id }}"
+        }
+      },
+      "id": "save-batumi-node",
+      "name": "Save Batumi Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1250, 400],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO external_refs (entity_type, entity_id, system, external_id, created_at, updated_at)\nSELECT $1, gen_random_uuid(), 'rentprog', $2, NOW(), NOW()\nWHERE NOT EXISTS (\n  SELECT 1 FROM external_refs WHERE system = 'rentprog' AND external_id = $2\n)\nON CONFLICT (system, external_id) DO UPDATE SET updated_at = NOW()\nRETURNING entity_id",
+        "options": {
+          "queryReplacement": "={{ $('Prepare Data').item.json.entity_type }},={{ $json.id }}"
+        }
+      },
+      "id": "save-kutaisi-node",
+      "name": "Save Kutaisi Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1450, 600],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO external_refs (entity_type, entity_id, system, external_id, created_at, updated_at)\nSELECT $1, gen_random_uuid(), 'rentprog', $2, NOW(), NOW()\nWHERE NOT EXISTS (\n  SELECT 1 FROM external_refs WHERE system = 'rentprog' AND external_id = $2\n)\nON CONFLICT (system, external_id) DO UPDATE SET updated_at = NOW()\nRETURNING entity_id",
+        "options": {
+          "queryReplacement": "={{ $('Prepare Data').item.json.entity_type }},={{ $json.id }}"
+        }
+      },
+      "id": "save-service-center-node",
+      "name": "Save Service Center Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1650, 800],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "=❌ Не удалось найти {{ $('Prepare Data').item.json.entity_type }} с ID {{ $('Prepare Data').item.json.rentprog_id }} ни в одном филиале!\n\nПопытки:\n• Tbilisi: не найдено\n• Batumi: не найдено\n• Kutaisi: не найдено\n• Service Center: не найдено\n\nВозможно, сущность была удалена или ID некорректен."
+      },
+      "id": "alert-not-found-node",
+      "name": "Alert: Not Found",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1650, 1000],
+      "credentials": {
+        "telegramApi": {
+          "id": "1tKryXxL5Gq395nN",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"processed\": true, \"branch\": 'tbilisi' } }}",
+        "options": {}
+      },
+      "id": "respond-tbilisi-node",
+      "name": "Respond Tbilisi",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"processed\": true, \"branch\": 'batumi' } }}",
+        "options": {}
+      },
+      "id": "respond-batumi-node",
+      "name": "Respond Batumi",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"processed\": true, \"branch\": 'kutaisi' } }}",
+        "options": {}
+      },
+      "id": "respond-kutaisi-node",
+      "name": "Respond Kutaisi",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1650, 600]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"processed\": true, \"branch\": 'service-center' } }}",
+        "options": {}
+      },
+      "id": "respond-service-center-node",
+      "name": "Respond Service Center",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1850, 800]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": false, \"error\": \"Not found in any branch\" } }}",
+        "options": {}
+      },
+      "id": "respond-not-found-node",
+      "name": "Respond Not Found",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1850, 1000]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Prepare Data", "type": "main", "index": 0 }]]
+    },
+    "Prepare Data": {
+      "main": [[{ "node": "Try Tbilisi", "type": "main", "index": 0 }]]
+    },
+    "Try Tbilisi": {
+      "main": [[{ "node": "If Tbilisi Success", "type": "main", "index": 0 }]]
+    },
+    "If Tbilisi Success": {
+      "main": [
+        [{ "node": "Save Tbilisi Data", "type": "main", "index": 0 }],
+        [{ "node": "Try Batumi", "type": "main", "index": 0 }]
+      ]
+    },
+    "Try Batumi": {
+      "main": [[{ "node": "If Batumi Success", "type": "main", "index": 0 }]]
+    },
+    "If Batumi Success": {
+      "main": [
+        [{ "node": "Save Batumi Data", "type": "main", "index": 0 }],
+        [{ "node": "Try Kutaisi", "type": "main", "index": 0 }]
+      ]
+    },
+    "Try Kutaisi": {
+      "main": [[{ "node": "If Kutaisi Success", "type": "main", "index": 0 }]]
+    },
+    "If Kutaisi Success": {
+      "main": [
+        [{ "node": "Save Kutaisi Data", "type": "main", "index": 0 }],
+        [{ "node": "Try Service Center", "type": "main", "index": 0 }]
+      ]
+    },
+    "Try Service Center": {
+      "main": [[{ "node": "If Service Center Success", "type": "main", "index": 0 }]]
+    },
+    "If Service Center Success": {
+      "main": [
+        [{ "node": "Save Service Center Data", "type": "main", "index": 0 }],
+        [{ "node": "Alert: Not Found", "type": "main", "index": 0 }]
+      ]
+    },
+    "Save Tbilisi Data": {
+      "main": [[{ "node": "Respond Tbilisi", "type": "main", "index": 0 }]]
+    },
+    "Save Batumi Data": {
+      "main": [[{ "node": "Respond Batumi", "type": "main", "index": 0 }]]
+    },
+    "Save Kutaisi Data": {
+      "main": [[{ "node": "Respond Kutaisi", "type": "main", "index": 0 }]]
+    },
+    "Save Service Center Data": {
+      "main": [[{ "node": "Respond Service Center", "type": "main", "index": 0 }]]
+    },
+    "Alert: Not Found": {
+      "main": [[{ "node": "Respond Not Found", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0
+}
+

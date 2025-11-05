@@ -1,0 +1,240 @@
+{
+  "name": "Cash Register Reconciliation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 4 * * *"
+            }
+          ]
+        },
+        "timezone": "Asia/Tbilisi"
+      },
+      "id": "cron-daily-4am",
+      "name": "Daily at 04:00 Tbilisi",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id as \"employeeId\", name as \"employeeName\", cash_gel, cash_usd, cash_eur FROM employees WHERE role != 'inactive'",
+        "options": {}
+      },
+      "id": "get-employees",
+      "name": "Get All Employees",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [450, 300],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "PostgreSQL (Neon)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Playwright script для парсинга кассы сотрудника\n\nconst employeeName = $input.item.json.employeeName;\nconst employeeId = $input.item.json.employeeId;\n\n// Определить филиал сотрудника (можно добавить поле branch_id в БД)\n// Для примера используем первый филиал\nconst branch = 'tbilisi';\n\n// TODO: Получить credentials из n8n Credentials\nconst credentials = {\n  tbilisi: { login: 'tbilisi_user', password: 'PASSWORD' }\n};\n\nconst creds = credentials[branch];\n\nconst { chromium } = require('playwright');\nconst browser = await chromium.launch({ headless: true });\nconst page = await browser.newPage();\n\ntry {\n  // 1. Авторизоваться\n  await page.goto(`https://web.rentprog.ru/${branch}/login`);\n  await page.fill('[name=\"email\"]', creds.login);\n  await page.fill('[name=\"password\"]', creds.password);\n  await page.click('button[type=\"submit\"]');\n  await page.waitForNavigation();\n  \n  // 2. Перейти на страницу Компания → Сотрудники\n  await page.goto(`https://web.rentprog.ru/${branch}/company/employees`);\n  await page.waitForLoadState('networkidle');\n  \n  // 3. Найти сотрудника в списке по имени\n  await page.click(`text=\"${employeeName}\"`);\n  await page.waitForLoadState('networkidle');\n  \n  // 4. Парсинг полей кассы\n  // TODO: Определить правильные селекторы после получения доступа\n  const cashGel = await page.locator('[data-field=\"cash-gel\"]').textContent();\n  const cashUsd = await page.locator('[data-field=\"cash-usd\"]').textContent();\n  const cashEur = await page.locator('[data-field=\"cash-eur\"]').textContent();\n  \n  await browser.close();\n  \n  return [{\n    employeeId,\n    employeeName,\n    branch,\n    realCash: {\n      gel: parseFloat(cashGel) || 0,\n      usd: parseFloat(cashUsd) || 0,\n      eur: parseFloat(cashEur) || 0\n    },\n    calculatedCash: {\n      gel: $input.item.json.cash_gel || 0,\n      usd: $input.item.json.cash_usd || 0,\n      eur: $input.item.json.cash_eur || 0\n    }\n  }];\n  \n} catch (error) {\n  await browser.close();\n  throw new Error(`Failed to scrape cash for ${employeeName}: ${error.message}`);\n}"
+      },
+      "id": "scrape-employee-cash",
+      "name": "Scrape Employee Cash",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Сравнить реальную кассу с расчетной\n\nconst { employeeId, employeeName, branch, realCash, calculatedCash } = $input.item.json;\n\nconst discrepancies = [];\n\nfor (const currency of ['gel', 'usd', 'eur']) {\n  const real = realCash[currency];\n  const calculated = calculatedCash[currency];\n  const diff = Math.abs(real - calculated);\n  \n  if (diff > 0.01) {\n    discrepancies.push({\n      currency: currency.toUpperCase(),\n      calculated,\n      real,\n      diff: real - calculated\n    });\n  }\n}\n\nreturn [{\n  employeeId,\n  employeeName,\n  branch,\n  hasDiscrepancy: discrepancies.length > 0,\n  discrepancies,\n  realCash,\n  calculatedCash\n}];"
+      },
+      "id": "compare-cash",
+      "name": "Compare Cash",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition1",
+              "leftValue": "={{ $json.hasDiscrepancy }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-discrepancy",
+      "name": "If Has Discrepancy",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE employees SET cash_gel = {{ $json.realCash.gel }}, cash_usd = {{ $json.realCash.usd }}, cash_eur = {{ $json.realCash.eur }}, cash_last_synced = NOW() WHERE id = '{{ $json.employeeId }}'",
+        "options": {}
+      },
+      "id": "update-cash-from-rentprog",
+      "name": "Auto-Correct Cash",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1250, 400],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "PostgreSQL (Neon)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Форматировать alert о расхождении\n\nconst { employeeName, branch, discrepancies, realCash, calculatedCash } = $input.item.json;\n\nconst lines = [\n  '⚠️ Расхождение кассы сотрудника',\n  '',\n  `👤 Сотрудник: ${employeeName}`,\n  `🏢 Филиал: ${branch}`,\n  '',\n  '💰 Расхождение:'\n];\n\nfor (const d of discrepancies) {\n  const sign = d.diff > 0 ? '+' : '';\n  lines.push(\n    `${d.currency}: Расчет ${d.calculated.toFixed(2)} | Факт ${d.real.toFixed(2)} | Разница: ${sign}${d.diff.toFixed(2)}`\n  );\n}\n\nlines.push('');\nlines.push('✅ Касса автоисправлена из RentProg');\nlines.push(`🕐 Последняя сверка: ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Tbilisi' })}`);\n\nreturn [{\n  alertText: lines.join('\\n')\n}];"
+      },
+      "id": "format-alert",
+      "name": "Format Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "chatId": "-5004140602",
+        "text": "={{ $json.alertText }}",
+        "additionalFields": {}
+      },
+      "id": "send-alert",
+      "name": "Send Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1450, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE employees SET cash_last_synced = NOW() WHERE id = '{{ $json.employeeId }}'",
+        "options": {}
+      },
+      "id": "update-sync-timestamp",
+      "name": "Update Sync Timestamp",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1250, 100],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "PostgreSQL (Neon)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily at 04:00 Tbilisi": {
+      "main": [
+        [
+          {
+            "node": "Get All Employees",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Employees": {
+      "main": [
+        [
+          {
+            "node": "Scrape Employee Cash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Employee Cash": {
+      "main": [
+        [
+          {
+            "node": "Compare Cash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare Cash": {
+      "main": [
+        [
+          {
+            "node": "If Has Discrepancy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Has Discrepancy": {
+      "main": [
+        [
+          {
+            "node": "Update Sync Timestamp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Auto-Correct Cash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi"
+  }
+}
+

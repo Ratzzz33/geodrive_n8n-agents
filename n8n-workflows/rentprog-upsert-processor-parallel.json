@@ -1,0 +1,247 @@
+{
+  "name": "RentProg Upsert Processor (Parallel)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "upsert-processor-parallel",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-node",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 500],
+      "webhookId": "rentprog-upsert-processor-parallel"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "rentprog_id",
+              "name": "rentprog_id",
+              "value": "={{ $json.body.rentprog_id || $json.body.rentprogId || $json.rentprog_id || $json.rentprogId }}",
+              "type": "string"
+            },
+            {
+              "id": "entity_type",
+              "name": "entity_type",
+              "value": "={{ $json.body.entity_type || $json.body.entityType || $json.entity_type || $json.entityType }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "prepare-data-node",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [450, 500]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Создаем 4 элемента для параллельных запросов\nconst branches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];\n\nreturn branches.map(branch => ({\n  json: {\n    branch: branch,\n    rentprog_id: $input.item.json.rentprog_id,\n    entity_type: $input.item.json.entity_type\n  }\n}));"
+      },
+      "id": "create-branch-items-node",
+      "name": "Create Branch Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 500]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://rentprog.net/api/v1/public/{{ $json.entity_type }}s/{{ $json.rentprog_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "rentprogApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "branch",
+              "value": "={{ $json.branch }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "try-all-branches-node",
+      "name": "Try All Branches (Parallel)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [850, 500],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "success-check",
+              "leftValue": "={{ $json.id !== undefined && $json.id !== null }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-success-node",
+      "name": "Filter Success",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [1050, 500]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Берем ПЕРВЫЙ успешный результат\nif ($input.all().length === 0) {\n  // Нет успешных результатов\n  return {\n    json: {\n      found: false,\n      error: 'Not found in any branch'\n    }\n  };\n}\n\n// Возвращаем первый успешный\nconst first = $input.all()[0].json;\nconst branch = $('Create Branch Items').all().find(item => \n  item.json.branch && first.id\n)?.json.branch || 'unknown';\n\nreturn {\n  json: {\n    ...first,\n    found: true,\n    branch: branch,\n    rentprog_id: first.id,\n    entity_type: $('Prepare Data').item.json.entity_type\n  }\n};"
+      },
+      "id": "get-first-success-node",
+      "name": "Get First Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "found-check",
+              "leftValue": "={{ $json.found }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-found-node",
+      "name": "If Found",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1450, 500]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO external_refs (entity_type, entity_id, system, external_id, created_at, updated_at)\nSELECT $1, gen_random_uuid(), 'rentprog', $2, NOW(), NOW()\nWHERE NOT EXISTS (\n  SELECT 1 FROM external_refs WHERE system = 'rentprog' AND external_id = $2\n)\nON CONFLICT (system, external_id) DO UPDATE SET updated_at = NOW()\nRETURNING entity_id",
+        "options": {
+          "queryReplacement": "={{ $json.entity_type }},={{ $json.rentprog_id }}"
+        }
+      },
+      "id": "save-data-node",
+      "name": "Save Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1650, 400],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "=❌ Не удалось найти {{ $('Prepare Data').item.json.entity_type }} с ID {{ $('Prepare Data').item.json.rentprog_id }} ни в одном филиале!\n\nПопытки (параллельно):\n• Tbilisi: не найдено\n• Batumi: не найдено\n• Kutaisi: не найдено\n• Service Center: не найдено\n\nВозможно, сущность была удалена или ID некорректен."
+      },
+      "id": "alert-not-found-node",
+      "name": "Alert: Not Found",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1650, 600],
+      "credentials": {
+        "telegramApi": {
+          "id": "1tKryXxL5Gq395nN",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"processed\": true, \"branch\": $json.branch } }}",
+        "options": {}
+      },
+      "id": "respond-success-node",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1850, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": false, \"error\": \"Not found in any branch\" } }}",
+        "options": {}
+      },
+      "id": "respond-not-found-node",
+      "name": "Respond Not Found",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1850, 600]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Prepare Data", "type": "main", "index": 0 }]]
+    },
+    "Prepare Data": {
+      "main": [[{ "node": "Create Branch Items", "type": "main", "index": 0 }]]
+    },
+    "Create Branch Items": {
+      "main": [[{ "node": "Try All Branches (Parallel)", "type": "main", "index": 0 }]]
+    },
+    "Try All Branches (Parallel)": {
+      "main": [[{ "node": "Filter Success", "type": "main", "index": 0 }]]
+    },
+    "Filter Success": {
+      "main": [[{ "node": "Get First Success", "type": "main", "index": 0 }]]
+    },
+    "Get First Success": {
+      "main": [[{ "node": "If Found", "type": "main", "index": 0 }]]
+    },
+    "If Found": {
+      "main": [
+        [{ "node": "Save Data", "type": "main", "index": 0 }],
+        [{ "node": "Alert: Not Found", "type": "main", "index": 0 }]
+      ]
+    },
+    "Save Data": {
+      "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]]
+    },
+    "Alert: Not Found": {
+      "main": [[{ "node": "Respond Not Found", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0
+}
+

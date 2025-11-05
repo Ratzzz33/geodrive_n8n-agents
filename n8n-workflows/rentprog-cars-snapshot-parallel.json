@@ -1,0 +1,322 @@
+{
+  "name": "RentProg Cars Snapshot",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 400]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Филиал: TBILISI\nconst branch = 'tbilisi';\nconst companyToken = '91b83b93963633649f29a04b612bab3f9fbb0471b5928622';\nconst baseUrl = 'https://rentprog.net/api/v1/public';\n\nconsole.log(`🔄 Запуск импорта для филиала: ${branch}`);\n\n// Получаем request token\nconst tokenResponse = await this.helpers.httpRequest({\n  method: 'GET',\n  url: `${baseUrl}/get_token`,\n  qs: { company_token: companyToken },\n  json: true,\n  timeout: 15000\n});\n\nconst requestToken = tokenResponse?.token;\nif (!requestToken) {\n  throw new Error(`Не удалось получить токен для ${branch}`);\n}\n\nconsole.log(`✓ Токен получен для ${branch}`);\n\n// Пагинация: загружаем все авто\nconst cars = [];\nfor (let page = 1; page <= 1000; page++) {\n  const pageResponse = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `${baseUrl}/all_cars_full`,\n    qs: { limit: 20, page },\n    headers: { 'Authorization': `Bearer ${requestToken}` },\n    json: true,\n    timeout: 15000\n  });\n\n  const carsPage = Array.isArray(pageResponse) ? pageResponse : [];\n  if (!carsPage.length) break;\n\n  cars.push(...carsPage);\n  console.log(`📄 ${branch} - Страница ${page}: ${carsPage.length} авто`);\n\n  if (carsPage.length < 20) break;\n  \n  // Rate limit: 1 секунда между запросами\n  await new Promise(r => setTimeout(r, 1000));\n}\n\nconsole.log(`✅ ${branch}: загружено ${cars.length} авто`);\n\nreturn [{ json: { branch, cars, totalCount: cars.length } }];"
+      },
+      "id": "fetch-tbilisi",
+      "name": "Fetch Tbilisi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200],
+      "notes": "Импорт автомобилей из Тбилиси"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Филиал: BATUMI\nconst branch = 'batumi';\nconst companyToken = '7ad345720f8d92f10c187122427c6a2c2bb9494c6bf14e8d';\nconst baseUrl = 'https://rentprog.net/api/v1/public';\n\nconsole.log(`🔄 Запуск импорта для филиала: ${branch}`);\n\n// Получаем request token\nconst tokenResponse = await this.helpers.httpRequest({\n  method: 'GET',\n  url: `${baseUrl}/get_token`,\n  qs: { company_token: companyToken },\n  json: true,\n  timeout: 15000\n});\n\nconst requestToken = tokenResponse?.token;\nif (!requestToken) {\n  throw new Error(`Не удалось получить токен для ${branch}`);\n}\n\nconsole.log(`✓ Токен получен для ${branch}`);\n\n// Пагинация: загружаем все авто\nconst cars = [];\nfor (let page = 1; page <= 1000; page++) {\n  const pageResponse = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `${baseUrl}/all_cars_full`,\n    qs: { limit: 20, page },\n    headers: { 'Authorization': `Bearer ${requestToken}` },\n    json: true,\n    timeout: 15000\n  });\n\n  const carsPage = Array.isArray(pageResponse) ? pageResponse : [];\n  if (!carsPage.length) break;\n\n  cars.push(...carsPage);\n  console.log(`📄 ${branch} - Страница ${page}: ${carsPage.length} авто`);\n\n  if (carsPage.length < 20) break;\n  \n  // Rate limit: 1 секунда между запросами\n  await new Promise(r => setTimeout(r, 1000));\n}\n\nconsole.log(`✅ ${branch}: загружено ${cars.length} авто`);\n\nreturn [{ json: { branch, cars, totalCount: cars.length } }];"
+      },
+      "id": "fetch-batumi",
+      "name": "Fetch Batumi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 400],
+      "notes": "Импорт автомобилей из Батуми"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Филиал: KUTAISI\nconst branch = 'kutaisi';\nconst companyToken = '5599ebb7b94827fdfd49ca3a5b7e259cfa99d8ea78edeb50';\nconst baseUrl = 'https://rentprog.net/api/v1/public';\n\nconsole.log(`🔄 Запуск импорта для филиала: ${branch}`);\n\n// Получаем request token\nconst tokenResponse = await this.helpers.httpRequest({\n  method: 'GET',\n  url: `${baseUrl}/get_token`,\n  qs: { company_token: companyToken },\n  json: true,\n  timeout: 15000\n});\n\nconst requestToken = tokenResponse?.token;\nif (!requestToken) {\n  throw new Error(`Не удалось получить токен для ${branch}`);\n}\n\nconsole.log(`✓ Токен получен для ${branch}`);\n\n// Пагинация: загружаем все авто\nconst cars = [];\nfor (let page = 1; page <= 1000; page++) {\n  const pageResponse = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `${baseUrl}/all_cars_full`,\n    qs: { limit: 20, page },\n    headers: { 'Authorization': `Bearer ${requestToken}` },\n    json: true,\n    timeout: 15000\n  });\n\n  const carsPage = Array.isArray(pageResponse) ? pageResponse : [];\n  if (!carsPage.length) break;\n\n  cars.push(...carsPage);\n  console.log(`📄 ${branch} - Страница ${page}: ${carsPage.length} авто`);\n\n  if (carsPage.length < 20) break;\n  \n  // Rate limit: 1 секунда между запросами\n  await new Promise(r => setTimeout(r, 1000));\n}\n\nconsole.log(`✅ ${branch}: загружено ${cars.length} авто`);\n\nreturn [{ json: { branch, cars, totalCount: cars.length } }];"
+      },
+      "id": "fetch-kutaisi",
+      "name": "Fetch Kutaisi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 600],
+      "notes": "Импорт автомобилей из Кутаиси"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Филиал: SERVICE-CENTER\nconst branch = 'service-center';\nconst companyToken = '5y4j4gcs75o9n5s1e2vrxx4a';\nconst baseUrl = 'https://rentprog.net/api/v1/public';\n\nconsole.log(`🔄 Запуск импорта для филиала: ${branch}`);\n\n// Получаем request token\nconst tokenResponse = await this.helpers.httpRequest({\n  method: 'GET',\n  url: `${baseUrl}/get_token`,\n  qs: { company_token: companyToken },\n  json: true,\n  timeout: 15000\n});\n\nconst requestToken = tokenResponse?.token;\nif (!requestToken) {\n  throw new Error(`Не удалось получить токен для ${branch}`);\n}\n\nconsole.log(`✓ Токен получен для ${branch}`);\n\n// Пагинация: загружаем все авто\nconst cars = [];\nfor (let page = 1; page <= 1000; page++) {\n  const pageResponse = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `${baseUrl}/all_cars_full`,\n    qs: { limit: 20, page },\n    headers: { 'Authorization': `Bearer ${requestToken}` },\n    json: true,\n    timeout: 15000\n  });\n\n  const carsPage = Array.isArray(pageResponse) ? pageResponse : [];\n  if (!carsPage.length) break;\n\n  cars.push(...carsPage);\n  console.log(`📄 ${branch} - Страница ${page}: ${carsPage.length} авто`);\n\n  if (carsPage.length < 20) break;\n  \n  // Rate limit: 1 секунда между запросами\n  await new Promise(r => setTimeout(r, 1000));\n}\n\nconsole.log(`✅ ${branch}: загружено ${cars.length} авто`);\n\nreturn [{ json: { branch, cars, totalCount: cars.length } }];"
+      },
+      "id": "fetch-service-center",
+      "name": "Fetch Service-Center",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 800],
+      "notes": "Импорт автомобилей из Service-Center"
+    },
+    {
+      "parameters": {},
+      "id": "merge-branches",
+      "name": "Merge Branches",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [800, 400],
+      "notes": "Объединение данных всех филиалов"
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $json.branch;\nconst cars = $json.cars || [];\n\nconst transformed = cars.map(car => ({\n  rentprog_id: String(car.id),\n  branch_code: branch,\n  plate: car.car_number || car.number || null,\n  vin: car.vin || null,\n  model: car.car_name || car.model || null,\n  starline_id: car.starline_id || null,\n  data: car\n}));\n\nconsole.log(`🔄 Подготовлено ${transformed.length} авто для upsert (филиал: ${branch})`);\n\nreturn [{\n  json: {\n    branch,\n    cars: transformed,\n    carsCount: transformed.length\n  }\n}];"
+      },
+      "id": "transform-for-upsert",
+      "name": "Transform For Upsert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 400],
+      "notes": "Преобразование данных автомобилей для вставки в БД"
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $json.branch;\nconst cars = $json.cars || [];\n\nif (cars.length === 0) {\n  console.warn(`⚠️ Нет данных для upsert (филиал: ${branch})`);\n  return [{ json: { branch, sql: 'SELECT 1;', carsCount: 0, carsData: [] } }];\n}\n\nconst values = cars.map(car => {\n  const esc = (val) => val ? `'${String(val).replace(/'/g, \"''\")}'` : 'NULL';\n  const jsonData = JSON.stringify(car.data).replace(/'/g, \"''\");\n\n  return `(\n    gen_random_uuid(),\n    (SELECT id FROM branches WHERE code = '${branch}' LIMIT 1),\n    ${esc(car.plate)},\n    ${esc(car.vin)},\n    ${esc(car.model)},\n    ${esc(car.starline_id)},\n    '${jsonData}'::jsonb,\n    NOW(),\n    NOW()\n  )`;\n}).join(',\\n');\n\nconst sql = `\n-- Upsert автомобилей для филиала ${branch}\nINSERT INTO cars (\n  id, branch_id, plate, vin, model, starline_id, data, created_at, updated_at\n)\nVALUES\n${values}\nON CONFLICT ((data->>'id')) DO UPDATE SET\n  branch_id = EXCLUDED.branch_id,\n  plate = EXCLUDED.plate,\n  vin = EXCLUDED.vin,\n  model = EXCLUDED.model,\n  starline_id = EXCLUDED.starline_id,\n  data = EXCLUDED.data,\n  updated_at = NOW();\n`;\n\nconsole.log(`🧾 SQL upsert подготовлен (${cars.length} авто, филиал: ${branch})`);\n\nreturn [{ json: { branch, sql, carsCount: cars.length, carsData: cars } }];"
+      },
+      "id": "generate-upsert-sql",
+      "name": "Generate Upsert SQL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 400],
+      "notes": "SQL для вставки/обновления автомобилей"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.sql }}",
+        "options": {}
+      },
+      "id": "upsert-cars-postgres",
+      "name": "Upsert Cars to PostgreSQL",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1550, 400],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Выполнение SQL для таблицы cars"
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $json.branch;\nconst carsData = $json.carsData || [];\n\nif (carsData.length === 0) {\n  return [{ json: { branch, sql: 'SELECT 1;', externalRefsCount: 0 } }];\n}\n\nconst values = carsData.map(car => {\n  const esc = (val) => val ? `'${String(val).replace(/'/g, \"''\")}'` : 'NULL';\n  const rentprogId = esc(car.rentprog_id);\n  const meta = JSON.stringify({ branch, synced_at: new Date().toISOString() }).replace(/'/g, \"''\");\n\n  return `(\n    gen_random_uuid(),\n    'car',\n    (SELECT id FROM cars WHERE data->>'id' = ${rentprogId} LIMIT 1),\n    'rentprog',\n    ${rentprogId},\n    '${branch}',\n    '${meta}'::jsonb,\n    NOW(),\n    NOW()\n  )`;\n}).join(',\\n');\n\nconst sql = `\n-- Upsert external_refs для филиала ${branch}\nINSERT INTO external_refs (\n  id, entity_type, entity_id, system, external_id, branch_code, meta, created_at, updated_at\n)\nVALUES\n${values}\nON CONFLICT (system, external_id) DO UPDATE SET\n  entity_id = EXCLUDED.entity_id,\n  branch_code = EXCLUDED.branch_code,\n  meta = EXCLUDED.meta,\n  updated_at = NOW();\n`;\n\nconsole.log(`🔗 SQL external_refs подготовлен (${carsData.length} авто, филиал: ${branch})`);\n\nreturn [{ json: { branch, sql, externalRefsCount: carsData.length } }];"
+      },
+      "id": "generate-external-refs-sql",
+      "name": "Generate External Refs SQL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 400],
+      "notes": "SQL для таблицы external_refs"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.sql }}",
+        "options": {}
+      },
+      "id": "upsert-external-refs",
+      "name": "Upsert External Refs",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2050, 400],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Выполнение SQL для external_refs"
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $json.branch;\nconst imported = $json.carsCount || 0;\n\nconsole.log(`✅ Филиал ${branch}: импортировано ${imported} авто`);\n\nreturn [{ json: { branch, imported, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "branch-summary",
+      "name": "Branch Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2300, 400],
+      "notes": "Итог по филиалу"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst summary = items.map(item => item.json);\nconst totalImported = summary.reduce((acc, curr) => acc + (curr.imported || 0), 0);\n\nconsole.log('========================================');\nconsole.log('🎉 ИМПОРТ АВТО ЗАВЕРШЕН');\nconsole.log('========================================');\nsummary.forEach(item => console.log(`${item.branch}: ${item.imported} авто`));\nconsole.log('========================================');\nconsole.log(`ИТОГО: ${totalImported} автомобилей`);\nconsole.log('========================================');\n\nreturn [{ json: { status: 'completed', totalImported, branches: summary, completedAt: new Date().toISOString() } }];"
+      },
+      "id": "final-report",
+      "name": "Final Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2550, 400],
+      "notes": "Финальный отчёт"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Tbilisi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Batumi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Kutaisi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Service-Center",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Tbilisi": {
+      "main": [
+        [
+          {
+            "node": "Merge Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Batumi": {
+      "main": [
+        [
+          {
+            "node": "Merge Branches",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Fetch Kutaisi": {
+      "main": [
+        [
+          {
+            "node": "Merge Branches",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Fetch Service-Center": {
+      "main": [
+        [
+          {
+            "node": "Merge Branches",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merge Branches": {
+      "main": [
+        [
+          {
+            "node": "Transform For Upsert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform For Upsert": {
+      "main": [
+        [
+          {
+            "node": "Generate Upsert SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Upsert SQL": {
+      "main": [
+        [
+          {
+            "node": "Upsert Cars to PostgreSQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Cars to PostgreSQL": {
+      "main": [
+        [
+          {
+            "node": "Generate External Refs SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate External Refs SQL": {
+      "main": [
+        [
+          {
+            "node": "Upsert External Refs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert External Refs": {
+      "main": [
+        [
+          {
+            "node": "Branch Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch Summary": {
+      "main": [
+        [
+          {
+            "node": "Final Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-11-03T00:00:00.000Z",
+  "versionId": "3"
+}
+

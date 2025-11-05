@@ -3,7 +3,7 @@
  * Реализует паттерн: наша модель данных (UUID) + external_refs
  */
 
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { getDatabase } from './index';
 import {
   branches,
@@ -340,5 +340,130 @@ export async function getLastSyncTime(branchCode: BranchName): Promise<Date | nu
     .limit(1);
 
   return result[0]?.updated_at || null;
+}
+
+/**
+ * Динамический upsert сущности с автосозданием колонок
+ * Реализует аналог PostgreSQL функции dynamic_upsert_entity на TypeScript
+ */
+export async function dynamicUpsertEntity(
+  tableName: 'cars' | 'clients' | 'bookings',
+  rentprogId: string,
+  data: Record<string, any>
+): Promise<{ entity_id: string; created: boolean; added_columns: string[] }> {
+  const db = getDatabase();
+
+  // 1. Найти или создать запись в external_refs
+  let entityId = await resolveByExternalRef('rentprog', rentprogId);
+  let created = false;
+
+  if (!entityId) {
+    // Генерируем новый UUID
+    entityId = crypto.randomUUID();
+    created = true;
+
+    // Создаем запись в external_refs
+    await db.insert(externalRefs).values({
+      entity_type: tableName.slice(0, -1), // 'car', 'client', 'booking'
+      entity_id: entityId,
+      system: 'rentprog',
+      external_id: rentprogId,
+      data: data,
+    });
+
+    logger.debug(`INSERT into external_refs: entity_type=${tableName.slice(0, -1)}, entity_id=${entityId}, external_id=${rentprogId}`);
+  } else {
+    // Обновляем data в external_refs
+    await db
+      .update(externalRefs)
+      .set({
+        data: data,
+        updated_at: new Date(),
+      })
+      .where(
+        and(
+          eq(externalRefs.system, 'rentprog'),
+          eq(externalRefs.external_id, rentprogId)
+        )
+      );
+
+    logger.debug(`UPDATE external_refs: entity_type=${tableName.slice(0, -1)}, entity_id=${entityId}, external_id=${rentprogId}`);
+  }
+
+  // 2. Динамически добавляем колонки в целевую таблицу
+  const addedColumns: string[] = [];
+  const tableSchema = tableName === 'cars' ? cars : tableName === 'clients' ? clients : bookings;
+
+  for (const [key, value] of Object.entries(data)) {
+    // Пропускаем служебные поля
+    if (['id', 'created_at', 'updated_at', 'car_id', 'client_id', 'booking_id'].includes(key)) {
+      continue;
+    }
+
+    // Определяем тип колонки
+    let columnType: string;
+    if (value === null || value === undefined) {
+      columnType = 'TEXT';
+    } else if (typeof value === 'string') {
+      columnType = 'TEXT';
+    } else if (typeof value === 'number') {
+      if (Number.isInteger(value)) {
+        columnType = 'BIGINT';
+      } else {
+        columnType = 'NUMERIC';
+      }
+    } else if (typeof value === 'boolean') {
+      columnType = 'BOOLEAN';
+    } else if (Array.isArray(value)) {
+      columnType = 'JSONB';
+    } else {
+      columnType = 'JSONB';
+    }
+
+    // Проверяем, существует ли колонка
+    const columnExists = await db.execute(sql`
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = ${tableName} AND column_name = ${key}
+    `);
+
+    if (columnExists.rows.length === 0) {
+      // Добавляем колонку
+      await db.execute(sql`ALTER TABLE ${sql.identifier(tableName)} ADD COLUMN ${sql.identifier(key)} ${sql.raw(columnType)}`);
+      addedColumns.push(`${key} (${columnType})`);
+      logger.debug(`Added column: ${tableName}.${key} (${columnType})`);
+    }
+  }
+
+  // 3. Вставляем или обновляем данные в целевой таблице
+  const tableMap = { cars, clients, bookings };
+  const table = tableMap[tableName];
+
+  if (created) {
+    // Вставляем новую запись с минимальными полями
+    const insertData: any = { id: entityId };
+
+    // Добавляем служебные поля
+    if (tableName === 'cars') {
+      insertData.branch_id = await getOrCreateBranch('service-center', 'Service Center');
+    }
+
+    await db.insert(table).values(insertData);
+    logger.debug(`INSERT into ${tableName}: id=${entityId}`);
+  }
+
+  // Обновляем все поля из data, кроме служебных
+  const updateData: any = { updated_at: new Date() };
+  for (const [key, value] of Object.entries(data)) {
+    if (!['id', 'created_at', 'updated_at', 'car_id', 'client_id', 'booking_id'].includes(key)) {
+      updateData[key] = value;
+    }
+  }
+
+  if (Object.keys(updateData).length > 1) { // Есть что обновлять кроме updated_at
+    await db.update(table).set(updateData).where(eq(table.id, entityId));
+    logger.debug(`UPDATE ${tableName}: id=${entityId}, fields=${Object.keys(updateData).join(',')}`);
+  }
+
+  return { entity_id: entityId, created, added_columns: addedColumns };
 }
 

@@ -392,6 +392,18 @@ try {
 powershell -ExecutionPolicy Bypass -File setup/import_workflow_working.ps1
 ```
 
+### Настройки workflow «Service Center Processor» (не менять)
+
+Для workflow `Service Center Processor` (`#PbDKuU06H7s2Oem8`) запрещено изменять параметры в Settings:
+- `Execution Order` — оставить `v0 (legacy)`
+- `Error Workflow` — `No Workflow`
+- `Timezone` — `Asia/Tbilisi`
+- `Save failed/successful production executions`, `Save manual executions`, `Save execution progress` — значение `Save`
+- `Timeout Workflow` — включён
+- `Timeout After` — `1 hour`
+
+При изменении нод workflow эти значения не трогать.
+
 ---
 
 ## Проверенные команды

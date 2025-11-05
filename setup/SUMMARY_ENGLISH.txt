@@ -1,0 +1,39 @@
+=== UPDATE: company_id is NOT a required field ===
+
+Changes applied:
+
+1. Removed company_id validation from validateEventFormat()
+   Before: checked id AND company_id
+   After: only checks id
+
+2. Updated documentation:
+   - docs/WEBHOOK_EVENT_VALIDATION.md
+   - setup/update_validation_code.mjs
+
+3. Created guideline for standard nodes priority:
+   - docs/N8N_STANDARD_NODES_FIRST.md
+   - Explains when Code node is justified
+   - Examples of refactoring Code -> Standard nodes
+
+Validation rules (all event types):
+   - id: REQUIRED
+   - company_id: OPTIONAL (not validated)
+
+Why "Parse & Validate Format" uses Code node:
+   - Parses Ruby hash -> JSON (non-standard format)
+   - Validates 9 event types with different rules
+   - Dynamic validateEventFormat() function
+   - Impossible to implement with standard nodes without 50+ nodes
+
+Code node is JUSTIFIED for this task!
+
+Workflow updated in n8n:
+   https://n8n.rentflow.rentals/workflow/gNXRKIQpNubEazH7
+
+Updated files:
+   - setup/parse_code_with_validation.js
+   - n8n-workflows/rentprog-webhooks-monitor.json
+   - docs/WEBHOOK_EVENT_VALIDATION.md
+   - docs/N8N_STANDARD_NODES_FIRST.md
+   - setup/update_validation_code.mjs
+

@@ -70,6 +70,9 @@
 **employees** - Сотрудники
 - `id` (UUID PK)
 - `name`, `role`, `tg_user_id`
+- `cash_gel`, `cash_usd`, `cash_eur` (NUMERIC) - касса сотрудника по валютам
+- `cash_last_updated`, `cash_last_synced` (TIMESTAMPTZ) - последнее обновление и сверка
+- `task_chat_id` (TEXT) - ID группы "Tasks | <ФИО>" в Telegram
 - `created_at`, `updated_at`
 
 **clients** - Клиенты
@@ -115,6 +118,16 @@
 **webhook_dedup**
 - `source`, `dedup_hash`, `received_at`
 - Используется для дедупликации нестандартных источников (Umnico и др.)
+
+**event_processing_log** - дедупликация UI событий
+- `id` (UUID PK)
+- `hash` (TEXT UNIQUE) - SHA256(branch + ts + description)
+- `event_data` (JSONB) - полные данные спарсенного события
+- `event_type` (TEXT) - тип: `cash_operation`, `maintenance`, `mileage`, `booking_status`
+- `processed_at` (TIMESTAMPTZ)
+- `processing_result` (JSONB) - результат обработки
+- Индексы: на `hash`, `event_type`, `processed_at`
+- Автоочистка: старше 30 дней
 
 #### Внешние ссылки (external_refs)
 

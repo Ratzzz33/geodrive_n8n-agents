@@ -28,7 +28,7 @@ def update_webhook_url():
         current_url = output.strip()
         print(f"Текущее значение: {current_url}")
         
-        if "webhook.rentflow.rentals" in current_url:
+        if "n8n.rentflow.rentals" in current_url:
             print("✅ Уже правильно установлено!")
             ssh.close()
             return True
@@ -55,9 +55,16 @@ def update_webhook_url():
     
     print("\n=== Шаг 4: Обновление WEBHOOK_URL ===")
     commands = [
-        f"sed -i 's|WEBHOOK_URL=.*geodrive\\.netlify\\.app|WEBHOOK_URL=https://webhook.rentflow.rentals/|g' {compose_file}",
-        f"sed -i 's|WEBHOOK_URL=\\${{WEBHOOK_URL:-.*geodrive|WEBHOOK_URL=\\${{WEBHOOK_URL:-https://webhook.rentflow.rentals/|g' {compose_file}",
-        f"sed -i 's|N8N_WEBHOOK_URL=\\${{N8N_WEBHOOK_URL:-.*geodrive|N8N_WEBHOOK_URL=\\${{N8N_WEBHOOK_URL:-https://webhook.rentflow.rentals/|g' {compose_file}"
+        # Заменяем webhook.rentflow.rentals на n8n.rentflow.rentals (с дефолтом)
+        f"sed -i 's|WEBHOOK_URL=\\${{WEBHOOK_URL:-https://webhook\\.rentflow\\.rentals}}|WEBHOOK_URL=\\${{WEBHOOK_URL:-https://n8n.rentflow.rentals}}|g' {compose_file}",
+        f"sed -i 's|N8N_WEBHOOK_URL=\\${{N8N_WEBHOOK_URL:-https://webhook\\.rentflow\\.rentals}}|N8N_WEBHOOK_URL=\\${{N8N_WEBHOOK_URL:-https://n8n.rentflow.rentals}}|g' {compose_file}",
+        # Заменяем прямые значения (без дефолта)
+        f"sed -i 's|WEBHOOK_URL=https://webhook\\.rentflow\\.rentals|WEBHOOK_URL=https://n8n.rentflow.rentals|g' {compose_file}",
+        f"sed -i 's|N8N_WEBHOOK_URL=https://webhook\\.rentflow\\.rentals|N8N_WEBHOOK_URL=https://n8n.rentflow.rentals|g' {compose_file}",
+        # Также заменяем старые значения с geodrive.netlify.app
+        f"sed -i 's|WEBHOOK_URL=.*geodrive\\.netlify\\.app|WEBHOOK_URL=https://n8n.rentflow.rentals|g' {compose_file}",
+        f"sed -i 's|WEBHOOK_URL=\\${{WEBHOOK_URL:-.*geodrive|WEBHOOK_URL=\\${{WEBHOOK_URL:-https://n8n.rentflow.rentals}}|g' {compose_file}",
+        f"sed -i 's|N8N_WEBHOOK_URL=\\${{N8N_WEBHOOK_URL:-.*geodrive|N8N_WEBHOOK_URL=\\${{N8N_WEBHOOK_URL:-https://n8n.rentflow.rentals}}|g' {compose_file}"
     ]
     
     for cmd in commands:
@@ -86,10 +93,12 @@ def update_webhook_url():
         new_url = output.strip()
         print(f"Новое значение: {new_url}")
         
-        if "webhook.rentflow.rentals" in new_url:
+        if "n8n.rentflow.rentals" in new_url:
             print("\n✅ УСПЕХ! WEBHOOK_URL обновлен!")
             print("\nПроверьте UI n8n:")
-            print("https://n8n.rentflow.rentals/workflow/gNXRKIQpNubEazH7")
+            print("https://n8n.rentflow.rentals")
+            print("\nProduction URL должен показывать:")
+            print("https://n8n.rentflow.rentals/webhook/...")
             ssh.close()
             return True
         else:
@@ -103,6 +112,7 @@ def update_webhook_url():
 if __name__ == "__main__":
     print("=" * 50)
     print("Обновление WEBHOOK_URL на сервере")
+    print("Замена: webhook.rentflow.rentals → n8n.rentflow.rentals")
     print("=" * 50)
     print()
     

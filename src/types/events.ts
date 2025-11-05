@@ -3,6 +3,34 @@
  * События классифицируются и маршрутизируются оркестратором
  */
 
+/**
+ * Тип операции из RentProg вебхука
+ */
+export type RentProgOperation = 'create' | 'update' | 'destroy';
+
+/**
+ * Тип сущности из RentProg вебхука
+ */
+export type RentProgEntityType = 'car' | 'client' | 'booking';
+
+/**
+ * Событие из RentProg вебхука (сохраняется в таблице events)
+ */
+export interface RentProgWebhookEvent {
+  id: number;
+  ts: Date;
+  event_name: string;           // 'car_update', 'client_destroy', etc.
+  entity_type: RentProgEntityType;
+  operation: RentProgOperation;
+  rentprog_id: string;
+  company_id: number | null;
+  payload: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  processed: boolean;
+  ok: boolean;
+  reason?: string;
+}
+
 export type EventType =
   // События от RentProg
   | 'booking.issue.planned'

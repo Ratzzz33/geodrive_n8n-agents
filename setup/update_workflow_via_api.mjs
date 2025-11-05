@@ -1,77 +1,80 @@
-import fs from 'fs';
-import http from 'http';
+import https from 'https';
+import { readFileSync } from 'fs';
 
-const N8N_HOST = 'http://46.224.17.15:5678/api/v1';
+const N8N_HOST = 'https://n8n.rentflow.rentals/api/v1';
 const N8N_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZDYyYjM3My0yMDFiLTQ3ZjMtODU5YS1jZGM2OWRkZWE0NGEiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYyMDg0MjY4LCJleHAiOjE3NjQ2NTE2MDB9.gsdxltowlQShNi9mil074-cMhnuJJLI5lN6MP7FQEcI';
+
 const WORKFLOW_ID = 'gNXRKIQpNubEazH7';
+const WORKFLOW_FILE = 'n8n-workflows/rentprog-webhooks-monitor.json';
 
-const wf = JSON.parse(fs.readFileSync('workflow_for_mcp.json', 'utf8'));
-const { id, ...workflowData } = wf;
+console.log('📥 Загрузка workflow из файла...\n');
 
-// Проверка исправлений
-const parseNode = workflowData.nodes.find(n => n.name === 'Parse & Validate Format');
-const ifNode = workflowData.nodes.find(n => n.name === 'If Known Format');
-const code = parseNode.parameters.jsCode;
-const ifCondition = ifNode.parameters.conditions.conditions[0].leftValue;
+const workflowContent = readFileSync(WORKFLOW_FILE, 'utf8');
+const workflow = JSON.parse(workflowContent);
 
-console.log('🔍 Проверка исправлений:');
-console.log('  ✅ Явная установка isKnownFormat = false:', code.includes('isKnownFormat = false') && code.includes('else {') ? 'ДА' : 'НЕТ');
-console.log('  ✅ Условие If Known Format:', ifCondition === '={{ $json.isKnownFormat === true }}' ? 'ПРАВИЛЬНО' : `ОШИБКА: ${ifCondition}`);
+// Удаляем системные поля
+delete workflow.id;
+delete workflow.versionId;
+delete workflow.updatedAt;
+delete workflow.createdAt;
+delete workflow.triggerCount;
 
-const body = JSON.stringify(workflowData);
-const url = new URL(`${N8N_HOST}/workflows/${WORKFLOW_ID}`);
+// Подготовка данных для обновления
+const updateData = {
+  name: workflow.name,
+  nodes: workflow.nodes,
+  connections: workflow.connections,
+  settings: workflow.settings || { executionOrder: 'v1' }
+};
 
-console.log(`\n🔄 Обновление workflow ${WORKFLOW_ID}...`);
-console.log(`   Nodes: ${workflowData.nodes.length}`);
-console.log(`   Connections: ${Object.keys(workflowData.connections).length}`);
-console.log(`   Размер: ${(body.length / 1024).toFixed(1)} KB`);
+const body = JSON.stringify(updateData);
 
 const options = {
-  hostname: url.hostname,
-  port: url.port,
-  path: url.pathname,
   method: 'PUT',
+  hostname: 'n8n.rentflow.rentals',
+  path: `/api/v1/workflows/${WORKFLOW_ID}`,
   headers: {
     'X-N8N-API-KEY': N8N_API_KEY,
     'Content-Type': 'application/json',
     'Content-Length': Buffer.byteLength(body)
-  },
-  timeout: 60000
+  }
 };
 
-const req = http.request(options, (res) => {
-  let data = '';
-  res.on('data', (chunk) => { data += chunk; });
+console.log(`🔄 Обновление workflow ${WORKFLOW_ID}...`);
+console.log(`   Нод: ${workflow.nodes.length}`);
+console.log(`   Connections: ${Object.keys(workflow.connections).length}\n`);
+
+const req = https.request(options, (res) => {
+  let responseData = '';
+  
+  res.on('data', chunk => responseData += chunk);
   res.on('end', () => {
     if (res.statusCode === 200 || res.statusCode === 201) {
+      const result = JSON.parse(responseData);
       console.log('✅ Workflow успешно обновлен!');
-      try {
-        const result = JSON.parse(data);
-        if (result.data) {
-          console.log(`   Updated: ${result.data.updatedAt || 'unknown'}`);
-          console.log(`   Version: ${result.data.versionId || 'unknown'}`);
-        }
-      } catch (e) {
-        console.log('   Ответ получен');
+      if (result.data && result.data.id) {
+        console.log(`   ID: ${result.data.id}`);
+        console.log(`   URL: https://n8n.rentflow.rentals/workflow/${result.data.id}`);
+      } else if (result.id) {
+        console.log(`   ID: ${result.id}`);
+        console.log(`   URL: https://n8n.rentflow.rentals/workflow/${result.id}`);
       }
     } else {
       console.error(`❌ Ошибка: ${res.statusCode}`);
-      console.error(data.substring(0, 1000));
+      console.error('Ответ:', responseData);
+      try {
+        const error = JSON.parse(responseData);
+        console.error('Детали:', JSON.stringify(error, null, 2));
+      } catch {
+        console.error('Текст ошибки:', responseData);
+      }
     }
   });
 });
 
-req.on('error', (error) => {
-  console.error('❌ Ошибка запроса:', error.message);
-  process.exit(1);
-});
-
-req.on('timeout', () => {
-  req.destroy();
-  console.error('❌ Timeout при обновлении');
-  process.exit(1);
+req.on('error', (err) => {
+  console.error('❌ Ошибка запроса:', err.message);
 });
 
 req.write(body);
 req.end();
-
