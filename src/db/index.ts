@@ -115,6 +115,16 @@ export async function closeDatabase(): Promise<void> {
 export { schema };
 
 /**
+ * Экспорт SQL connection для raw запросов
+ */
+export function getSqlConnection(): postgres.Sql {
+  if (!connection) {
+    throw new Error('База данных не инициализирована. Вызовите initDatabase() сначала.');
+  }
+  return connection;
+}
+
+/**
  * Функция дедупликации вебхуков
  */
 export async function checkWebhookDedup(

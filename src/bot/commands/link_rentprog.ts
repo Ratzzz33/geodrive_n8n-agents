@@ -2,14 +2,25 @@
  * Команда /link_rentprog - связывание Telegram аккаунта с RentProg ID
  * 
  * Использование: /link_rentprog 14714
+ * 
+ * Архитектура: использует external_refs для связи с RentProg
  */
 
 import { Context } from 'telegraf';
-import { sql } from '../../db';
+import { getDatabase } from '../../db/index.js';
+import { employees, externalRefs } from '../../db/schema.js';
+import { eq, and } from 'drizzle-orm';
 
 export async function linkRentprogCommand(ctx: Context) {
-  const args = ctx.message?.text?.split(' ');
-  const rentprogId = args?.[1];
+  // Type guard для проверки наличия text
+  if (!ctx.message || !('text' in ctx.message)) {
+    await ctx.reply('❌ Команда должна быть текстовым сообщением');
+    return;
+  }
+  
+  const db = getDatabase();
+  const args = ctx.message.text.split(' ');
+  const rentprogId = args[1];
   const tgUserId = ctx.from?.id;
 
   if (!tgUserId) {
@@ -30,10 +41,11 @@ export async function linkRentprogCommand(ctx: Context) {
 
   try {
     // 1. Проверить что пользователь зарегистрирован в Jarvis
-    const employee = await sql`
-      SELECT id, name FROM employees 
-      WHERE tg_user_id = ${tgUserId}
-    `.then(rows => rows[0]);
+    const [employee] = await db
+      .select()
+      .from(employees)
+      .where(eq(employees.tg_user_id, tgUserId))
+      .limit(1);
 
     if (!employee) {
       await ctx.reply(
@@ -44,13 +56,20 @@ export async function linkRentprogCommand(ctx: Context) {
       return;
     }
 
-    // 2. Проверить что RentProg сотрудник существует
-    const rentprogEmployee = await sql`
-      SELECT * FROM rentprog_employees 
-      WHERE rentprog_id = ${rentprogId}
-    `.then(rows => rows[0]);
+    // 2. Проверить что RentProg сотрудник существует в external_refs
+    const [rentprogRef] = await db
+      .select()
+      .from(externalRefs)
+      .where(
+        and(
+          eq(externalRefs.system, 'rentprog'),
+          eq(externalRefs.entity_type, 'employee'),
+          eq(externalRefs.external_id, rentprogId)
+        )
+      )
+      .limit(1);
 
-    if (!rentprogEmployee) {
+    if (!rentprogRef) {
       await ctx.reply(
         `❌ Сотрудник с RentProg ID ${rentprogId} не найден в системе\n\n` +
         'Возможные причины:\n' +
@@ -62,59 +81,73 @@ export async function linkRentprogCommand(ctx: Context) {
       return;
     }
 
-    // 3. Проверить не связан ли уже с другим сотрудником
-    if (rentprogEmployee.employee_id) {
-      const linkedEmployee = await sql`
-        SELECT name, tg_user_id FROM employees 
-        WHERE id = ${rentprogEmployee.employee_id}
-      `.then(rows => rows[0]);
+    const rentprogName = (rentprogRef.data as any)?.name || 'Неизвестно';
 
-      if (linkedEmployee.tg_user_id === tgUserId) {
-        await ctx.reply(
-          '✅ Вы уже связаны с этим RentProg аккаунтом!\n\n' +
-          `👤 Jarvis: ${employee.name}\n` +
-          `🔗 RentProg: ${rentprogEmployee.name} (ID: ${rentprogId})\n\n` +
-          'Используйте /myinfo для просмотра информации'
-        );
-        return;
-      } else {
-        await ctx.reply(
-          `⚠️ Этот RentProg ID уже связан с другим сотрудником: ${linkedEmployee.name}\n\n` +
-          'Если это ошибка, обратитесь к администратору'
-        );
-        return;
+    // 3. Проверить не связан ли уже с другим сотрудником
+    if (rentprogRef.entity_id) {
+      const [linkedEmployee] = await db
+        .select()
+        .from(employees)
+        .where(eq(employees.id, rentprogRef.entity_id))
+        .limit(1);
+
+      if (linkedEmployee) {
+        if (linkedEmployee.tg_user_id === tgUserId) {
+          await ctx.reply(
+            '✅ Вы уже связаны с этим RentProg аккаунтом!\n\n' +
+            `👤 Jarvis: ${employee.name}\n` +
+            `🔗 RentProg: ${rentprogName} (ID: ${rentprogId})\n\n` +
+            'Используйте /myinfo для просмотра информации'
+          );
+          return;
+        } else {
+          await ctx.reply(
+            `⚠️ Этот RentProg ID уже связан с другим сотрудником: ${linkedEmployee.name}\n\n` +
+            'Если это ошибка, обратитесь к администратору'
+          );
+          return;
+        }
       }
     }
 
     // 4. Проверить не связан ли текущий сотрудник с другим RentProg ID
-    const existingLink = await sql`
-      SELECT rentprog_id, name FROM rentprog_employees
-      WHERE employee_id = ${employee.id}
-    `.then(rows => rows[0]);
+    const [existingLink] = await db
+      .select()
+      .from(externalRefs)
+      .where(
+        and(
+          eq(externalRefs.system, 'rentprog'),
+          eq(externalRefs.entity_type, 'employee'),
+          eq(externalRefs.entity_id, employee.id)
+        )
+      )
+      .limit(1);
 
-    if (existingLink) {
+    if (existingLink && existingLink.external_id !== rentprogId) {
+      const existingName = (existingLink.data as any)?.name || 'Неизвестно';
       await ctx.reply(
         `⚠️ Вы уже связаны с другим RentProg аккаунтом:\n` +
-        `ID: ${existingLink.rentprog_id}\n` +
-        `Имя: ${existingLink.name}\n\n` +
+        `ID: ${existingLink.external_id}\n` +
+        `Имя: ${existingName}\n\n` +
         'Если это ошибка, обратитесь к администратору'
       );
       return;
     }
 
-    // 5. Создать связь
-    await sql`
-      UPDATE rentprog_employees
-      SET employee_id = ${employee.id},
-          updated_at = NOW()
-      WHERE rentprog_id = ${rentprogId}
-    `;
+    // 5. Создать связь (обновить entity_id в external_refs)
+    await db
+      .update(externalRefs)
+      .set({
+        entity_id: employee.id,
+        updated_at: new Date(),
+      })
+      .where(eq(externalRefs.id, rentprogRef.id));
 
     // 6. Подтверждение
     await ctx.reply(
       '✅ Успешно связано!\n\n' +
       `👤 Jarvis: ${employee.name}\n` +
-      `🔗 RentProg: ${rentprogEmployee.name} (ID: ${rentprogId})\n\n` +
+      `🔗 RentProg: ${rentprogName} (ID: ${rentprogId})\n\n` +
       '🎉 Теперь вы будете получать:\n' +
       '• Уведомления о ваших бронях\n' +
       '• Напоминания о задачах\n' +

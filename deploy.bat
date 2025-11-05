@@ -1,19 +1,12 @@
 @echo off
-REM Запуск деплоя через Git Bash
-echo Запуск деплоя через Git Bash...
-
-REM Проверяем наличие Git Bash
-if exist "C:\Program Files\Git\bin\bash.exe" (
-    "C:\Program Files\Git\bin\bash.exe" setup/deploy-all.sh
-) else if exist "C:\Program Files (x86)\Git\bin\bash.exe" (
-    "C:\Program Files (x86)\Git\bin\bash.exe" setup/deploy-all.sh
-) else (
-    echo Git Bash не найден!
-    echo Установите Git for Windows или выполните вручную:
-    echo bash setup/deploy-all.sh
-    pause
-    exit 1
-)
-
+title Deploying TypeScript Fixes
+cd /d C:\Users\33pok\geodrive_n8n-agents
+echo.
+echo ================================================
+echo   Deploying TypeScript Fixes to Hetzner
+echo ================================================
+echo.
+python deploy_fixes_now.py
+echo.
+echo ================================================
 pause
-

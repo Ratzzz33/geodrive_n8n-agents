@@ -30,11 +30,11 @@ SERVER_PASSWORD = os.getenv(
     "Geodrive2024SecurePass"  # Пароль SSH от Hetzner сервера
 )
 
-# Установка кодировки для Windows
-if sys.platform == 'win32':
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+# Установка кодировки для Windows (отключено - может блокировать вывод в Cursor)
+# if sys.platform == 'win32':
+#     import io
+#     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+#     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 
 class ServerSSH:
@@ -83,12 +83,14 @@ class ServerSSH:
             return None
         
         try:
-            stdin, stdout, stderr = self.ssh.exec_command(command)
+            # get_pty=True решает проблему буферизации для долгих команд
+            stdin, stdout, stderr = self.ssh.exec_command(command, get_pty=True)
             
             if wait:
-                exit_status = stdout.channel.recv_exit_status()
+                # ВАЖНО: сначала читаем вывод, потом exit status!
                 output = stdout.read().decode('utf-8', errors='ignore')
                 error = stderr.read().decode('utf-8', errors='ignore')
+                exit_status = stdout.channel.recv_exit_status()
                 return (output, error, exit_status)
             else:
                 return ("", "", 0)
@@ -107,11 +109,13 @@ class ServerSSH:
             # Объединяем команды
             combined = " && ".join(commands)
             
-            stdin, stdout, stderr = self.ssh.exec_command(combined)
-            exit_status = stdout.channel.recv_exit_status()
+            # get_pty=True для долгих команд
+            stdin, stdout, stderr = self.ssh.exec_command(combined, get_pty=True)
             
+            # ВАЖНО: сначала читаем вывод, потом exit status!
             output = stdout.read().decode('utf-8', errors='ignore')
             error = stderr.read().decode('utf-8', errors='ignore')
+            exit_status = stdout.channel.recv_exit_status()
             
             if output:
                 print(output)
@@ -190,8 +194,10 @@ def run_command_on_server(command: str, show_output: bool = True) -> bool:
     """Быстрая функция для выполнения одной команды"""
     ssh = ServerSSH()
     
+    print(f"Подключение к {SERVER_USER}@{SERVER_IP}...", end=" ", flush=True)
     if not ssh.connect():
         return False
+    print("✓ Успешно!", flush=True)
     
     result = ssh.execute(command, wait=True)
     ssh.close()

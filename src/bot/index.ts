@@ -17,6 +17,9 @@ import {
   getLastSyncTime,
 } from '../db/upsert';
 import { sendSyncProgressToN8n } from '../integrations/n8n';
+import { startCommand } from './commands/start.js';
+import { linkRentprogCommand } from './commands/link_rentprog.js';
+import { myinfoCommand } from './commands/myinfo.js';
 
 let bot: Telegraf | null = null;
 
@@ -51,12 +54,39 @@ export function initBot(): Telegraf {
   bot.command('start', async (ctx: Context) => {
     logger.info('Command /start received', { userId: ctx.from?.id, chatId: ctx.chat?.id });
     try {
-      await ctx.reply(
-        '👋 Привет! Я Jarvis, помощник для управления автопрокатом Geodrive.\n\n' +
-        'Используй /help для списка команд.'
-      );
+      await startCommand(ctx);
     } catch (error) {
       logger.error('Error in /start command:', error);
+      try {
+        await ctx.reply('Произошла ошибка при выполнении команды.');
+      } catch (e) {
+        // Игнорируем ошибки отправки
+      }
+    }
+  });
+
+  // Команда /link_rentprog
+  bot.command('link_rentprog', async (ctx: Context) => {
+    logger.info('Command /link_rentprog received', { userId: ctx.from?.id, chatId: ctx.chat?.id });
+    try {
+      await linkRentprogCommand(ctx);
+    } catch (error) {
+      logger.error('Error in /link_rentprog command:', error);
+      try {
+        await ctx.reply('Произошла ошибка при выполнении команды.');
+      } catch (e) {
+        // Игнорируем ошибки отправки
+      }
+    }
+  });
+
+  // Команда /myinfo
+  bot.command('myinfo', async (ctx: Context) => {
+    logger.info('Command /myinfo received', { userId: ctx.from?.id, chatId: ctx.chat?.id });
+    try {
+      await myinfoCommand(ctx);
+    } catch (error) {
+      logger.error('Error in /myinfo command:', error);
       try {
         await ctx.reply('Произошла ошибка при выполнении команды.');
       } catch (e) {
@@ -71,11 +101,15 @@ export function initBot(): Telegraf {
     try {
       await ctx.reply(
         '📋 Доступные команды:\n\n' +
-        '/start - Начать работу\n' +
+        '**Личные:**\n' +
+        '/start - Регистрация в системе\n' +
+        '/myinfo - Информация о вас\n' +
+        '/link_rentprog <ID> - Связать с RentProg аккаунтом\n\n' +
+        '**Система:**\n' +
         '/help - Показать это сообщение\n' +
         '/status - Проверить статус системы\n' +
         '/sync_rentprog - Первичная синхронизация RentProg\n\n' +
-        'Бот находится в режиме разработки (MVP).'
+        '💡 Система находится в режиме разработки (MVP).'
       );
     } catch (error) {
       logger.error('Error in /help command:', error);
