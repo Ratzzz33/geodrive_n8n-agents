@@ -15,7 +15,7 @@
 - **Webhooks**:
   - Вариант A (единый адрес): `https://webhook.rentflow.rentals` → Nginx → n8n `RentProg Webhooks Monitor` → таблица `events` (`processed=false`) → cron `RentProg Upsert Processor` → Jarvis API `/process-event`
   - Вариант B (текущая эксплуатация, 2025‑11‑05): 4 processor workflows по адресам `/webhook/{branch}-webhook` (Tbilisi/Batumi/Kutaisi/Service Center); парсинг `entityType/operation`, запись в БД/`external_refs`, параллельные Telegram-алерты (Code → Telegram)
-  - Авто-fetch + upsert/архивация выполняются либо через Jarvis API, либо напрямую из workflow/SQL
+  - Авто-fetch + upsert/архивизация выполняются либо через Jarvis API, либо напрямую из workflow/SQL
   - Telegram алерты: чат берётся из `$env.TELEGRAM_ALERT_CHAT_ID` (credential "Telegram account" в n8n)
 - **Ограничения RentProg**: пагинация, rate limit 60 GET/мин, company_id вместо branch в payload
 - **База знаний**: `rp_capture` (PostgreSQL на localhost:5434) — используется агентом-инструктором/LLM
@@ -169,6 +169,69 @@
 #### Запчасти
 - Склад по филиалам
 - Учет наличия
+
+## Подсистема задач (Jarvis Tasks)
+
+### Назначение
+- Централизованная система задач для сотрудников и агентов
+- Источники: события от RentProg/агентов, команды Jarvis, ручной ввод
+- Привязки к нашим сущностям (`cars`, `bookings`, `clients`, `branches`) или личные задачи
+
+### Таблицы
+
+**tasks**
+- `id UUID PK`
+- `title TEXT NOT NULL`
+- `description TEXT DEFAULT ''`
+- `status TEXT NOT NULL` — `todo|in_progress|blocked|done|cancelled`
+- `priority TEXT NOT NULL DEFAULT 'normal'` — `low|normal|high|urgent`
+- `creator_id UUID FK → employees`
+- `assignee_id UUID FK → employees` (nullable)
+- `branch_id UUID FK → branches` (nullable)
+- `due_at TIMESTAMPTZ` (nullable)
+- `snooze_until TIMESTAMPTZ` (nullable)
+- `source TEXT NOT NULL` — `jarvis|agent|rentprog|human`
+- `tg_chat_id TEXT` — ID группы сотрудника в Telegram (для темы задачи)
+- `tg_topic_id TEXT` — ID темы в группе сотрудника
+- `created_at TIMESTAMPTZ DEFAULT now()`
+- `updated_at TIMESTAMPTZ DEFAULT now()`
+
+Индексы: `idx_tasks_assignee_status_due (assignee_id, status, due_at)`, `idx_tasks_branch_status (branch_id, status)`
+
+**task_links** — связи задачи с сущностями (много к одному к задаче)
+- `id BIGSERIAL PK`
+- `task_id UUID FK → tasks`
+- `entity_type TEXT` — `'car'|'booking'|'client'|'employee'|'branch'`
+- `entity_id UUID` — наш UUID соответствующей сущности
+- `created_at TIMESTAMPTZ DEFAULT now()`
+
+Индексы: `(task_id)`, `(entity_type, entity_id)`
+
+**task_events** — журнал изменений (аудит)
+- `id BIGSERIAL PK`
+- `task_id UUID FK → tasks`
+- `event TEXT` — `created|updated|status_changed|reminder_sent|comment`
+- `payload JSONB` — детали
+- `created_at TIMESTAMPTZ DEFAULT now()`
+
+**task_comments** (опционально)
+- `id BIGSERIAL PK`
+- `task_id UUID FK → tasks`
+- `author_id UUID FK → employees`
+- `text TEXT`
+- `tg_message_id TEXT` — если комментарий пришёл из Telegram темы
+- `created_at TIMESTAMPTZ DEFAULT now()`
+
+### Telegram-мэппинг
+- У каждого сотрудника собственная группа `Tasks | <ФИО>` → `employees.task_chat_id` (добавить колонку)
+- Для каждой новой открытой задачи создаётся тема в этой группе → сохраняются `tasks.tg_topic_id`
+- В закреп темы: описание, ссылки (на сущность, RentProg), чек-лист
+- Кнопки: `Done`, `Snooze 1h/Today/Tomorrow`, `Assign`, `Details`
+
+### Политики
+- Задача должна иметь одного ответственного (assignee), наблюдатели — через комментарии/уведомления
+- Напоминания: по `due_at` и `snooze_until` (агент задач выполняет пинги)
+- Эскалация: если просрочка > SLA, копия в группу руководителя филиала
 
 ## Объектное хранилище
 
