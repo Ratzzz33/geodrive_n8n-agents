@@ -38,7 +38,7 @@ export function initBot(): Telegraf {
       logger.debug(`Update received: ${ctx.updateType}`, {
         userId: ctx.from?.id,
         chatId: ctx.chat?.id,
-        messageText: 'text' in (ctx.message || {}) ? ctx.message?.text : undefined,
+        messageText: ctx.message && 'text' in ctx.message ? ctx.message.text : undefined,
       });
       await next();
     } catch (error) {
@@ -364,7 +364,7 @@ export async function startBot(): Promise<void> {
       logger.debug('Webhook не был установлен или уже удален');
     }
 
-    await bot.launch({
+    await (bot.launch as any)({
       polling: {
         dropPendingUpdates: true,
       },

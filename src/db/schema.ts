@@ -78,6 +78,7 @@ export const externalRefs = pgTable('external_refs', {
   system: text('system').notNull(), // 'rentprog' | 'amocrm' | 'umnico' | ...
   external_id: text('external_id').notNull(), // ID во внешней системе
   branch_code: text('branch_code'), // Для систем с филиалами (RentProg)
+  data: jsonb('data'), // Полные данные из внешней системы
   meta: jsonb('meta'), // Дополнительные метаданные
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull(),

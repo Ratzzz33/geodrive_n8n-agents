@@ -211,7 +211,7 @@ export async function getAllEmployeesWithCash(): Promise<EmployeeCash[]> {
     ORDER BY name
   `;
 
-  return result as EmployeeCash[];
+  return result as unknown as EmployeeCash[];
 }
 
 /**

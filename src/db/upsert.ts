@@ -426,7 +426,7 @@ export async function dynamicUpsertEntity(
       WHERE table_name = ${tableName} AND column_name = ${key}
     `);
 
-    if (columnExists.rows.length === 0) {
+    if (columnExists.length === 0) {
       // Добавляем колонку
       await db.execute(sql`ALTER TABLE ${sql.identifier(tableName)} ADD COLUMN ${sql.identifier(key)} ${sql.raw(columnType)}`);
       addedColumns.push(`${key} (${columnType})`);

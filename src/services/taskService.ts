@@ -67,7 +67,7 @@ export async function createTask(params: CreateTaskParams): Promise<Task> {
     )
     VALUES (
       ${title}, ${description}, ${status}, ${priority},
-      ${creator_id}, ${assignee_id}, ${branch_id}, ${due_at}, ${source}
+      ${creator_id || null}, ${assignee_id || null}, ${branch_id || null}, ${due_at || null}, ${source}
     )
     RETURNING *
   `;
@@ -167,7 +167,7 @@ export async function getTasksByEntity(
     ORDER BY t.created_at DESC
   `;
 
-  return result as Task[];
+  return result as unknown as Task[];
 }
 
 /**

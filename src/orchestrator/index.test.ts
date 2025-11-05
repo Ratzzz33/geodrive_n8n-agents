@@ -37,7 +37,7 @@ describe('Orchestrator route function', () => {
     const event: SystemEvent = {
       type: 'car.moved' as EventType,
       source: 'rentprog',
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
       payload: {
         carId: 'test-car-123',
         branchFrom: 'tbilisi',
@@ -56,7 +56,7 @@ describe('Orchestrator route function', () => {
     const event: SystemEvent = {
       type: 'booking.issue.planned',
       source: 'rentprog',
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
       payload: {
         bookingId: 'test-booking-123',
       },
@@ -73,7 +73,7 @@ describe('Orchestrator route function', () => {
     const event: SystemEvent = {
       type: 'booking.return.planned',
       source: 'rentprog',
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
       payload: {
         bookingId: 'test-booking-456',
       },
@@ -93,7 +93,7 @@ describe('Orchestrator route function', () => {
     const event: SystemEvent = {
       type: 'car.moved' as EventType,
       source: 'rentprog',
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
       payload: {},
     };
 
