@@ -259,13 +259,71 @@ export function initApiServer(port: number = 3000): void {
     }
   });
 
+  // Endpoint для upsert машины (вызывается из n8n workflow)
+  app.post('/upsert-car', async (req, res) => {
+    try {
+      const { dynamicUpsertEntity } = await import('../db/upsert');
+      const { rentprog_id, data_hex } = req.body;
+
+      if (!rentprog_id || !data_hex) {
+        res.status(400).json({ ok: false, error: 'Missing required fields: rentprog_id, data_hex' });
+        return;
+      }
+
+      // Декодируем hex обратно в JSON
+      const dataJson = Buffer.from(data_hex, 'hex').toString('utf8');
+      const data = JSON.parse(dataJson);
+
+      const result = await dynamicUpsertEntity('cars', rentprog_id, data);
+
+      res.json({
+        ok: true,
+        entity_id: result.entity_id,
+        created: result.created,
+        added_columns: result.added_columns
+      });
+    } catch (error) {
+      logger.error('Upsert car error:', error);
+      res.status(500).json({ ok: false, error: 'Internal server error' });
+    }
+  });
+
+  // Endpoint для upsert клиента (вызывается из n8n workflow)
+  app.post('/upsert-client', async (req, res) => {
+    try {
+      const { dynamicUpsertEntity } = await import('../db/upsert');
+      const { rentprog_id, data_hex } = req.body;
+
+      if (!rentprog_id || !data_hex) {
+        res.status(400).json({ ok: false, error: 'Missing required fields: rentprog_id, data_hex' });
+        return;
+      }
+
+      // Декодируем hex обратно в JSON
+      const dataJson = Buffer.from(data_hex, 'hex').toString('utf8');
+      const data = JSON.parse(dataJson);
+
+      const result = await dynamicUpsertEntity('clients', rentprog_id, data);
+
+      res.json({
+        ok: true,
+        entity_id: result.entity_id,
+        created: result.created,
+        added_columns: result.added_columns
+      });
+    } catch (error) {
+      logger.error('Upsert client error:', error);
+      res.status(500).json({ ok: false, error: 'Internal server error' });
+    }
+  });
+
   // Root endpoint
   app.get('/', (req, res) => {
     res.json({ status: 'ok', service: 'jarvis-bot' });
   });
 
-  server = app.listen(port, () => {
-    logger.info(`🌐 API server listening on port ${port}`);
+  server = app.listen(port, '0.0.0.0', () => {
+    logger.info(`🌐 API server listening on port ${port} (0.0.0.0)`);
   });
 }
 
