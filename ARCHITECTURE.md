@@ -20,9 +20,9 @@
 
 ### 3. n8n (оркестр интеграций и наблюдаемость)
 - Визуальные workflow для приёма вебхуков и фоновых задач
-- Workflows: `RentProg Webhooks Monitor`, `RentProg Upsert Processor`, `Health & Status`, `Sync Progress`
-- Мониторинг, алерты в Telegram
-- Двухэтапная обработка (быстрый ACK → отложенный upsert)
+- Workflows: `RentProg Webhooks Monitor`, `RentProg Upsert Processor`, `Health & Status`, `Sync Progress`, а также 4 per-branch processor’а: `Tbilisi/Batumi/Kutaisi/Service Center Processor Rentprog`
+- Параллельные Telegram-алерты (Code → Telegram node) с Chat ID из `$env.TELEGRAM_ALERT_CHAT_ID`
+- Двухэтапная обработка (быстрый ACK → отложенный upsert) и/или прямой upsert из processors (см. ниже)
 
 ### 4. Jarvis API (Express)
 - HTTP шлюз между n8n и бизнес-логикой
@@ -91,10 +91,9 @@
 
 ### Обработка (pipeline)
 1. Nginx принимает HTTP webhook → проксирует в n8n
-2. n8n `RentProg Webhooks Monitor` → сохраняет событие в `events` (дедуп) → быстрый ACK (<100 мс)
-3. Каждые 5 мин `RentProg Upsert Processor` берет `processed = false`, вызывает Jarvis API `/process-event`
-4. Jarvis API auto-fetch’ит полные данные, upsert’ит в БД/`external_refs`, отмечает `processed = true`
-5. Оркестратор подписан на внутренние события (успешные upsert’ы, ошибки) и прогоняет их через агентов
+2. Вариант A (обобщённый): `RentProg Webhooks Monitor` → запись в `events` (дедуп) → быстрый ACK (<100 мс) → cron `RentProg Upsert Processor` → Jarvis API `/process-event` → upsert → `processed=true` → внутренние события для оркестратора
+3. Вариант B (текущая эксплуатация для RentProg, 2025‑11‑05): 4 processor workflows по филиалам (`…-webhook`) выполняют парсинг `entityType/operation`, сохраняют в БД, вызывают триггеры (`process_booking_nested_entities`) для nested-объектов и ПАРАЛЛЕЛЬНО отправляют Telegram-алерты. Запись в `external_refs` и upsert выполняются напрямую из workflow/SQL.
+4. Оркестратор подписан на внутренние события (успех/ошибка) и прогоняет их через соответствующих агентов
 
 ### Исходящие действия
 1. Сообщения в Telegram (темы авто, персональные группы, алерты)
@@ -110,6 +109,7 @@
 - Дедупликация и идемпотентность (`events` `UNIQUE(company_id, type, rentprog_id)`)
 - Планируемые меры: IP whitelist RentProg, HSTS и rate limiting в Nginx
 - ACL в Telegram (бот модератор), аудит действий через логи n8n и Jarvis API
+- Переменные для алертов: `TELEGRAM_ALERT_CHAT_ID` (на сервере, docker-compose); credential "Telegram account" хранится в n8n
 
 ## Технологический стек
 

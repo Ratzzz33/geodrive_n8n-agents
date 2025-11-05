@@ -13,11 +13,10 @@
   - `paginate()` — автоматическая выгрузка по 10–20 сущностей
   - `healthCheck()` — per-branch проверка (используется workflow `Health & Status`)
 - **Webhooks**:
-  - Единый адрес: `https://webhook.rentflow.rentals`
-  - Nginx → n8n `RentProg Webhooks Monitor` → таблица `events` (`processed=false`)
-  - Cron workflow `RentProg Upsert Processor` вызывает Jarvis API `/process-event`
-  - Авто-fetch данных из RentProg + upsert/архивирование (operation: `create/update/delete`)
-  - Telegram alert для неизвестных форматов (ручное обучение)
+  - Вариант A (единый адрес): `https://webhook.rentflow.rentals` → Nginx → n8n `RentProg Webhooks Monitor` → таблица `events` (`processed=false`) → cron `RentProg Upsert Processor` → Jarvis API `/process-event`
+  - Вариант B (текущая эксплуатация, 2025‑11‑05): 4 processor workflows по адресам `/webhook/{branch}-webhook` (Tbilisi/Batumi/Kutaisi/Service Center); парсинг `entityType/operation`, запись в БД/`external_refs`, параллельные Telegram-алерты (Code → Telegram)
+  - Авто-fetch + upsert/архивация выполняются либо через Jarvis API, либо напрямую из workflow/SQL
+  - Telegram алерты: чат берётся из `$env.TELEGRAM_ALERT_CHAT_ID` (credential "Telegram account" в n8n)
 - **Ограничения RentProg**: пагинация, rate limit 60 GET/мин, company_id вместо branch в payload
 - **База знаний**: `rp_capture` (PostgreSQL на localhost:5434) — используется агентом-инструктором/LLM
   - `rp_pages`, `rp_api_calls`, `rp_entities`, `rp_docs`, `rp_doc_chunks`

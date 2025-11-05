@@ -12,6 +12,7 @@
 - ✅ Интеграция RentProg: API-клиент, единый вебхук через Nginx → n8n → Jarvis API, таблица `events`
 - ✅ Набор n8n workflow: `RentProg Webhooks Monitor`, `RentProg Upsert Processor`, `Health & Status`, `Sync Progress`
 - ✅ External References pattern и миграции (`events`, `sync_runs`, `health`, `webhook_dedup`)
+- ✅ Telegram Alerts для RentProg: добавлены в 4 processor workflows (`Tbilisi/Batumi/Kutaisi/Service Center Processor Rentprog`), чат `$env.TELEGRAM_ALERT_CHAT_ID`
 - 🚧 Jarvis API (Express) — endpoint `/process-event` готов, требуется запуск как постоянно работающего сервиса
 - 🚧 MVP-агенты на стадии проектирования (описаны ниже, реализация начинается после запуска Jarvis API)
 - 🔜 Snapshot workflow для RentProg (автоимпорт `cars`, далее `clients`/`bookings`) и ввод в эксплуатацию дневного плана

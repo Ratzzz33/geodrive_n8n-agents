@@ -34,14 +34,21 @@
 
 ## Типы событий
 
-### События от RentProg (Nginx → n8n → Jarvis API → Оркестратор)
+### События от RentProg (две модели эксплуатации)
 
-Поток обработки:
+Модель A (единый webhook, deferred processing):
 1. RentProg отправляет webhook на `https://webhook.rentflow.rentals`
 2. Nginx проксирует запрос в n8n `RentProg Webhooks Monitor`
-3. Workflow парсит payload (Ruby hash → JSON), определяет `companyId`, `entityType`, `operation` и сохраняет запись в таблицу `events` (`processed=false`)
-4. Каждые 5 минут workflow `RentProg Upsert Processor` выбирает необработанные события и вызывает Jarvis API `/process-event`
-5. Jarvis API auto-fetch’ит полные данные из RentProg, выполняет upsert/архивацию, обновляет `events.processed=true` и эмитит нормализованное событие в оркестратор
+3. Запись в `events` (`processed=false`, дедуп)
+4. Каждые 5 минут workflow `RentProg Upsert Processor` вызывает Jarvis API `/process-event`
+5. Jarvis API auto-fetch → upsert/архивирование → `processed=true` → внутреннее событие для оркестратора
+
+Модель B (текущая эксплуатация, 2025‑11‑05):
+1. RentProg → n8n `/webhook/{branch}-webhook` (4 processor workflows)
+2. `Parse Webhook` определяет `entityType/operation`, сохраняет событие/данные в БД (включая `external_refs`)
+3. Для nested данных (booking → car/client) используется триггер БД `process_booking_nested_entities`
+4. Параллельно: `Format Telegram Alert` → `Send Telegram Alert` отправляет уведомление в чат `$env.TELEGRAM_ALERT_CHAT_ID`
+5. При необходимости эмитится нормализованное внутреннее событие в оркестратор
 
 Поддерживаемые типы событий (после нормализации):
 - `booking.issue.planned`, `booking.return.planned`
