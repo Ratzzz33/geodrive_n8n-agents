@@ -305,3 +305,4 @@ WHERE entity_type = 'rentprog_employee';
 **Версия:** 1.0  
 **Статус:** ✅ Ready for production webhooks
 
+

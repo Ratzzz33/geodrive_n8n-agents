@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "dev:api": "tsx watch src/api-only.ts",
+    "dev:playwright": "tsx watch src/services/playwrightService.ts",
     "start:api": "tsx src/api-only.ts",
+    "start:playwright": "node dist/services/playwrightService.js",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "vitest run",
@@ -38,6 +40,7 @@
     "node-cron": "^3.0.3",
     "node-fetch": "^2.7.0",
     "pg": "^8.16.3",
+    "playwright": "^1.49.0",
     "postgres": "^3.4.4",
     "telegraf": "^4.16.3",
     "zod": "^3.25.76"
