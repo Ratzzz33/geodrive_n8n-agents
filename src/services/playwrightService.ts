@@ -43,7 +43,6 @@ app.post('/scrape-events', async (req, res) => {
   try {
     browser = await chromium.launch({
       headless: true,
-      executablePath: '/usr/bin/chromium-browser',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
     
@@ -106,7 +105,6 @@ app.post('/scrape-employee-cash', async (req, res) => {
   try {
     browser = await chromium.launch({
       headless: true,
-      executablePath: '/usr/bin/chromium-browser',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
     
@@ -165,7 +163,6 @@ app.post('/scrape-company-cash', async (req, res) => {
   try {
     browser = await chromium.launch({
       headless: true,
-      executablePath: '/usr/bin/chromium-browser',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
     
