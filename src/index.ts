@@ -3,10 +3,10 @@
  * Инициализирует все компоненты системы
  */
 
-import { initDatabase, closeDatabase } from './db';
-import { startBot, stopBot } from './bot';
-import { logger } from './utils/logger';
-import { initApiServer, stopApiServer } from './api';
+import { initDatabase, closeDatabase } from './db/index.js';
+import { startBot, stopBot } from './bot/index.js';
+import { logger } from './utils/logger.js';
+import { initApiServer, stopApiServer } from './api/index.js';
 
 /**
  * Главная функция

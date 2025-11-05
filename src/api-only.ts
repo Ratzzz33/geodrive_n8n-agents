@@ -2,9 +2,9 @@
  * Запуск только API сервера (без бота)
  */
 
-import { initDatabase, closeDatabase } from './db';
-import { logger } from './utils/logger';
-import { initApiServer, stopApiServer } from './api';
+import { initDatabase, closeDatabase } from './db/index.js';
+import { logger } from './utils/logger.js';
+import { initApiServer, stopApiServer } from './api/index.js';
 
 /**
  * Главная функция
