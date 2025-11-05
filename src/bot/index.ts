@@ -4,7 +4,7 @@
  */
 
 import { Telegraf, Context } from 'telegraf';
-import { config } from '../config';
+import { config } from '../config/index.js';
 import { logger } from '../utils/logger';
 import { checkDatabaseHealth } from '../db';
 import { healthCheck, paginate, type BranchName } from '../integrations/rentprog';

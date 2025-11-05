@@ -3,7 +3,7 @@
  */
 
 import axios from 'axios';
-import { config } from '../config';
+import { config } from '../config/index.js';
 import { logger } from '../utils/logger';
 import type { BranchName } from './rentprog';
 

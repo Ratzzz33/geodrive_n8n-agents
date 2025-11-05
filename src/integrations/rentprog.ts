@@ -5,7 +5,7 @@
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import crypto from 'crypto';
-import { config } from '../config';
+import { config } from '../config/index.js';
 import { logger } from '../utils/logger';
 
 // Типы филиалов

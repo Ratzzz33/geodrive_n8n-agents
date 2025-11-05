@@ -12,7 +12,7 @@ import {
   upsertClientFromRentProg,
   upsertBookingFromRentProg,
 } from '../db/upsert';
-import { config } from '../config';
+import { config } from '../config/index.js';
 import type { SystemEvent } from '../types/events';
 import { sendEventToN8n, sendTelegramAlert } from '../integrations/n8n';
 

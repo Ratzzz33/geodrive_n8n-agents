@@ -6,7 +6,7 @@ import express from 'express';
 import { healthCheck } from '../integrations/rentprog';
 import { sendHealthToN8n } from '../integrations/n8n';
 import { logger } from '../utils/logger';
-import { config } from '../config';
+import { config } from '../config/index.js';
 import type { BranchName } from '../integrations/rentprog';
 
 const app = express();

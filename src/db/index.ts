@@ -6,9 +6,9 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { eq, lt } from 'drizzle-orm';
-import { config } from '../config';
-import { logger } from '../utils/logger';
-import * as schema from './schema';
+import { config } from '../config/index.js';
+import { logger } from '../utils/logger.js';
+import * as schema from './schema.js';
 
 let connection: postgres.Sql | null = null;
 let db: ReturnType<typeof drizzle> | null = null;

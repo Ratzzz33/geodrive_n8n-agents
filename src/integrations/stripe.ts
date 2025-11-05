@@ -3,7 +3,7 @@
  * Заглушки для MVP
  */
 
-import { config } from '../config';
+import { config } from '../config/index.js';
 import { logger } from '../utils/logger';
 
 /**
