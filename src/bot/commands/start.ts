@@ -51,7 +51,6 @@ export async function startCommand(ctx: Context) {
       .values({
         name,
         tg_user_id: tgUserId,
-        tg_username: username,
         role: 'employee', // дефолтная роль
         created_at: new Date(),
         updated_at: new Date(),

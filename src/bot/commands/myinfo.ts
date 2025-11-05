@@ -52,18 +52,16 @@ export async function myinfoCommand(ctx: Context) {
       )
       .limit(1);
 
-    // 3. Получить статистику броней (если есть связь)
-    let bookingsCount = 0;
-    if (rentprogRef) {
-      const result = await db
-        .select({ count: count() })
-        .from(bookings)
-        .where(
-          // Проверяем поля issue_employee_id или return_employee_id
-          // TODO: добавить когда будут эти поля в schema
-        );
-      // bookingsCount = result[0]?.count || 0;
-    }
+  // 3. Получить статистику броней (если есть связь)
+  let bookingsCount = 0;
+  if (rentprogRef) {
+    // TODO: Добавить подсчет броней когда будут поля issue_employee_id/return_employee_id в schema
+    // const result = await db
+    //   .select({ count: count() })
+    //   .from(bookings)
+    //   .where(eq(bookings.issue_employee_id, employee.id));
+    // bookingsCount = result[0]?.count || 0;
+  }
 
     // 4. Формирование ответа
     let message = '👤 **Информация о вас**\n\n';
@@ -74,9 +72,6 @@ export async function myinfoCommand(ctx: Context) {
     message += `• Имя: ${employee.name}\n`;
     message += `• Telegram ID: \`${tgUserId}\`\n`;
     message += `• Роль: ${employee.role || 'не указана'}\n`;
-    if (employee.branch_id) {
-      message += `• Филиал ID: \`${employee.branch_id}\`\n`;
-    }
     message += `• Зарегистрирован: ${employee.created_at?.toLocaleDateString('ru-RU') || 'н/д'}\n`;
 
     message += '\n';
