@@ -3,7 +3,7 @@
  */
 
 import { eq, and } from 'drizzle-orm';
-import { getDb } from './index.js';
+import { getDatabase } from './index.js';
 import { payments, branches, externalRefs, type PaymentInsert } from './schema.js';
 
 /**
@@ -22,7 +22,7 @@ export async function savePaymentFromRentProg(
     rawData: any;
   }
 ): Promise<{ paymentId: string; created: boolean }> {
-  const db = getDb();
+  const db = getDatabase();
   
   try {
     // 1. Найти branch_id по коду филиала
@@ -167,7 +167,7 @@ export async function savePaymentsBatch(
  * Получить статистику платежей по филиалу
  */
 export async function getPaymentStats(branchCode: string, dateFrom?: Date, dateTo?: Date) {
-  const db = getDb();
+  const db = getDatabase();
   
   // TODO: Реализовать агрегацию платежей
   // Пока просто возвращаем заглушку
