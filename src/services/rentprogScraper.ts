@@ -219,7 +219,7 @@ export async function scrapeEmployeeCash(
     }
     
     // Извлекаем данные кассы из ответа API
-    const cashData = userCashbox.data;
+    const cashData: any = userCashbox.data;
     
     return {
       success: true,
