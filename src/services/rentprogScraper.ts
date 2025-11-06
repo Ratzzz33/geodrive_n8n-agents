@@ -162,10 +162,11 @@ export async function scrapeCompanyCash(branch: Branch): Promise<{ success: bool
     // Преобразуем данные API в формат Payment
     const payments: Payment[] = [];
     
-    // RentProg возвращает массив транзакций в data[]
-    const data: any = result.data;
-    if (data && Array.isArray(data)) {
-      for (const item of data) {
+    // RentProg возвращает {counts: {data: [...], totalcount: {...}}}
+    // result.data уже это counts объект
+    const dataArray: any = result.data.data;
+    if (dataArray && Array.isArray(dataArray)) {
+      for (const item of dataArray) {
         const attrs = item.attributes || {};
         payments.push({
           branch: branch,
