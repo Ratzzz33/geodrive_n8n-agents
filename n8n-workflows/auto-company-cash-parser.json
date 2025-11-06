@@ -1,0 +1,133 @@
+{
+  "name": "Auto Company Cash Parser",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const branches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];\n\nreturn branches.map(branch => ({\n  json: { branch }\n}));"
+      },
+      "id": "prepare-branches",
+      "name": "Prepare Branches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://172.17.0.1:3002/scrape-and-save-company-cash?branch={{ $json.branch }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "scrape-branch",
+      "name": "Scrape Branch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [640, 400],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\n\nconst emoji = result.success ? '✅' : '❌';\nconst branch = $input.item.json.branch || 'unknown';\n\nlet message = `${emoji} **${branch.toUpperCase()}**\\n\\n`;\n\nif (result.success) {\n  message += `📥 Scraped: ${result.scraped}\\n`;\n  message += `💾 Saved: ${result.saved}\\n`;\n  message += `🆕 Created: ${result.created}\\n`;\n  message += `🔄 Updated: ${result.updated}\\n`;\n  \n  if (result.errors > 0) {\n    message += `⚠️ Errors: ${result.errors}\\n`;\n  }\n  \n  const durationSec = (result.duration / 1000).toFixed(2);\n  const speed = result.speed || '0';\n  message += `⏱️ Duration: ${durationSec}s (${speed} payments/sec)`;\n} else {\n  message += `❌ Error: ${result.error || 'Unknown error'}`;\n}\n\nreturn [{\n  json: {\n    message,\n    branch,\n    success: result.success\n  }\n}];"
+      },
+      "id": "format-result",
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 400]
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parseMode": "Markdown"
+        }
+      },
+      "id": "send-to-telegram",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1040, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "nONqDN52rBYnhODp",
+          "name": "Telegram Bot (@n8n_alert_geodrive_bot)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Every Hour": {
+      "main": [
+        [
+          {
+            "node": "Prepare Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Branches": {
+      "main": [
+        [
+          {
+            "node": "Scrape Branch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Branch": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}
+
