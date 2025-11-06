@@ -2,6 +2,7 @@
  * Функции для работы с платежами в БД
  */
 
+import { randomUUID } from 'crypto';
 import { eq, and, inArray } from 'drizzle-orm';
 import { getDatabase } from './index.js';
 import { payments, branches, externalRefs, type PaymentInsert } from './schema.js';
@@ -274,7 +275,7 @@ export async function savePaymentsBatchOptimized(
       // Извлекаем поля из raw_data
       const extractedFields = extractPaymentFields(payment.rawData);
       
-      const paymentId = crypto.randomUUID();
+      const paymentId = randomUUID();
       
       paymentsToInsert.push({
         id: paymentId,
