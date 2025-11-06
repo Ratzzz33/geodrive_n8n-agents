@@ -160,20 +160,21 @@ export async function scrapeCompanyCash(branch: Branch): Promise<{ success: bool
     // Преобразуем данные API в формат Payment
     const payments: Payment[] = [];
     
-    // Если в ответе есть массив транзакций
+    // RentProg возвращает массив транзакций в data[]
     const data: any = result.data;
-    if (data && Array.isArray(data.transactions)) {
-      for (const transaction of data.transactions) {
+    if (data && Array.isArray(data)) {
+      for (const item of data) {
+        const attrs = item.attributes || {};
         payments.push({
           branch: branch,
-          paymentDate: transaction.date || '',
-          employeeName: transaction.employee_name || 'unknown',
-          paymentType: transaction.type || 'unknown',
-          paymentMethod: transaction.method || 'unknown',
-          amount: parseFloat(transaction.amount) || 0,
-          currency: transaction.currency || 'GEL',
-          comment: transaction.comment || '',
-          rawData: transaction
+          paymentDate: attrs.created_at || '',
+          employeeName: attrs.source || 'unknown',
+          paymentType: attrs.group || 'unknown',
+          paymentMethod: attrs.cash ? 'cash' : attrs.cashless ? 'cashless' : attrs.cash_card ? 'card' : 'unknown',
+          amount: parseFloat(attrs.sum) || 0,
+          currency: attrs.currency_id === 39 ? 'GEL' : attrs.currency_id === 1 ? 'USD' : attrs.currency_id === 3 ? 'EUR' : 'unknown',
+          comment: attrs.description || '',
+          rawData: attrs
         });
       }
     }
