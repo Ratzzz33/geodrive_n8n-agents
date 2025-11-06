@@ -52,7 +52,7 @@ class ServerSSH:
             self.ssh = paramiko.SSHClient()
             self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             
-            print(f"Подключение к {self.user}@{self.ip}...", end=" ", flush=True)
+            print(f"Connecting to {self.user}@{self.ip}...", end=" ", flush=True)
             
             self.ssh.connect(
                 self.ip,
@@ -63,23 +63,23 @@ class ServerSSH:
                 allow_agent=False
             )
             
-            print("✓ Успешно!")
+            print("OK")
             return True
             
         except paramiko.AuthenticationException:
-            print("❌ Ошибка авторизации")
+            print("ERROR: Authentication failed")
             return False
         except paramiko.SSHException as e:
-            print(f"❌ SSH ошибка: {e}")
+            print(f"ERROR: SSH error: {e}")
             return False
         except Exception as e:
-            print(f"❌ Ошибка подключения: {e}")
+            print(f"ERROR: Connection failed: {e}")
             return False
     
     def execute(self, command: str, wait: bool = True) -> Optional[Tuple[str, str, int]]:
         """Выполнение команды на сервере"""
         if not self.ssh:
-            print("❌ Нет подключения к серверу!")
+            print("ERROR: No connection to server!")
             return None
         
         try:
@@ -96,13 +96,13 @@ class ServerSSH:
                 return ("", "", 0)
                 
         except Exception as e:
-            print(f"❌ Ошибка выполнения команды: {e}")
+            print(f"ERROR: Command execution failed: {e}")
             return None
     
     def execute_multiple(self, commands: List[str]) -> bool:
         """Выполнение нескольких команд в одной сессии"""
         if not self.ssh:
-            print("❌ Нет подключения к серверу!")
+            print("ERROR: No connection to server!")
             return False
         
         try:
@@ -125,7 +125,7 @@ class ServerSSH:
             return exit_status == 0
             
         except Exception as e:
-            print(f"❌ Ошибка: {e}")
+            print(f"ERROR: {e}")
             return False
     
     def close(self):
@@ -181,12 +181,12 @@ class ServerSSH:
                 system_vars = config.get('system_variables', {})
                 for name, value in system_vars.items():
                     if not self.update_docker_compose_variable(name, value):
-                        print(f"⚠️ Не удалось обновить {name}")
+                        print(f"WARNING: Failed to update {name}")
                         return False
                 
                 return self.restart_container('n8n')
         except Exception as e:
-            print(f"❌ Ошибка синхронизации: {e}")
+            print(f"ERROR: Sync failed: {e}")
             return False
 
 
@@ -194,10 +194,10 @@ def run_command_on_server(command: str, show_output: bool = True) -> bool:
     """Быстрая функция для выполнения одной команды"""
     ssh = ServerSSH()
     
-    print(f"Подключение к {SERVER_USER}@{SERVER_IP}...", end=" ", flush=True)
+    print(f"Connecting to {SERVER_USER}@{SERVER_IP}...", end=" ", flush=True)
     if not ssh.connect():
         return False
-    print("✓ Успешно!", flush=True)
+    print("OK", flush=True)
     
     result = ssh.execute(command, wait=True)
     ssh.close()
@@ -205,7 +205,9 @@ def run_command_on_server(command: str, show_output: bool = True) -> bool:
     if result:
         output, error, exit_status = result
         if show_output and output:
-            print(output)
+            # Filter to ASCII only for Windows terminal
+            clean_output = ''.join(c if ord(c) < 128 else '?' for c in output)
+            print(clean_output)
         if error:
             print(error, file=sys.stderr)
         return exit_status == 0
@@ -216,11 +218,11 @@ def run_command_on_server(command: str, show_output: bool = True) -> bool:
 def main():
     """Пример использования"""
     if len(sys.argv) < 2:
-        print("Использование:")
-        print(f"  {sys.argv[0]} <команда>")
+        print("Usage:")
+        print(f"  {sys.argv[0]} <command>")
         print(f"  {sys.argv[0]} 'docker exec n8n printenv WEBHOOK_URL'")
         print()
-        print("Или в Python коде:")
+        print("Or in Python code:")
         print("  from setup.server_ssh import ServerSSH")
         print("  ssh = ServerSSH()")
         print("  ssh.connect()")

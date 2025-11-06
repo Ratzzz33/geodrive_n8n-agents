@@ -27,11 +27,12 @@ app.get('/health', (req, res) => {
 });
 
 /**
- * POST /scrape-company-cash
  * Парсинг кассы компании
+ * POST /scrape-company-cash (body: {branch})
+ * GET /scrape-company-cash?branch=tbilisi
  */
-app.post('/scrape-company-cash', async (req, res) => {
-  const { branch } = req.body;
+const scrapeCompanyCashHandler = async (req: any, res: any) => {
+  const branch = req.body?.branch || req.query?.branch;
   
   if (!branch || !['tbilisi', 'batumi', 'kutaisi', 'service-center'].includes(branch)) {
     return res.status(400).json({
@@ -52,14 +53,18 @@ app.post('/scrape-company-cash', async (req, res) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-});
+};
+
+app.post('/scrape-company-cash', scrapeCompanyCashHandler);
+app.get('/scrape-company-cash', scrapeCompanyCashHandler);
 
 /**
- * POST /scrape-events
  * Парсинг страницы событий
+ * POST /scrape-events (body: {branch})
+ * GET /scrape-events?branch=tbilisi
  */
-app.post('/scrape-events', async (req, res) => {
-  const { branch } = req.body;
+const scrapeEventsHandler = async (req: any, res: any) => {
+  const branch = req.body?.branch || req.query?.branch;
   
   if (!branch || !['tbilisi', 'batumi', 'kutaisi', 'service-center'].includes(branch)) {
     return res.status(400).json({
@@ -80,14 +85,19 @@ app.post('/scrape-events', async (req, res) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-});
+};
+
+app.post('/scrape-events', scrapeEventsHandler);
+app.get('/scrape-events', scrapeEventsHandler);
 
 /**
- * POST /scrape-employee-cash
  * Парсинг кассы конкретного сотрудника
+ * POST /scrape-employee-cash (body: {branch, employeeName})
+ * GET /scrape-employee-cash?branch=tbilisi&employeeName=agent1
  */
-app.post('/scrape-employee-cash', async (req, res) => {
-  const { branch, employeeName } = req.body;
+const scrapeEmployeeCashHandler = async (req: any, res: any) => {
+  const branch = req.body?.branch || req.query?.branch;
+  const employeeName = req.body?.employeeName || req.query?.employeeName;
   
   if (!branch || !['tbilisi', 'batumi', 'kutaisi', 'service-center'].includes(branch)) {
     return res.status(400).json({
@@ -115,7 +125,10 @@ app.post('/scrape-employee-cash', async (req, res) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-});
+};
+
+app.post('/scrape-employee-cash', scrapeEmployeeCashHandler);
+app.get('/scrape-employee-cash', scrapeEmployeeCashHandler);
 
 const PORT = 3002;  // Другой порт чтобы не конфликтовать с Playwright service
 

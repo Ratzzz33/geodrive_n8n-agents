@@ -1,25 +1,54 @@
 #!/usr/bin/env python3
-import sys, os
-setup_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'setup')
-sys.path.insert(0, setup_dir)
-from server_ssh import ServerSSH
+"""
+Быстрая проверка HTTP Scraper Service
+"""
 
-ssh = ServerSSH()
-if ssh.connect():
-    print("\n📌 Checking build status...")
-    out, err, code = ssh.execute("cd /root/geodrive_n8n-agents && ls -la dist/ 2>&1 | head -20")
-    print(out or err)
-    print(f"\nExit code: {code}")
+import paramiko
+import json
+
+SERVER_IP = "46.224.17.15"
+SERVER_USER = "root"
+SERVER_PASSWORD = "Geodrive2024SecurePass"
+
+def quick_check():
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
-    if code == 0:
-        print("\n✅ Build directory exists!")
-        print("\n📌 Restarting services...")
-        out, err, code = ssh.execute("pm2 restart jarvis-api playwright-service")
-        print(out or err)
+    try:
+        ssh.connect(SERVER_IP, username=SERVER_USER, password=SERVER_PASSWORD, timeout=30)
         
-        print("\n📌 Checking services status...")
-        out, err, code = ssh.execute("pm2 status")
-        print(out or err)
-    
-    ssh.close()
+        checks = [
+            ("1. PM2 Status", "pm2 list"),
+            ("2. Health Check", "curl -s http://localhost:3002/health"),
+            ("3. Test Scrape (tbilisi)", "curl -s -X POST http://localhost:3002/scrape-company-cash -H 'Content-Type: application/json' -d '{\"branch\":\"tbilisi\"}' 2>&1 | head -50"),
+            ("4. Recent Logs (last 20 lines)", "pm2 logs http-scraper-service --lines 20 --nostream 2>&1 | tail -40"),
+        ]
+        
+        for name, cmd in checks:
+            print(f"\n{'='*70}")
+            print(f"[CHECK] {name}")
+            print('='*70)
+            
+            stdin, stdout, stderr = ssh.exec_command(cmd, get_pty=True, timeout=30)
+            output = stdout.read().decode('utf-8', errors='ignore')
+            
+            # ASCII only
+            safe_output = ''.join(c if ord(c) < 128 else '?' for c in output)
+            
+            # Show relevant output
+            lines = safe_output.strip().split('\n')
+            for line in lines[:50]:  # First 50 lines max
+                print(line)
+        
+        print(f"\n{'='*70}")
+        print("[SUCCESS] PROVERKA ZAVERSHENA")
+        print('='*70)
+        
+    except Exception as e:
+        print(f"\n[ERROR] OSHIBKA: {e}")
+        
+    finally:
+        ssh.close()
 
+if __name__ == "__main__":
+    quick_check()
