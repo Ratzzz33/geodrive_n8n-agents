@@ -21,7 +21,7 @@ const TOKENS: Record<Branch, string> = {
 /**
  * Общие заголовки для всех API запросов
  */
-function getHeaders(branch: Branch): HeadersInit {
+function getHeaders(branch: Branch): Record<string, string> {
   return {
     'accept': 'application/json, text/plain, */*',
     'authorization': TOKENS[branch],
@@ -161,8 +161,9 @@ export async function scrapeCompanyCash(branch: Branch): Promise<{ success: bool
     const payments: Payment[] = [];
     
     // Если в ответе есть массив транзакций
-    if (result.data && Array.isArray(result.data.transactions)) {
-      for (const transaction of result.data.transactions) {
+    const data: any = result.data;
+    if (data && Array.isArray(data.transactions)) {
+      for (const transaction of data.transactions) {
         payments.push({
           branch: branch,
           paymentDate: transaction.date || '',
