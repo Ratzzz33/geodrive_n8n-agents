@@ -123,9 +123,11 @@ export async function getCompanyCounts(
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
-    const data = await response.json();
+    const json = await response.json();
+    // RentProg API возвращает {counts: {data: [...], totalcount: {...}, workers: [...]}}
+    const data = json.counts || json;
     
-    console.log(`✅ Company counts for ${branch}:`, data);
+    console.log(`✅ Company counts for ${branch}: ${data.data?.length || 0} transactions`);
     
     return {
       success: true,
