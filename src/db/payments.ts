@@ -254,7 +254,47 @@ export async function savePaymentsBatchOptimized(
       );
     }
     
-    // 3. Готовим данные для batch insert
+    // 3. Предзагружаем маппинг booking_id (RentProg -> наш UUID)
+    const bookingIds = [...new Set(paymentsData.map(p => p.rawData.booking_id).filter(Boolean))].map(String);
+    const bookingRefsMap = new Map<string, string>();
+    
+    if (bookingIds.length > 0) {
+      const bookingRefs = await db
+        .select()
+        .from(externalRefs)
+        .where(
+          and(
+            eq(externalRefs.entity_type, 'booking'),
+            eq(externalRefs.system, 'rentprog'),
+            inArray(externalRefs.external_id, bookingIds)
+          )
+        );
+      
+      bookingRefs.forEach(ref => bookingRefsMap.set(ref.external_id, ref.entity_id));
+      console.log(`✅ Loaded ${bookingRefs.length} booking mappings`);
+    }
+    
+    // 4. Предзагружаем маппинг employee_id (RentProg user_id -> наш UUID)
+    const userIds = [...new Set(paymentsData.map(p => p.rawData.user_id).filter(Boolean))].map(String);
+    const employeeRefsMap = new Map<string, string>();
+    
+    if (userIds.length > 0) {
+      const employeeRefs = await db
+        .select()
+        .from(externalRefs)
+        .where(
+          and(
+            eq(externalRefs.entity_type, 'employee'),
+            eq(externalRefs.system, 'rentprog'),
+            inArray(externalRefs.external_id, userIds)
+          )
+        );
+      
+      employeeRefs.forEach(ref => employeeRefsMap.set(ref.external_id, ref.entity_id));
+      console.log(`✅ Loaded ${employeeRefs.length} employee mappings`);
+    }
+    
+    // 5. Готовим данные для batch insert
     const paymentsToInsert: any[] = [];
     const externalRefsToInsert: any[] = [];
     
@@ -275,13 +315,22 @@ export async function savePaymentsBatchOptimized(
       // Извлекаем поля из raw_data
       const extractedFields = extractPaymentFields(payment.rawData);
       
+      // Находим booking_id и employee_id через маппинги
+      const bookingId = payment.rawData.booking_id 
+        ? bookingRefsMap.get(String(payment.rawData.booking_id)) || null
+        : null;
+      
+      const employeeId = payment.rawData.user_id
+        ? employeeRefsMap.get(String(payment.rawData.user_id)) || null
+        : null;
+      
       const paymentId = randomUUID();
       
       paymentsToInsert.push({
         id: paymentId,
         branch_id: branchId,
-        booking_id: null, // TODO: связать через booking_id из external_refs
-        employee_id: null, // TODO: связать через user_id из external_refs
+        booking_id: bookingId,
+        employee_id: employeeId,
         payment_date: new Date(payment.paymentDate),
         payment_type: payment.paymentType,
         payment_method: payment.paymentMethod,
@@ -302,7 +351,7 @@ export async function savePaymentsBatchOptimized(
       });
     }
     
-    // 4. Batch insert (вставляем порциями по 100 для безопасности)
+    // 6. Batch insert (вставляем порциями по 100 для безопасности)
     let created = 0;
     const chunkSize = 100;
     
@@ -322,7 +371,12 @@ export async function savePaymentsBatchOptimized(
     const duration = Date.now() - startTime;
     const speed = created > 0 ? (created / (duration / 1000)).toFixed(2) : '0';
     
+    // Статистика по связям
+    const linkedBookings = paymentsToInsert.filter(p => p.booking_id !== null).length;
+    const linkedEmployees = paymentsToInsert.filter(p => p.employee_id !== null).length;
+    
     console.log(`🚀 Total: ${created} payments in ${(duration / 1000).toFixed(2)}s (${speed} payments/sec)`);
+    console.log(`🔗 Linked: ${linkedBookings} bookings, ${linkedEmployees} employees`);
     
     return {
       saved: created,
