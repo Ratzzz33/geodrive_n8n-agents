@@ -89,6 +89,29 @@ export const externalRefs = pgTable('external_refs', {
   systemIdx: index('external_refs_system_idx').on(table.system, table.external_id),
 }));
 
+// Платежи и кассовые операции
+export const payments = pgTable('payments', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  branch_id: uuid('branch_id').references(() => branches.id),
+  booking_id: uuid('booking_id').references(() => bookings.id),
+  employee_id: uuid('employee_id').references(() => employees.id),
+  payment_date: timestamp('payment_date', { withTimezone: true }).notNull(),
+  payment_type: text('payment_type').notNull(), // Группа платежа (расходы/доходы)
+  payment_method: text('payment_method').notNull(), // 'cash', 'cashless', 'card'
+  amount: text('amount').notNull(), // Numeric as text для точности
+  currency: text('currency').notNull().default('GEL'), // 'GEL', 'USD', 'EUR'
+  description: text('description'),
+  raw_data: jsonb('raw_data'), // Полные данные из RentProg
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  branchIdx: index('payments_branch_idx').on(table.branch_id),
+  bookingIdx: index('payments_booking_idx').on(table.booking_id),
+  employeeIdx: index('payments_employee_idx').on(table.employee_id),
+  dateIdx: index('payments_date_idx').on(table.payment_date),
+  typeIdx: index('payments_type_idx').on(table.payment_type),
+}));
+
 // Дедупликация вебхуков
 export const webhookDedup = pgTable('webhook_dedup', {
   id: integer('id').generatedAlwaysAsIdentity().primaryKey(),
@@ -112,6 +135,8 @@ export type Car = typeof cars.$inferSelect;
 export type CarInsert = typeof cars.$inferInsert;
 export type Booking = typeof bookings.$inferSelect;
 export type BookingInsert = typeof bookings.$inferInsert;
+export type Payment = typeof payments.$inferSelect;
+export type PaymentInsert = typeof payments.$inferInsert;
 export type ExternalRef = typeof externalRefs.$inferSelect;
 export type ExternalRefInsert = typeof externalRefs.$inferInsert;
 export type WebhookDedup = typeof webhookDedup.$inferSelect;

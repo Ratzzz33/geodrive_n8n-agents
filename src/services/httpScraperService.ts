@@ -9,6 +9,7 @@ import {
   scrapeEvents,
   scrapeEmployeeCash,
 } from './rentprogScraper.js';
+import { savePaymentsBatch } from '../db/payments.js';
 
 const app = express();
 app.use(express.json());
@@ -129,6 +130,62 @@ const scrapeEmployeeCashHandler = async (req: any, res: any) => {
 
 app.post('/scrape-employee-cash', scrapeEmployeeCashHandler);
 app.get('/scrape-employee-cash', scrapeEmployeeCashHandler);
+
+/**
+ * Парсинг кассы компании И СОХРАНЕНИЕ в БД
+ * POST /scrape-and-save-company-cash (body: {branch})
+ * GET /scrape-and-save-company-cash?branch=tbilisi
+ */
+const scrapeAndSaveCompanyCashHandler = async (req: any, res: any) => {
+  const branch = req.body?.branch || req.query?.branch;
+  
+  if (!branch || !['tbilisi', 'batumi', 'kutaisi', 'service-center'].includes(branch)) {
+    return res.status(400).json({
+      success: false,
+      error: `Invalid branch: ${branch}`
+    });
+  }
+  
+  console.log(`📥 Request: scrape-and-save-company-cash for ${branch}`);
+  
+  try {
+    // 1. Парсим данные из RentProg
+    const scrapeResult = await scrapeCompanyCash(branch as Branch);
+    
+    if (!scrapeResult.success) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to scrape company cash',
+        payments: []
+      });
+    }
+    
+    // 2. Сохраняем в БД
+    console.log(`💾 Saving ${scrapeResult.payments.length} payments to database...`);
+    const saveResult = await savePaymentsBatch(scrapeResult.payments);
+    
+    console.log(`✅ Saved: ${saveResult.saved}, Created: ${saveResult.created}, Updated: ${saveResult.updated}, Errors: ${saveResult.errors}`);
+    
+    res.json({
+      success: true,
+      scraped: scrapeResult.payments.length,
+      saved: saveResult.saved,
+      created: saveResult.created,
+      updated: saveResult.updated,
+      errors: saveResult.errors
+    });
+    
+  } catch (error) {
+    console.error(`❌ Error scraping and saving company cash:`, error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+app.post('/scrape-and-save-company-cash', scrapeAndSaveCompanyCashHandler);
+app.get('/scrape-and-save-company-cash', scrapeAndSaveCompanyCashHandler);
 
 const PORT = 3002;  // Другой порт чтобы не конфликтовать с Playwright service
 
