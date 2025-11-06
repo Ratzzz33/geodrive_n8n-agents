@@ -3,8 +3,7 @@
  * Заполняет таблицы: rentprog_employees, employees, external_refs
  */
 
-import fetch from 'node-fetch';
-import { getDatabase } from '../db/index.js';
+import { getDatabase, getSqlConnection } from '../db/index.js';
 import { employees } from '../db/schema.js';
 import { randomUUID } from 'crypto';
 
@@ -45,7 +44,8 @@ async function getUserCashbox(branch: string): Promise<RentProgEmployee[]> {
   const token = TOKENS[branch];
   
   try {
-    const response = await fetch(`${BASE_URL}/user_cashbox`, {
+    // Используем нативный fetch (доступен в Node.js 18+)
+    const response = await globalThis.fetch(`${BASE_URL}/user_cashbox`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
@@ -93,8 +93,7 @@ async function getUserCashbox(branch: string): Promise<RentProgEmployee[]> {
 export async function importAllEmployees() {
   console.log('🚀 Starting employee import from RentProg...\n');
   
-  const db = getDatabase();
-  const { sql } = db;
+  const sql = getSqlConnection();
   
   let totalImported = 0;
   let totalCreated = 0;
