@@ -90,7 +90,7 @@ async function getAuthenticatedClient(branch: Branch, forceLogin = false): Promi
   
   // Логинимся
   const creds = CREDENTIALS[branch];
-  const loginUrl = `https://web.rentprog.ru/${branch}/login`;
+  const loginUrl = 'https://web.rentprog.ru/signin?from=%2Fcompany_counts';
   
   console.log(`🔐 Logging in to ${branch}...`);
   
@@ -120,7 +120,7 @@ async function getAuthenticatedClient(branch: Branch, forceLogin = false): Promi
     
     // 4. Проверить успех
     const finalUrl = postResponse.request?.res?.responseUrl || postResponse.config.url;
-    const isSuccess = !finalUrl?.includes('/login');
+    const isSuccess = !finalUrl?.includes('/signin');
     
     if (!isSuccess) {
       throw new Error('Login failed: redirected back to login page');
@@ -149,7 +149,7 @@ export async function scrapeCompanyCash(branch: Branch): Promise<{ success: bool
     
     // Получить страницу кассы
     console.log(`💰 Fetching company cash page for ${branch}...`);
-    const cashUrl = `https://web.rentprog.ru/${branch}/company/cash`;
+    const cashUrl = 'https://web.rentprog.ru/company_counts';
     const response = await client.get(cashUrl);
     
     // Если 401/403 - перелогиниться
