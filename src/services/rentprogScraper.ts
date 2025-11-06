@@ -97,11 +97,13 @@ async function getAuthenticatedClient(branch: Branch, forceLogin = false): Promi
   try {
     // 1. Получить страницу логина
     const getResponse = await client.get(loginUrl);
+    console.log(`📄 GET ${loginUrl} -> Status: ${getResponse.status}`);
     
     // 2. Извлечь CSRF token
     const $ = cheerio.load(getResponse.data);
     const csrfToken = $('input[name="_csrf"]').val() || 
                       $('meta[name="csrf-token"]').attr('content');
+    console.log(`🔑 CSRF token found: ${csrfToken ? 'YES' : 'NO'}`);
     
     // 3. Отправить форму
     const formData = new URLSearchParams();
@@ -111,6 +113,7 @@ async function getAuthenticatedClient(branch: Branch, forceLogin = false): Promi
       formData.append('_csrf', csrfToken as string);
     }
     
+    console.log(`📤 Posting login form for: ${creds.login}`);
     const postResponse = await client.post(loginUrl, formData, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -120,10 +123,14 @@ async function getAuthenticatedClient(branch: Branch, forceLogin = false): Promi
     
     // 4. Проверить успех
     const finalUrl = postResponse.request?.res?.responseUrl || postResponse.config.url;
+    console.log(`📍 Final URL: ${finalUrl}, Status: ${postResponse.status}`);
     const isSuccess = !finalUrl?.includes('/signin');
     
     if (!isSuccess) {
-      throw new Error('Login failed: redirected back to login page');
+      // Сохраним HTML для диагностики
+      console.log(`❌ Login failed. Response body (first 500 chars):`);
+      console.log(typeof postResponse.data === 'string' ? postResponse.data.substring(0, 500) : JSON.stringify(postResponse.data).substring(0, 500));
+      throw new Error(`Login failed: redirected back to login page (${finalUrl})`);
     }
     
     console.log(`✅ Logged in to ${branch} successfully, cookie cached`);
