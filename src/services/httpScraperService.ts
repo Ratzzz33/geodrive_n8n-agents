@@ -9,7 +9,7 @@ import {
   scrapeEvents,
   scrapeEmployeeCash,
 } from './rentprogScraper.js';
-import { savePaymentsBatch } from '../db/payments.js';
+import { savePaymentsBatchOptimized } from '../db/payments.js';
 import { initDatabase } from '../db/index.js';
 
 const app = express();
@@ -161,11 +161,13 @@ const scrapeAndSaveCompanyCashHandler = async (req: any, res: any) => {
       });
     }
     
-    // 2. Сохраняем в БД
+    // 2. Сохраняем в БД (ОПТИМИЗИРОВАННАЯ версия с batch insert)
     console.log(`💾 Saving ${scrapeResult.payments.length} payments to database...`);
-    const saveResult = await savePaymentsBatch(scrapeResult.payments);
+    const saveResult = await savePaymentsBatchOptimized(scrapeResult.payments);
     
+    const speed = saveResult.duration > 0 ? (saveResult.created / (saveResult.duration / 1000)).toFixed(2) : '0';
     console.log(`✅ Saved: ${saveResult.saved}, Created: ${saveResult.created}, Updated: ${saveResult.updated}, Errors: ${saveResult.errors}`);
+    console.log(`⚡ Speed: ${speed} payments/sec, Duration: ${(saveResult.duration / 1000).toFixed(2)}s`);
     
     res.json({
       success: true,
@@ -173,7 +175,9 @@ const scrapeAndSaveCompanyCashHandler = async (req: any, res: any) => {
       saved: saveResult.saved,
       created: saveResult.created,
       updated: saveResult.updated,
-      errors: saveResult.errors
+      errors: saveResult.errors,
+      duration: saveResult.duration,
+      speed: `${speed} payments/sec`
     });
     
   } catch (error) {

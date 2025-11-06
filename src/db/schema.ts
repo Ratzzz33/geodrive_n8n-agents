@@ -3,7 +3,7 @@
  * Наша модель данных с UUID как первичными ключами
  */
 
-import { pgTable, text, uuid, timestamp, integer, jsonb, unique, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, uuid, timestamp, integer, jsonb, unique, index, boolean } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 // Филиалы
@@ -95,13 +95,54 @@ export const payments = pgTable('payments', {
   branch_id: uuid('branch_id').references(() => branches.id),
   booking_id: uuid('booking_id').references(() => bookings.id),
   employee_id: uuid('employee_id').references(() => employees.id),
+  
+  // Основные данные платежа
   payment_date: timestamp('payment_date', { withTimezone: true }).notNull(),
-  payment_type: text('payment_type').notNull(), // Группа платежа (расходы/доходы)
+  payment_type: text('payment_type').notNull(), // Группа платежа
   payment_method: text('payment_method').notNull(), // 'cash', 'cashless', 'card'
   amount: text('amount').notNull(), // Numeric as text для точности
   currency: text('currency').notNull().default('GEL'), // 'GEL', 'USD', 'EUR'
   description: text('description'),
-  raw_data: jsonb('raw_data'), // Полные данные из RentProg
+  
+  // RentProg IDs (для связи с RentProg сущностями)
+  rp_payment_id: integer('rp_payment_id'), // ID платежа в RentProg
+  rp_car_id: integer('rp_car_id'), // ID автомобиля
+  rp_user_id: integer('rp_user_id'), // ID пользователя (сотрудник)
+  rp_client_id: integer('rp_client_id'), // ID клиента
+  rp_company_id: integer('rp_company_id'), // ID компании
+  rp_cashbox_id: integer('rp_cashbox_id'), // ID кассы
+  rp_category_id: integer('rp_category_id'), // ID категории платежа
+  rp_subcategory_id: integer('rp_subcategory_id'), // ID подкатегории
+  
+  // Коды и названия
+  car_code: text('car_code'), // Код автомобиля (Ford Mustang 648)
+  payment_subgroup: text('payment_subgroup'), // Подгруппа платежа
+  
+  // Финансовые данные
+  exchange_rate: text('exchange_rate'), // Курс обмена
+  rated_amount: text('rated_amount'), // Сумма с учетом курса
+  last_balance: text('last_balance'), // Остаток после операции
+  
+  // Статусы
+  has_check: boolean('has_check').default(false), // Наличие чека
+  is_completed: boolean('is_completed').default(false), // Завершен
+  is_operation: boolean('is_operation').default(false), // Операция или запись
+  is_tinkoff_paid: boolean('is_tinkoff_paid').default(false), // Оплачено через Тинькофф
+  is_client_balance: boolean('is_client_balance').default(false), // Из баланса клиента
+  
+  // Дополнительные связи
+  debt_id: integer('debt_id'), // ID долга
+  agent_id: integer('agent_id'), // ID агента
+  investor_id: integer('investor_id'), // ID инвестора
+  contractor_id: integer('contractor_id'), // ID контрагента
+  
+  // Даты завершения
+  completed_at: timestamp('completed_at', { withTimezone: true }),
+  completed_by: integer('completed_by'), // Кто завершил
+  
+  // raw_data - будет NULL после разноски для визуального контроля
+  raw_data: jsonb('raw_data'),
+  
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
@@ -110,6 +151,13 @@ export const payments = pgTable('payments', {
   employeeIdx: index('payments_employee_idx').on(table.employee_id),
   dateIdx: index('payments_date_idx').on(table.payment_date),
   typeIdx: index('payments_type_idx').on(table.payment_type),
+  rpPaymentIdx: index('payments_rp_payment_id_idx').on(table.rp_payment_id),
+  rpCarIdx: index('payments_rp_car_id_idx').on(table.rp_car_id),
+  rpUserIdx: index('payments_rp_user_id_idx').on(table.rp_user_id),
+  rpCategoryIdx: index('payments_rp_category_id_idx').on(table.rp_category_id),
+  hasCheckIdx: index('payments_has_check_idx').on(table.has_check),
+  isCompletedIdx: index('payments_is_completed_idx').on(table.is_completed),
+  carCodeIdx: index('payments_car_code_idx').on(table.car_code),
 }));
 
 // Дедупликация вебхуков
