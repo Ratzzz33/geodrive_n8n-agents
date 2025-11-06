@@ -123,7 +123,7 @@ export async function getCompanyCounts(
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
-    const json = await response.json();
+    const json: any = await response.json();
     // RentProg API возвращает {counts: {data: [...], totalcount: {...}, workers: [...]}}
     const data = json.counts || json;
     
