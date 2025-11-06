@@ -3,7 +3,7 @@
  * Заполняет таблицы: rentprog_employees, employees, external_refs
  */
 
-import { getDatabase, getSqlConnection } from '../db/index.js';
+import { initDatabase, getDatabase, getSqlConnection } from '../db/index.js';
 import { employees } from '../db/schema.js';
 import { randomUUID } from 'crypto';
 
@@ -200,7 +200,8 @@ export async function importAllEmployees() {
 
 // Если запущено напрямую
 if (import.meta.url === `file://${process.argv[1]}`) {
-  importAllEmployees()
+  initDatabase()
+    .then(() => importAllEmployees())
     .then(() => process.exit(0))
     .catch(err => {
       console.error('Fatal error:', err);
