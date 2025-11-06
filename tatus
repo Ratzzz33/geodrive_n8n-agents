@@ -1,0 +1,54 @@
+[33mc23d114[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m)[m Remove Apify files (not needed, using HTTP scraper)
+D	n8n-workflows/company-cash-register-parser-apify.json
+D	setup/build_existing_actor.py
+D	setup/check_actor_versions.py
+D	setup/create_apify_actor.py
+[33m56d4988[m Add HTTP scraper service with cookie caching (faster than Playwright)
+M	package-lock.json
+D	src/api/routes/scrapeCompanyCash.ts
+[33mb0dadab[m feat: Replace Playwright with HTTP scraper (10x faster, cookie caching)
+A	APIFY_NODE_INSTALLATION.md
+A	APIFY_SETUP_GUIDE.md
+A	APIFY_WORKFLOW_SETUP.md
+A	COMPANY_CASH_PARSER_FIXED.md
+A	CREATE_APIFY_CREDENTIALS.md
+A	DEPLOY_HTTP_SCRAPER.md
+A	FINAL_APIFY_SOLUTION.md
+A	FIX_N8N_WORKFLOW_URL.md
+A	FIX_PLAYWRIGHT_SERVICE.md
+M	PLAYWRIGHT_SERVICE_READY.md
+A	RESTART_N8N.bat
+A	RESTART_PLAYWRIGHT.bat
+A	apify-actor/.actor/actor.json
+A	apify-actor/README.md
+A	apify-actor/main.js
+A	apify-actor/package.json
+A	check_and_restart_playwright.py
+A	check_and_restart_playwright.sh
+A	check_playwright_logs.py
+A	deploy_http_scraper.py
+M	ecosystem.config.cjs
+A	n8n-workflows/company-cash-register-parser-apify.json
+M	package.json
+A	restart_playwright_service.py
+A	setup/build_existing_actor.py
+A	setup/check_actor_versions.py
+A	setup/create_apify_actor.py
+A	src/api/routes/scrapeCompanyCash.ts
+A	src/services/httpScraperService.ts
+A	src/services/rentprogScraper.ts
+[33md4e0265[m[33m ([m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix: n8n workflow uses Playwright microservice instead of direct import
+A	DEPLOYMENT_SUCCESS_REPORT.md
+A	DEPLOY_GIT_BASH.bat
+A	FINAL_DEPLOY.bat
+A	FINAL_DEPLOY_INSTRUCTIONS.md
+A	PLAYWRIGHT_WORKFLOW_FIX_COMPLETE.md
+A	check_playwright_service.py
+A	check_status.py
+A	deploy.sh
+A	n8n-workflows/company-cash-register-parser-fixed.json
+A	quick_check.py
+[33m0db96de[m Fix: TypeScript errors in bot commands (myinfo, start)
+M	claude.md
+M	src/bot/commands/myinfo.ts
+M	src/bot/commands/start.ts

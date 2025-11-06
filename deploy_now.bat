@@ -1,8 +1,12 @@
 @echo off
-cd /d C:\Users\33pok\geodrive_n8n-agents
-echo Starting deploy...
-python fix_and_deploy.py
+cd /d "%~dp0"
+echo ============================================
+echo   Deploying HTTP Scraper Service
+echo ============================================
 echo.
-echo Press any key to close...
-pause >nul
 
+python deploy_now.py
+
+echo.
+echo ============================================
+pause
