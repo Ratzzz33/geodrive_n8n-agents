@@ -10,6 +10,7 @@ import {
   scrapeEmployeeCash,
 } from './rentprogScraper.js';
 import { savePaymentsBatch } from '../db/payments.js';
+import { initDatabase } from '../db/index.js';
 
 const app = express();
 app.use(express.json());
@@ -189,10 +190,24 @@ app.get('/scrape-and-save-company-cash', scrapeAndSaveCompanyCashHandler);
 
 const PORT = 3002;  // Другой порт чтобы не конфликтовать с Playwright service
 
-app.listen(PORT, () => {
-  console.log(`🚀 HTTP Scraper Service listening on port ${PORT}`);
-  console.log(`   Health: http://localhost:${PORT}/health`);
-  console.log(`   Method: HTTP requests (no Playwright/browser)`);
-  console.log(`   Memory: ~20MB (vs ~300MB for Playwright)`);
-});
+// Инициализация БД при старте сервиса
+async function startServer() {
+  try {
+    console.log('Initializing database connection...');
+    await initDatabase();
+    console.log('Database initialized successfully');
+    
+    app.listen(PORT, () => {
+      console.log(`🚀 HTTP Scraper Service listening on port ${PORT}`);
+      console.log(`   Health: http://localhost:${PORT}/health`);
+      console.log(`   Method: HTTP requests (no Playwright/browser)`);
+      console.log(`   Memory: ~20MB (vs ~300MB for Playwright)`);
+    });
+  } catch (error) {
+    console.error('Failed to initialize database:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
