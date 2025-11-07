@@ -34,7 +34,52 @@ interface RentProgEmployee {
   role?: string;
   active?: boolean;
   last_activity?: string;
+  last_login?: string;
+  account?: { cash?: number; id?: number };
+  currency_accounts?: Array<{ currency_id: number; cash: number }>;
+  traccar_id?: number | null;
+  traccar_password?: string | null;
+  vote_up?: number;
+  vote_down?: number;
   [key: string]: any;
+}
+
+/**
+ * Извлечь структурированные поля из данных RentProg сотрудника
+ */
+function extractEmployeeFields(user: RentProgEmployee) {
+  // Извлекаем суммы из currency_accounts по currency_id
+  const currencyAccounts = user.currency_accounts || [];
+  let cashGel = null;
+  let cashUsd = null;
+  let cashEur = null;
+  
+  for (const account of currencyAccounts) {
+    // currency_id: 39 = GEL, 1 = USD, 3 = EUR
+    if (account.currency_id === 39) {
+      cashGel = account.cash;
+    } else if (account.currency_id === 1) {
+      cashUsd = account.cash;
+    } else if (account.currency_id === 3) {
+      cashEur = account.cash;
+    }
+  }
+  
+  return {
+    email: user.email || null,
+    role: user.role || null,
+    active: user.active !== undefined ? user.active : true,
+    last_login: user.last_login || null,
+    account_cash: user.account?.cash || null,
+    account_id: user.account?.id || null,
+    cash_gel: cashGel,
+    cash_usd: cashUsd,
+    cash_eur: cashEur,
+    traccar_id: user.traccar_id || null,
+    traccar_password: user.traccar_password || null,
+    vote_up: user.vote_up || 0,
+    vote_down: user.vote_down || 0,
+  };
 }
 
 /**
@@ -100,11 +145,17 @@ export async function importAllEmployees() {
         const rentprogId = String(user.id);
         const companyId = COMPANY_IDS[branch];
         
-        // 1. Upsert в rentprog_employees
+        // Извлекаем структурированные данные
+        const extracted = extractEmployeeFields(user);
+        
+        // 1. Upsert в rentprog_employees с разнесенными полями
         await sql`
           INSERT INTO rentprog_employees (
             id, rentprog_id, name, first_name, last_name, 
-            company_id, data, created_at, updated_at
+            company_id, email, role, active, last_login,
+            account_cash, account_id, cash_gel, cash_usd, cash_eur,
+            traccar_id, traccar_password, vote_up, vote_down,
+            data, created_at, updated_at
           )
           VALUES (
             gen_random_uuid(),
@@ -113,7 +164,20 @@ export async function importAllEmployees() {
             ${user.first_name || null},
             ${user.last_name || null},
             ${companyId},
-            ${JSON.stringify(user)}::jsonb,
+            ${extracted.email},
+            ${extracted.role},
+            ${extracted.active},
+            ${extracted.last_login},
+            ${extracted.account_cash},
+            ${extracted.account_id},
+            ${extracted.cash_gel},
+            ${extracted.cash_usd},
+            ${extracted.cash_eur},
+            ${extracted.traccar_id},
+            ${extracted.traccar_password},
+            ${extracted.vote_up},
+            ${extracted.vote_down},
+            NULL,  -- data очищаем для визуального контроля
             NOW(),
             NOW()
           )
@@ -122,7 +186,20 @@ export async function importAllEmployees() {
             name = EXCLUDED.name,
             first_name = EXCLUDED.first_name,
             last_name = EXCLUDED.last_name,
-            data = EXCLUDED.data,
+            email = EXCLUDED.email,
+            role = EXCLUDED.role,
+            active = EXCLUDED.active,
+            last_login = EXCLUDED.last_login,
+            account_cash = EXCLUDED.account_cash,
+            account_id = EXCLUDED.account_id,
+            cash_gel = EXCLUDED.cash_gel,
+            cash_usd = EXCLUDED.cash_usd,
+            cash_eur = EXCLUDED.cash_eur,
+            traccar_id = EXCLUDED.traccar_id,
+            traccar_password = EXCLUDED.traccar_password,
+            vote_up = EXCLUDED.vote_up,
+            vote_down = EXCLUDED.vote_down,
+            data = NULL,  -- data очищаем для визуального контроля
             updated_at = NOW()
         `;
         
