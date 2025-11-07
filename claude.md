@@ -383,6 +383,42 @@ Write-Host "Workflows: $($response.data.Count)"
 - Передавай в агент структурированный контекст (system/instructions) и ограничивай доступные инструменты только необходимыми.
 - Для чатов держи цепочку компактной: Agent отвечает за выбор tools; финальный рендер делай в `Respond to Chat`/`Respond to Webhook`.
 
+### Узел GitHub в n8n — креденшелы, операции, триггер
+
+Креденшелы:
+- Создай GitHub Personal Access Token (Classic) с нужными правами:
+  - **repo** (полный доступ к репозиториям) — для issues/PR/files/releases
+  - **workflow** (если нужно вызывать GitHub Actions через workflow dispatch)
+  - **admin:repo_hook** (если настраиваешь вебхуки вручную для триггера)
+- В n8n создай креденшелы типа `GitHub` и вставь токен (User/Org — по ситуации).
+
+Операции узла GitHub (actions):
+- **Issues**: create/update/comment, list/search
+- **Pull Requests**: create/update/merge, list
+- **Repositories**: get/list, collaborators, topics
+- **Releases**: create/update, upload assets
+- **Files (Contents API)**: get/update/create (base64), get file metadata
+- **Workflows**: dispatch workflow, list runs (при наличии прав и API)
+
+Триггер (GitHub Trigger):
+- Сценарий: события GitHub → n8n → обработка/оповещение.
+- Настройка:
+  - Определи секрет (HMAC) в триггере и укажи его в GitHub Webhook
+  - URL вебхука — из узла триггера (используй `https://webhook.rentflow.rentals` + путь из ноды)
+  - Выбери события: `issues`, `pull_request`, `push`, `release` и др.
+- Безопасность: проверь, что секрет совпадает, и ограничь события до необходимых.
+
+Типовые паттерны:
+- **Auto‑comment CI**: `GitHub Trigger (pull_request)` → фильтр → `GitHub (Create Issue Comment)`
+- **Sync issues → DB**: `Schedule Trigger` → `GitHub (List Issues)` с пагинацией → Postgres upsert
+- **Release notify**: `GitHub Trigger (release)` → форматирование → Telegram/Slack уведомление
+- **Dispatch workflow**: событие/кнопка → `GitHub (Workflow Dispatch)` с inputs
+
+Практические заметки:
+- Учитывай лимиты GitHub API (ETag/If‑None‑Match для экономии кворы возможен в HTTP Request).
+- Для больших выборок используй пагинацию `page/per_page` и цикл `Split In Batches`.
+- Секреты и токены держи только в Credentials/ENV, не в коде.
+
 ---
 
 ### Импорт нового workflow - РАБОТАЮЩИЙ СПОСОБ ✅
