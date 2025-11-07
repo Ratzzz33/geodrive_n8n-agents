@@ -38,14 +38,14 @@ interface RentProgEmployee {
 }
 
 /**
- * Получить список сотрудников через API user_cashbox
+ * Получить список сотрудников через API /users
  */
-async function getUserCashbox(branch: string): Promise<RentProgEmployee[]> {
+async function getUsers(branch: string): Promise<RentProgEmployee[]> {
   const token = TOKENS[branch];
   
   try {
     // Используем нативный fetch (доступен в Node.js 18+)
-    const response = await globalThis.fetch(`${BASE_URL}/user_cashbox`, {
+    const response = await globalThis.fetch(`${BASE_URL}/users`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
@@ -61,25 +61,13 @@ async function getUserCashbox(branch: string): Promise<RentProgEmployee[]> {
     
     const json: any = await response.json();
     
-    // Структура: { gel: [...users], usd: [...users], eur: [...users] }
-    const allUsers: RentProgEmployee[] = [];
-    
-    if (json.gel && Array.isArray(json.gel)) {
-      allUsers.push(...json.gel);
-    }
-    if (json.usd && Array.isArray(json.usd)) {
-      allUsers.push(...json.usd);
-    }
-    if (json.eur && Array.isArray(json.eur)) {
-      allUsers.push(...json.eur);
+    // API возвращает массив напрямую
+    if (Array.isArray(json)) {
+      return json as RentProgEmployee[];
     }
     
-    // Дедупликация по ID
-    const uniqueUsers = Array.from(
-      new Map(allUsers.map(u => [u.id, u])).values()
-    );
-    
-    return uniqueUsers;
+    console.error(`❌ ${branch}: Unexpected response format`, typeof json);
+    return [];
     
   } catch (error) {
     console.error(`❌ ${branch}:`, error instanceof Error ? error.message : error);
@@ -102,7 +90,7 @@ export async function importAllEmployees() {
   for (const branch of Object.keys(TOKENS)) {
     console.log(`📥 Fetching employees for ${branch}...`);
     
-    const users = await getUserCashbox(branch);
+    const users = await getUsers(branch);
     console.log(`   Found: ${users.length} users`);
     
     if (users.length === 0) continue;
