@@ -37,7 +37,7 @@ try {
 }
 
 // Конфигурация n8n
-const N8N_BASE_URL = process.env.N8N_BASE_URL || process.env.N8N_URL || 'http://46.224.17.15:5678';
+const N8N_BASE_URL = process.env.N8N_BASE_URL || process.env.N8N_URL || 'https://n8n.rentflow.rentals';
 const N8N_API_KEY = process.env.N8N_API_KEY || '';
 
 // Убираем trailing slash и добавляем /api/v1 если нужно

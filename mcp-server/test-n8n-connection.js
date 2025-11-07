@@ -13,7 +13,7 @@ const __dirname = dirname(__filename);
 
 // Загрузка переменных окружения
 const envPath = join(__dirname, '..', '.env');
-let N8N_BASE_URL = process.env.N8N_BASE_URL || process.env.N8N_URL || 'http://46.224.17.15:5678';
+let N8N_BASE_URL = process.env.N8N_BASE_URL || process.env.N8N_URL || 'https://n8n.rentflow.rentals';
 let N8N_API_KEY = process.env.N8N_API_KEY || '';
 
 try {

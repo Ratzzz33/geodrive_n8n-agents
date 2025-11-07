@@ -12,7 +12,7 @@ param(
     [string]$FilePath
 )
 
-$N8N_HOST = if ($env:N8N_HOST) { $env:N8N_HOST } else { "http://46.224.17.15:5678" }
+$N8N_HOST = if ($env:N8N_HOST) { $env:N8N_HOST } else { "https://n8n.rentflow.rentals" }
 $N8N_API_KEY = if ($env:N8N_API_KEY) { $env:N8N_API_KEY } else { "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZDYyYjM3My0yMDFiLTQ3ZjMtODU5YS1jZGM2OWRkZWE0NGEiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYyMDEzNDI5fQ.OKx4tazufS_mMQ7sg30r08MOAUliYVWCRNYNEVEjHI8" }
 
 $baseURL = if ($N8N_HOST -match "/api/v1") { $N8N_HOST } else { "$N8N_HOST/api/v1" }
