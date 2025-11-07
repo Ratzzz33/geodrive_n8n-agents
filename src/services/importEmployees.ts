@@ -7,12 +7,12 @@ import { initDatabase, getDatabase, getSqlConnection } from '../db/index.js';
 import { employees } from '../db/schema.js';
 import { randomUUID } from 'crypto';
 
-// Bearer токены для каждого филиала
+// Bearer токены для каждого филиала (обновлено 2025-11-07)
 const TOKENS: Record<string, string> = {
-  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxOTI4MywiZXhwIjoxNzQ2NTUyMDAwfQ.F4tzmSwPzgU2SYxbgaKfBB-kLKpJIk1q3uCDZU4-8QU',
-  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxMTg1MiwiZXhwIjoxNzQ2NTUyMDAwfQ.qPq8E7zLtvRcP3zOXiJ_k7UdTBJMWw2TJixIZDbFZWI',
-  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxMjk3NiwiZXhwIjoxNzQ2NTUyMDAwfQ.dJ--AUmjYrqR0lmB1YcVXtXx2HB90DWOCebjm5KNdwU',
-  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNjMwNSwiZXhwIjoxNzQ2NTUyMDAwfQ.XLX4U0EIbHVR4esDj-g2GdS_7RKK6lYgpXX3EF8pbAg'
+  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc',
+  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',
+  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',
+  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs'
 };
 
 const COMPANY_IDS: Record<string, number> = {
