@@ -158,6 +158,7 @@ export class StarlineMonitorService {
   async updateGPSData(): Promise<{ updated: number; errors: string[] }> {
     console.log('📍 Начинаем обновление GPS данных...');
 
+    const sqlConnection = getSqlConnection();
     const matches = await this.matchCars();
     const errors: string[] = [];
     let updated = 0;
