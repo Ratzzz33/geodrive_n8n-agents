@@ -323,7 +323,6 @@ export function initApiServer(port: number = 3000): void {
     }
   });
 
-  /* ВРЕМЕННО ОТКЛЮЧЕНО - требуется доработка
   // Endpoint для обновления GPS данных из Starline
   app.post('/starline/update-gps', async (req, res) => {
     try {
@@ -439,7 +438,6 @@ export function initApiServer(port: number = 3000): void {
       });
     }
   });
-  */ // КОНЕЦ ВРЕМЕННО ОТКЛЮЧЕННОГО БЛОКА STARLINE
 
   // Health check endpoint
   app.get('/health', (req, res) => {
