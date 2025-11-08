@@ -12,6 +12,9 @@ import type { BranchName } from '../integrations/rentprog';
 const app = express();
 app.use(express.json());
 
+// Подключаем роутеры
+import carSearchRouter from './car-search';
+
 let server: ReturnType<typeof app.listen> | null = null;
 
 /**
@@ -22,6 +25,9 @@ export function initApiServer(port: number = 3000): void {
     logger.warn('API server already initialized');
     return;
   }
+
+  // Подключаем роутеры
+  app.use('/api/cars', carSearchRouter);
 
   // Health check для RentProg
   app.get('/rentprog/health', async (req, res) => {
@@ -314,6 +320,122 @@ export function initApiServer(port: number = 3000): void {
     } catch (error) {
       logger.error('Upsert client error:', error);
       res.status(500).json({ ok: false, error: 'Internal server error' });
+    }
+  });
+
+  // Endpoint для обновления GPS данных из Starline
+  app.post('/starline/update-gps', async (req, res) => {
+    try {
+      const { StarlineMonitorService } = await import('../services/starline-monitor');
+      
+      const service = new StarlineMonitorService();
+      const result = await service.updateGPSData();
+      
+      res.json({
+        ok: true,
+        updated: result.updated,
+        errors: result.errors,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Starline GPS update error:', error);
+      res.status(500).json({ 
+        ok: false, 
+        error: error instanceof Error ? error.message : 'Internal server error' 
+      });
+    }
+  });
+
+  // Endpoint для синхронизации устройств Starline в таблицу starline_devices
+  app.post('/starline/sync-devices', async (req, res) => {
+    try {
+      const { StarlineDevicesSyncService } = await import('../services/starline-devices-sync');
+      
+      const service = new StarlineDevicesSyncService();
+      const result = await service.syncDevices();
+      
+      res.json({
+        ok: true,
+        total: result.total,
+        new: result.new,
+        updated: result.updated,
+        errors: result.errors,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Starline sync devices error:', error);
+      res.status(500).json({ 
+        ok: false, 
+        error: error instanceof Error ? error.message : 'Internal server error' 
+      });
+    }
+  });
+
+  // Endpoint для автоматического сопоставления устройств с cars
+  app.post('/starline/match-devices', async (req, res) => {
+    try {
+      const { StarlineDevicesSyncService } = await import('../services/starline-devices-sync');
+      
+      const service = new StarlineDevicesSyncService();
+      const matches = await service.matchDevicesWithCars();
+      
+      res.json({
+        ok: true,
+        matches: matches,
+        count: matches.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Starline match devices error:', error);
+      res.status(500).json({ 
+        ok: false, 
+        error: error instanceof Error ? error.message : 'Internal server error' 
+      });
+    }
+  });
+
+  // Endpoint для получения статуса синхронизации
+  app.get('/starline/sync-status', async (req, res) => {
+    try {
+      const { StarlineDevicesSyncService } = await import('../services/starline-devices-sync');
+      
+      const service = new StarlineDevicesSyncService();
+      const status = await service.getSyncStatus();
+      
+      res.json({
+        ok: true,
+        ...status,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Starline sync status error:', error);
+      res.status(500).json({ 
+        ok: false, 
+        error: error instanceof Error ? error.message : 'Internal server error' 
+      });
+    }
+  });
+
+  // Endpoint для сопоставления машин Starline с таблицей cars (legacy - для обратной совместимости)
+  app.get('/starline/match-cars', async (req, res) => {
+    try {
+      const { StarlineMonitorService } = await import('../services/starline-monitor');
+      
+      const service = new StarlineMonitorService();
+      const matches = await service.matchCars();
+      
+      res.json({
+        ok: true,
+        matches: matches,
+        count: matches.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Starline match cars error:', error);
+      res.status(500).json({ 
+        ok: false, 
+        error: error instanceof Error ? error.message : 'Internal server error' 
+      });
     }
   });
 

@@ -17,7 +17,7 @@ export const branches = pgTable('branches', {
   codeIdx: index('branches_code_idx').on(table.code),
 }));
 
-// Сотрудники
+// Сотрудники (основная система Jarvis)
 export const employees = pgTable('employees', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
@@ -27,12 +27,30 @@ export const employees = pgTable('employees', {
   updated_at: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Сотрудники из RentProg
+export const rentprogEmployees = pgTable('rentprog_employees', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  rentprog_id: text('rentprog_id').unique().notNull(), // ID в RentProg (14714, 16003, ...)
+  name: text('name'), // "Данияр Байбаков"
+  first_name: text('first_name'),
+  last_name: text('last_name'),
+  company_id: integer('company_id'),
+  employee_id: uuid('employee_id').references(() => employees.id), // Необязательная связь с Jarvis
+  data: jsonb('data').default(sql`'{}'::jsonb`), // Дополнительные данные
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  rentprogIdIdx: index('rentprog_employees_rentprog_id_idx').on(table.rentprog_id),
+  companyIdIdx: index('rentprog_employees_company_id_idx').on(table.company_id),
+}));
+
 // Клиенты
 export const clients = pgTable('clients', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name'),
   phone: text('phone'),
   email: text('email'),
+  data: jsonb('data'), // Временное поле для raw данных (очищается после извлечения)
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -45,6 +63,7 @@ export const cars = pgTable('cars', {
   vin: text('vin'),
   model: text('model'), // Модель авто
   starline_id: text('starline_id'), // ID в Starline
+  data: jsonb('data'), // Временное поле для raw данных (очищается после извлечения)
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
@@ -58,15 +77,18 @@ export const bookings = pgTable('bookings', {
   branch_id: uuid('branch_id').references(() => branches.id),
   car_id: uuid('car_id').references(() => cars.id),
   client_id: uuid('client_id').references(() => clients.id),
+  responsible_id: uuid('responsible_id').references(() => rentprogEmployees.id), // Ответственный сотрудник из RentProg
   start_at: timestamp('start_at'),
   end_at: timestamp('end_at'),
   status: text('status'), // 'planned', 'active', 'completed', 'cancelled'
+  data: jsonb('data').default(sql`'{}'::jsonb`), // Временное поле для raw данных
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
   branchIdx: index('bookings_branch_idx').on(table.branch_id),
   carIdx: index('bookings_car_idx').on(table.car_id),
   clientIdx: index('bookings_client_idx').on(table.client_id),
+  responsibleIdx: index('bookings_responsible_idx').on(table.responsible_id),
   statusIdx: index('bookings_status_idx').on(table.status),
 }));
 
@@ -93,6 +115,7 @@ export const externalRefs = pgTable('external_refs', {
 export const payments = pgTable('payments', {
   id: uuid('id').defaultRandom().primaryKey(),
   branch_id: uuid('branch_id').references(() => branches.id),
+  branch: text('branch'), // Код филиала: 'tbilisi', 'batumi', 'kutaisi', 'service-center'
   booking_id: uuid('booking_id').references(() => bookings.id),
   employee_id: uuid('employee_id').references(() => employees.id),
   
@@ -143,10 +166,23 @@ export const payments = pgTable('payments', {
   // raw_data - будет NULL после разноски для визуального контроля
   raw_data: jsonb('raw_data'),
   
+  // Alias-колонки для совместимости с RentProg Company Cash workflow
+  payment_id: integer('payment_id'), // Alias для rp_payment_id
+  sum: text('sum'), // Alias для amount
+  cash: text('cash'), // Часть payment_method (наличные)
+  cashless: text('cashless'), // Часть payment_method (безналичные)
+  group: text('group'), // Alias для payment_type
+  subgroup: text('subgroup'), // Alias для payment_subgroup
+  car_id: integer('car_id'), // Alias для rp_car_id
+  client_id: integer('client_id'), // Alias для rp_client_id
+  user_id: integer('user_id'), // Alias для rp_user_id
+  
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
   branchIdx: index('payments_branch_idx').on(table.branch_id),
+  branchCodeIdx: index('idx_payments_branch').on(table.branch), // Код филиала
+  branchRpPaymentIdx: index('idx_payments_branch_rp_payment_id').on(table.branch, table.rp_payment_id), // Составной индекс
   bookingIdx: index('payments_booking_idx').on(table.booking_id),
   employeeIdx: index('payments_employee_idx').on(table.employee_id),
   dateIdx: index('payments_date_idx').on(table.payment_date),
@@ -158,6 +194,15 @@ export const payments = pgTable('payments', {
   hasCheckIdx: index('payments_has_check_idx').on(table.has_check),
   isCompletedIdx: index('payments_is_completed_idx').on(table.is_completed),
   carCodeIdx: index('payments_car_code_idx').on(table.car_code),
+  // Индексы для alias-колонок (workflow)
+  paymentIdIdx: index('idx_payments_payment_id').on(table.payment_id),
+  carIdIdx: index('idx_payments_car_id').on(table.car_id),
+  clientIdIdx: index('idx_payments_client_id').on(table.client_id),
+  userIdIdx: index('idx_payments_user_id').on(table.user_id),
+  groupIdx: index('idx_payments_group').on(table.group),
+  // UNIQUE constraints для дедупликации
+  branchPaymentUnique: unique('payments_branch_payment_id_unique').on(table.branch, table.rp_payment_id), // Основной
+  branchPaymentIdAliasUnique: unique('payments_branch_payment_id_alias_unique').on(table.branch, table.payment_id), // Для alias-колонки (workflow)
 }));
 
 // Дедупликация вебхуков
@@ -183,6 +228,8 @@ export type Car = typeof cars.$inferSelect;
 export type CarInsert = typeof cars.$inferInsert;
 export type Booking = typeof bookings.$inferSelect;
 export type BookingInsert = typeof bookings.$inferInsert;
+export type RentprogEmployee = typeof rentprogEmployees.$inferSelect;
+export type RentprogEmployeeInsert = typeof rentprogEmployees.$inferInsert;
 export type Payment = typeof payments.$inferSelect;
 export type PaymentInsert = typeof payments.$inferInsert;
 export type ExternalRef = typeof externalRefs.$inferSelect;
