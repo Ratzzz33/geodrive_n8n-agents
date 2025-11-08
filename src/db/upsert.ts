@@ -21,7 +21,11 @@ import {
 } from './schema';
 import { logger } from '../utils/logger';
 import type { BranchName } from '../integrations/rentprog';
-import { extractCarFields, extractClientFields } from './carsAndClients';
+// import { extractCarFields, extractClientFields } from './carsAndClients'; // Временно закомментировано
+
+// Временные заглушки
+const extractCarFields = (payload: any) => payload;
+const extractClientFields = (payload: any) => payload;
 
 /**
  * Разрешить entity_id по внешней ссылке
