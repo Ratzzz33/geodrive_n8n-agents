@@ -27,7 +27,7 @@ except ImportError:
 
 SERVER_PASSWORD = os.getenv(
     "SERVER_PASSWORD",
-    "Geodrive2024SecurePass"  # Пароль SSH от Hetzner сервера
+    "WNHeg7U7aiKw"  # Новый пароль после инцидента безопасности (08.11.2025)
 )
 
 # Установка кодировки для Windows (отключено - может блокировать вывод в Cursor)

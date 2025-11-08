@@ -43,6 +43,8 @@ interface StarlineDeviceDetails extends StarlineDevice {
   imei?: string;
   phone?: string;
   fw_version?: string;
+  sn?: string; // серийный номер
+  type?: number; // тип устройства
 }
 
 interface StarlineAPIResponse<T> {
@@ -88,7 +90,7 @@ export class StarlineClient {
       throw new Error(`Starline API error: ${response.status} ${response.statusText}`);
     }
 
-    const data: StarlineAPIResponse<{ devices: StarlineDevice[] }> = await response.json();
+    const data = await response.json() as StarlineAPIResponse<{ devices: StarlineDevice[] }>;
 
     if (data.result !== 1 || !data.answer) {
       throw new Error(`Starline API error: ${data.error || 'Unknown error'}`);
@@ -119,7 +121,7 @@ export class StarlineClient {
       throw new Error(`Starline API error: ${response.status} ${response.statusText}`);
     }
 
-    const data: StarlineAPIResponse<StarlineDeviceDetails> = await response.json();
+    const data = await response.json() as StarlineAPIResponse<StarlineDeviceDetails>;
 
     if (data.result !== 1 || !data.answer) {
       throw new Error(`Starline API error: ${data.error || 'Unknown error'}`);

@@ -11,7 +11,7 @@ import { logger } from '../utils/logger.js';
 import * as schema from './schema.js';
 
 let connection: postgres.Sql | null = null;
-let db: ReturnType<typeof drizzle> | null = null;
+export let db: ReturnType<typeof drizzle> | null = null;
 
 /**
  * Инициализация подключения к БД

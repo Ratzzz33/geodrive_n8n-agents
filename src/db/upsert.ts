@@ -21,6 +21,7 @@ import {
 } from './schema';
 import { logger } from '../utils/logger';
 import type { BranchName } from '../integrations/rentprog';
+import { extractCarFields, extractClientFields } from './carsAndClients';
 
 /**
  * Разрешить entity_id по внешней ссылке
@@ -136,16 +137,16 @@ export async function upsertCarFromRentProg(
 
   const branchId = await getOrCreateBranch(branchCode, branchCode);
 
+  // Извлекаем все поля из payload
+  const extractedFields = extractCarFields(payload);
+
   if (carId) {
     // Обновляем существующий автомобиль
     await db
       .update(cars)
       .set({
         branch_id: branchId,
-        plate: payload.plate || payload.number || payload.car_name || null,
-        vin: payload.vin || null,
-        model: payload.car_name || payload.model || null,
-        starline_id: payload.starline_id || null,
+        ...extractedFields,
         updated_at: new Date(),
       })
       .where(eq(cars.id, carId));
@@ -158,17 +159,14 @@ export async function upsertCarFromRentProg(
       .insert(cars)
       .values({
         branch_id: branchId,
-        plate: payload.plate || payload.number || payload.car_name || null,
-        vin: payload.vin || null,
-        model: payload.car_name || payload.model || null,
-        starline_id: payload.starline_id || null,
+        ...extractedFields,
       })
       .returning({ id: cars.id });
 
     carId = newCar.id;
 
-    // Создаем внешнюю ссылку
-    await linkExternalRef('car', carId, 'rentprog', rentprogId, branchCode, payload);
+    // Создаем внешнюю ссылку (без meta, т.к. данные уже в таблице)
+    await linkExternalRef('car', carId, 'rentprog', rentprogId, branchCode, null);
     logger.debug(`Created car ${carId} from RentProg ${rentprogId}`);
     return { entityId: carId, created: true };
   }
@@ -188,14 +186,15 @@ export async function upsertClientFromRentProg(
   // Ищем существующую ссылку
   let clientId = await resolveByExternalRef('rentprog', rentprogId);
 
+  // Извлекаем все поля из payload
+  const extractedFields = extractClientFields(payload);
+
   if (clientId) {
     // Обновляем существующего клиента
     await db
       .update(clients)
       .set({
-        name: payload.name || payload.client_name || null,
-        phone: payload.phone || payload.tel || null,
-        email: payload.email || null,
+        ...extractedFields,
         updated_at: new Date(),
       })
       .where(eq(clients.id, clientId));
@@ -207,16 +206,14 @@ export async function upsertClientFromRentProg(
     const [newClient] = await db
       .insert(clients)
       .values({
-        name: payload.name || payload.client_name || null,
-        phone: payload.phone || payload.tel || null,
-        email: payload.email || null,
+        ...extractedFields,
       })
       .returning({ id: clients.id });
 
     clientId = newClient.id;
 
-    // Создаем внешнюю ссылку
-    await linkExternalRef('client', clientId, 'rentprog', rentprogId, branchCode, payload);
+    // Создаем внешнюю ссылку (без meta, т.к. данные уже в таблице)
+    await linkExternalRef('client', clientId, 'rentprog', rentprogId, branchCode, null);
     logger.debug(`Created client ${clientId} from RentProg ${rentprogId}`);
     return { entityId: clientId, created: true };
   }

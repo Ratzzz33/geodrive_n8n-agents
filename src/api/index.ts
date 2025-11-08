@@ -13,7 +13,7 @@ const app = express();
 app.use(express.json());
 
 // Подключаем роутеры
-import carSearchRouter from './car-search';
+// import carSearchRouter from './car-search'; // Временно закомментировано
 
 let server: ReturnType<typeof app.listen> | null = null;
 
@@ -27,7 +27,7 @@ export function initApiServer(port: number = 3000): void {
   }
 
   // Подключаем роутеры
-  app.use('/api/cars', carSearchRouter);
+  // app.use('/api/cars', carSearchRouter); // Временно закомментировано
 
   // Health check для RentProg
   app.get('/rentprog/health', async (req, res) => {

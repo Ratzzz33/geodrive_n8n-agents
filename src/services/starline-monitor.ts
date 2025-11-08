@@ -5,7 +5,7 @@
  */
 
 import { StarlineClient } from '../integrations/starline-client';
-import { db } from '../db/connection';
+import { db } from '../db/index';
 import { sql } from 'drizzle-orm';
 
 interface CarMatch {
@@ -236,7 +236,7 @@ export class StarlineMonitorService {
           isMoving,
           distanceMoved,
           gpsLevel: deviceDetails.gps_lvl || 0,
-          gsmLevel: deviceDetails.gsm_level || 0,
+          gsmLevel: deviceDetails.gsm_lvl || 0,
           ignitionOn: deviceDetails.car_state?.ign || false,
           engineRunning: deviceDetails.car_state?.run || false,
           parkingBrake: deviceDetails.car_state?.pbrake || false,

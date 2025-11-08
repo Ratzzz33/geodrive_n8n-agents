@@ -26,6 +26,7 @@ config/*credentials*.json
 config/rentprog-ui-credentials.json
 *.credentials.json
 .credentials
+READONLY_USER_CREDENTIALS.md
 
 # IDE
 .vscode/

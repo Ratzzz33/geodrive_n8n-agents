@@ -5,7 +5,7 @@
  */
 
 import { StarlineClient } from '../integrations/starline-client';
-import { db } from '../db/connection';
+import { db } from '../db/index';
 import { sql } from 'drizzle-orm';
 
 interface DeviceSyncResult {
