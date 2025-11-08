@@ -315,7 +315,7 @@ export class StarlineMonitorService {
             battery_voltage = EXCLUDED.battery_voltage,
             last_activity = EXCLUDED.last_activity,
             last_sync = NOW()
-        `);
+        `;
 
         updated++;
         console.log(`✅ ${match.starlineAlias}: ${status} ${isMoving ? '🚗 (движется)' : '🅿️ (стоит)'} ${distanceMoved.toFixed(0)}m`);

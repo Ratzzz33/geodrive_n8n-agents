@@ -250,7 +250,7 @@ export class StarlineDevicesSyncService {
             'Автоматическое сопоставление',
             'system'
           )
-        `);
+        `;
 
         matches.push({
           deviceId: device.id,
