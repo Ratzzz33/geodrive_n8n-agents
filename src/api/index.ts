@@ -441,6 +441,11 @@ export function initApiServer(port: number = 3000): void {
   });
   */ // КОНЕЦ ВРЕМЕННО ОТКЛЮЧЕННОГО БЛОКА STARLINE
 
+  // Health check endpoint
+  app.get('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   // Root endpoint
   app.get('/', (req, res) => {
     res.json({ status: 'ok', service: 'jarvis-bot' });
