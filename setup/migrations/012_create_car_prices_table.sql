@@ -42,6 +42,42 @@ CREATE TABLE IF NOT EXISTS car_prices (
   CONSTRAINT car_prices_car_season_unique UNIQUE (car_id, season_id)
 );
 
+-- Добавить отсутствующие колонки если таблица уже существует
+DO $$ 
+BEGIN
+  -- Добавить active если нет
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'car_prices' AND column_name = 'active'
+  ) THEN
+    ALTER TABLE car_prices ADD COLUMN active BOOLEAN DEFAULT TRUE;
+  END IF;
+  
+  -- Добавить season_name если нет
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'car_prices' AND column_name = 'season_name'
+  ) THEN
+    ALTER TABLE car_prices ADD COLUMN season_name TEXT;
+  END IF;
+  
+  -- Добавить season_start_date если нет
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'car_prices' AND column_name = 'season_start_date'
+  ) THEN
+    ALTER TABLE car_prices ADD COLUMN season_start_date DATE;
+  END IF;
+  
+  -- Добавить season_end_date если нет
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'car_prices' AND column_name = 'season_end_date'
+  ) THEN
+    ALTER TABLE car_prices ADD COLUMN season_end_date DATE;
+  END IF;
+END $$;
+
 -- Индексы
 CREATE INDEX IF NOT EXISTS idx_car_prices_car_id ON car_prices(car_id);
 CREATE INDEX IF NOT EXISTS idx_car_prices_season ON car_prices(season_id);
@@ -54,42 +90,6 @@ COMMENT ON TABLE car_prices IS 'Цены на аренду автомобиле�
 COMMENT ON COLUMN car_prices.price_values IS 'JSONB структура с ценами по периодам аренды';
 COMMENT ON COLUMN car_prices.season_id IS 'ID сезона в RentProg';
 COMMENT ON COLUMN car_prices.rentprog_price_id IS 'ID price record в RentProg API';
-
--- =====================================================
--- View для удобного запроса текущих цен
--- =====================================================
-
-CREATE OR REPLACE VIEW current_car_prices AS
-SELECT 
-  c.id as car_id,
-  c.plate,
-  c.model,
-  cp.season_name,
-  cp.season_start_date,
-  cp.season_end_date,
-  cp.price_values,
-  -- Извлечь min/max цены
-  (
-    SELECT MIN((jsonb_array_elements(cp.price_values->'items')->>'price_per_day')::numeric)
-    FROM jsonb_array_elements(cp.price_values->'items')
-  ) as min_price_per_day,
-  (
-    SELECT MAX((jsonb_array_elements(cp.price_values->'items')->>'price_per_day')::numeric)
-    FROM jsonb_array_elements(cp.price_values->'items')
-  ) as max_price_per_day,
-  cp.price_values->>'currency' as currency,
-  cp.updated_at
-FROM cars c
-INNER JOIN car_prices cp ON c.id = cp.car_id
-WHERE cp.active = TRUE
-  AND (
-    cp.season_start_date IS NULL OR cp.season_start_date <= CURRENT_DATE
-  )
-  AND (
-    cp.season_end_date IS NULL OR cp.season_end_date >= CURRENT_DATE
-  );
-
-COMMENT ON VIEW current_car_prices IS 'Текущие действующие цены автомобилей (активные сезоны)';
 
 -- =====================================================
 -- Функция для получения цены за определённый период
@@ -145,6 +145,47 @@ END;
 $$ LANGUAGE plpgsql STABLE;
 
 COMMENT ON FUNCTION get_car_price_for_days IS 'Получить цену за день для автомобиля и количества дней аренды';
+
+-- =====================================================
+-- View для удобного запроса текущих цен
+-- =====================================================
+
+DROP VIEW IF EXISTS current_car_prices CASCADE;
+
+CREATE VIEW current_car_prices AS
+WITH price_items AS (
+  SELECT 
+    cp.id,
+    cp.car_id,
+    cp.season_name,
+    cp.season_start_date,
+    cp.season_end_date,
+    cp.price_values,
+    cp.updated_at,
+    item->>'price_per_day' as price_per_day
+  FROM car_prices cp,
+  LATERAL jsonb_array_elements(cp.price_values->'items') as item
+  WHERE cp.active = TRUE
+    AND (cp.season_start_date IS NULL OR cp.season_start_date <= CURRENT_DATE)
+    AND (cp.season_end_date IS NULL OR cp.season_end_date >= CURRENT_DATE)
+)
+SELECT 
+  c.id as car_id,
+  c.plate,
+  c.model,
+  pi.season_name,
+  pi.season_start_date,
+  pi.season_end_date,
+  pi.price_values,
+  MIN(pi.price_per_day::numeric) as min_price_per_day,
+  MAX(pi.price_per_day::numeric) as max_price_per_day,
+  pi.price_values->>'currency' as currency,
+  pi.updated_at
+FROM cars c
+INNER JOIN price_items pi ON c.id = pi.car_id
+GROUP BY c.id, c.plate, c.model, pi.season_name, pi.season_start_date, pi.season_end_date, pi.price_values, pi.updated_at;
+
+COMMENT ON VIEW current_car_prices IS 'Текущие действующие цены автомобилей (активные сезоны)';
 
 -- =====================================================
 -- Примеры использования
