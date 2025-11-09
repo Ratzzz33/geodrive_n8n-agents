@@ -122,7 +122,7 @@ export function initApiServer(port: number = 3000): void {
   });
 
   // Endpoint для проверки автомобилей без цен на сезоны
-  app.get('/check-cars-without-prices/:branch?', async (req, res) => {
+  app.get('/check-cars-without-prices/:branch(*)', async (req, res) => {
     try {
       const { branch } = req.params;
       
