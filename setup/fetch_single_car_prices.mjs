@@ -170,8 +170,7 @@ async function upsertCarPrices(carUuid, carData) {
 async function findCarWithoutPrices() {
   console.log('🔍 Поиск автомобиля без цен...\n');
   
-  // Находим авто, у которого либо нет записей в car_prices, либо их мало
-  // И которое ещё не проверяли сегодня
+  // Находим авто, у которого мало записей в car_prices (< 3 сезона)
   const cars = await sql`
     SELECT 
       c.id as car_uuid,
@@ -185,12 +184,9 @@ async function findCarWithoutPrices() {
       AND er.entity_type = 'car' 
       AND er.system = 'rentprog'
     LEFT JOIN car_prices cp ON cp.car_id = c.id
-    LEFT JOIN car_price_checks cpc ON cpc.car_id = c.id 
-      AND DATE(cpc.checked_at) = CURRENT_DATE
-    WHERE cpc.id IS NULL
     GROUP BY c.id, c.branch_id, b.code, er.external_id
     HAVING COUNT(cp.id) < 3
-    ORDER BY c.created_at DESC
+    ORDER BY RANDOM()
     LIMIT 1
   `;
   
@@ -216,8 +212,6 @@ async function saveCheckResult(car, hasPrices, foundBranch = null) {
         (branch, car_id, rentprog_car_id, checked_at, resolved)
       VALUES 
         (${car.branch_code}, ${car.car_uuid}, ${car.rentprog_car_id}, NOW(), FALSE)
-      ON CONFLICT (rentprog_car_id, branch, DATE(checked_at)) 
-      DO NOTHING
     `;
     console.log(`  📝 Результат проверки сохранен в БД (branch=${car.branch_code}, has_prices=${hasPrices}${foundBranch ? `, found_in=${foundBranch}` : ''})`);
   } catch (error) {
