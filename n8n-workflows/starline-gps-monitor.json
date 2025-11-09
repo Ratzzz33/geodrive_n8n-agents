@@ -24,7 +24,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:3000/starline/update-gps",
+        "url": "http://172.17.0.1:3000/starline/update-gps",
         "options": {
           "timeout": 30000
         }
