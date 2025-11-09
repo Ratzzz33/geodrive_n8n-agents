@@ -1,0 +1,275 @@
+{
+  "name": "RentProg Daily - Employee Cash Reconciliation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 4 * * *"
+            }
+          ]
+        },
+        "timezone": "Asia/Tbilisi"
+      },
+      "id": "cron-daily",
+      "name": "Daily at 04:00 Tbilisi",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Bearer токены для каждого филиала\nconst TOKENS = {\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc',\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs'\n};\n\nconst branches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];\n\nreturn branches.map(branch => ({\n  json: {\n    branch,\n    token: TOKENS[branch]\n  }\n}));"
+      },
+      "id": "prepare-branches",
+      "name": "Prepare Branches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "url": "=https://rentprog.net/api/v1/public/users",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "get-users-from-rentprog",
+      "name": "Get Users from RentProg",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  e.id as employee_id,\n  e.name as employee_name,\n  e.cash_gel,\n  e.cash_usd,\n  e.cash_eur,\n  er.external_id as rentprog_id\nFROM employees e\nJOIN external_refs er ON er.entity_id = e.id \n  AND er.entity_type = 'employee' \n  AND er.system = 'rentprog'\nWHERE e.role != 'inactive'\nORDER BY e.name",
+        "options": {}
+      },
+      "id": "get-employees-from-db",
+      "name": "Get Employees from DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [640, 600],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $('Prepare Branches').item.json.branch;\nconst rentprogUsers = $('Get Users from RentProg').item.json;\nconst dbEmployees = $('Get Employees from DB').all();\n\nif (!rentprogUsers || !rentprogUsers.data || !Array.isArray(rentprogUsers.data)) {\n  return [{ json: { branch, status: 'error', message: 'No data from RentProg' } }];\n}\n\nconst discrepancies = [];\n\n// Создаем карту пользователей RentProg по ID\nconst rentprogMap = {};\nrentprogUsers.data.forEach(user => {\n  rentprogMap[user.id] = user;\n});\n\n// Сравниваем с нашей БД\ndbEmployees.forEach(emp => {\n  const empData = emp.json;\n  const rpId = empData.rentprog_id;\n  const rpUser = rentprogMap[rpId];\n  \n  if (!rpUser) return; // Пользователь не найден в RentProg\n  \n  // Извлекаем кассы из RentProg\n  const rpCash = {\n    gel: 0,\n    usd: 0,\n    eur: 0\n  };\n  \n  if (rpUser.currency_accounts && Array.isArray(rpUser.currency_accounts)) {\n    rpUser.currency_accounts.forEach(acc => {\n      // currency_id: 39=GEL, 1=USD, 2=EUR\n      if (acc.currency_id === 39) rpCash.gel = acc.cash || 0;\n      if (acc.currency_id === 1) rpCash.usd = acc.cash || 0;\n      if (acc.currency_id === 2) rpCash.eur = acc.cash || 0;\n    });\n  }\n  \n  // Сравниваем\n  const dbCash = {\n    gel: empData.cash_gel || 0,\n    usd: empData.cash_usd || 0,\n    eur: empData.cash_eur || 0\n  };\n  \n  const diffs = [];\n  ['gel', 'usd', 'eur'].forEach(currency => {\n    const diff = Math.abs(rpCash[currency] - dbCash[currency]);\n    if (diff > 0.01) {\n      diffs.push({\n        currency: currency.toUpperCase(),\n        db: dbCash[currency],\n        rentprog: rpCash[currency],\n        diff: rpCash[currency] - dbCash[currency]\n      });\n    }\n  });\n  \n  if (diffs.length > 0) {\n    discrepancies.push({\n      employee_id: empData.employee_id,\n      employee_name: empData.employee_name,\n      rentprog_id: rpId,\n      branch,\n      differences: diffs,\n      correct_cash: rpCash\n    });\n  }\n});\n\nif (discrepancies.length === 0) {\n  return [{ json: { branch, status: 'ok', message: 'No discrepancies found' } }];\n}\n\nreturn discrepancies.map(d => ({ json: d }));"
+      },
+      "id": "compare-balances",
+      "name": "Compare Balances",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-discrepancy",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "ok",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-discrepancy",
+      "name": "If Has Discrepancy",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1040, 500]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE employees SET \n  cash_gel = {{ $json.correct_cash.gel }},\n  cash_usd = {{ $json.correct_cash.usd }},\n  cash_eur = {{ $json.correct_cash.eur }},\n  cash_last_synced = NOW()\nWHERE id = '{{ $json.employee_id }}'",
+        "options": {}
+      },
+      "id": "auto-correct-cash",
+      "name": "Auto-Correct Cash",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1240, 600],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const emp = $json;\nconst lines = [\n  '⚠️ Расхождение кассы сотрудника',\n  '',\n  `👤 Сотрудник: ${emp.employee_name}`,\n  `🏢 Филиал: ${emp.branch}`,\n  `🔢 RentProg ID: ${emp.rentprog_id}`,\n  '',\n  '💰 Расхождения:'\n];\n\nemp.differences.forEach(d => {\n  const sign = d.diff > 0 ? '+' : '';\n  lines.push(\n    `• ${d.currency}: БД ${d.db.toFixed(2)} | RentProg ${d.rentprog.toFixed(2)} | Разница: ${sign}${d.diff.toFixed(2)}`\n  );\n});\n\nlines.push('');\nlines.push('✅ Касса автоисправлена из RentProg');\nlines.push(`🕐 Время сверки: ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Tbilisi' })}`);\n\nreturn [{ json: { message: lines.join('\\n'), branch: emp.branch } }];"
+      },
+      "id": "format-alert",
+      "name": "Format Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1240, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "id": "send-alert",
+      "name": "Send Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1440, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "nONqDN52rBYnhODp",
+          "name": "Telegram Bot (@n8n_alert_geodrive_bot)"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {},
+      "id": "no-op-ok",
+      "name": "All OK",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1240, 200]
+    }
+  ],
+  "connections": {
+    "Daily at 04:00 Tbilisi": {
+      "main": [
+        [
+          {
+            "node": "Prepare Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Branches": {
+      "main": [
+        [
+          {
+            "node": "Get Users from RentProg",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Employees from DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Users from RentProg": {
+      "main": [
+        [
+          {
+            "node": "Compare Balances",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Employees from DB": {
+      "main": [
+        [
+          {
+            "node": "Compare Balances",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare Balances": {
+      "main": [
+        [
+          {
+            "node": "If Has Discrepancy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Has Discrepancy": {
+      "main": [
+        [
+          {
+            "node": "All OK",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Auto-Correct Cash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Asia/Tbilisi",
+    "executionOrder": "v1",
+    "errorWorkflow": "H3UBEp425F5SMyrX",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}
+

@@ -1,0 +1,371 @@
+{
+  "name": "Error Handler - AI Agent",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [-800, 260]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-800, 20],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "manual-error-text",
+      "name": "Manual Error Text",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [-600, 120],
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "json": [
+            {
+              "name": "error",
+              "value": {
+                "message": "TypeError: Cannot read properties of undefined (reading 'select')",
+                "stack": "TypeError: Cannot read properties of undefined (reading 'select')\\n    at file:///app/src/db/index.js:42:15"
+              }
+            },
+            {
+              "name": "workflow",
+              "value": {
+                "id": "MANUAL-TEST",
+                "name": "Manual Test Workflow",
+                "active": false
+              }
+            },
+            {
+              "name": "execution",
+              "value": {
+                "id": "manual-test-001",
+                "mode": "manual",
+                "startedAt": "={{ new Date().toISOString() }}"
+              }
+            },
+            {
+              "name": "node",
+              "value": {
+                "name": "Upsert Payments",
+                "type": "n8n-nodes-base.code"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "output": "main"
+      },
+      "id": "merge-input",
+      "name": "Merge Inputs",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [-600, 200]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const error = $json.error || {};\nconst workflow = $json.workflow || {};\nconst execution = $json.execution || {};\nconst node = $json.node || {};\n\nfunction normalize(message) {\n  if (!message) return '';\n  return message\n    .replace(/\\d+/g, 'N')\n    .replace(/[\\\\w\\\\/\\\\-\\\\.]+/g, '/PATH')\n    .replace(/'[^']+'/g, \"'VALUE'\")\n    .replace(/\\n+/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nfunction classify(message) {\n  const msg = (message || '').toLowerCase();\n  if (msg.match(/type .* is not assignable|property .* does not exist|cannot find|import/)) {\n    return { type: 'typescript', complexity: 'simple', model: 'gpt-5-nano' };\n  }\n  if (msg.match(/econnrefused|request failed|timeout|404|500|401|403/)) {\n    return { type: 'api', complexity: 'medium', model: 'gpt-5-mini' };\n  }\n  if (msg.match(/database|schema|migration|foreign key|constraint|violates|duplicate/)) {\n    return { type: 'database', complexity: 'complex', model: 'gpt-5-codex' };\n  }\n  if (msg.match(/deadlock|race condition|concurrent|assertion/)) {\n    return { type: 'logic', complexity: 'critical', model: 'gpt-4.1' };\n  }\n  return { type: 'general', complexity: 'medium', model: 'gpt-5-mini' };\n}\n\nconst normalizedMessage = normalize(error.message || '');\nconst base = (workflow.id || '') + ':' + (node.name || '') + ':' + normalizedMessage;\nfunction simpleHash(s){ let h=0; for(let i=0;i<s.length;i++){ h=((h<<5)-h)+s.charCodeAt(i); h|=0;} return String(h>>>0);} \nconst errorHash = simpleHash(base);\nconst classification = classify(error.message || '');\n\nreturn [\n  {\n    json: {\n      error,\n      workflow,\n      execution,\n      node,\n      error_hash: errorHash,\n      normalized_message: normalizedMessage,\n      error_type: classification.type,\n      error_complexity: classification.complexity,\n      ai_model: classification.model,\n      timestamp: new Date().toISOString(),\n      chat_id: -1003251225615\n    }\n  }\n];"
+      },
+      "id": "extract-context",
+      "name": "Extract Error Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-400, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  error_hash,\n  cursor_prompt,\n  ai_analysis,\n  ai_model_used,\n  occurrence_count,\n  first_seen,\n  last_seen\nFROM error_analysis_cache\nWHERE error_hash = $1\n  AND created_at > NOW() - INTERVAL '7 days'",
+        "options": {
+          "queryBatching": "independently",
+          "nodeVersion": 2
+        },
+        "additionalFields": {
+          "queryParams": "={{ $json.error_hash }}"
+        }
+      },
+      "id": "check-cache",
+      "name": "Check Cache",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [-200, 200],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.cursor_prompt }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and",
+          "options": {}
+        }
+      },
+      "id": "is-cached",
+      "name": "Is Cached?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [0, 200]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cached = $json;\nconst context = $item(0, 'Extract Error Context').json;\nconst summaryHtml = `🔁 <b>ПОВТОРЯЮЩАЯСЯ ОШИБКА</b> (AI токены не потрачены ✅)\\n\\n📋 <b>Workflow:</b> ${context.workflow.name || 'Unknown'}\\n   • ID: <code>${context.workflow.id || 'n/a'}</code>\\n🔴 <b>Node:</b> ${context.node.name || 'Unknown'} (<code>${context.node.type || 'n/a'}</code>)\\n⏰ <b>Время:</b> ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Tbilisi' })}\\n\\n❌ <b>Ошибка:</b>\\n<code>${(context.error.message || 'Unknown error').substring(0, 300)}</code>\\n\\n📊 <b>Статистика:</b>\\n• Всего появлений: <b>${(cached.occurrence_count || 0) + 1}</b>\\n• Первое: ${cached.first_seen ? new Date(cached.first_seen).toLocaleString('ru-RU', { timeZone: 'Asia/Tbilisi' }) : 'n/a'}\\n• Последнее: ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Tbilisi' })}\\n• AI модель (кэш): ${cached.ai_model_used || 'unknown'}\\n\\n🔗 <b>View:</b> https://n8n.rentflow.rentals/workflow/${context.workflow.id || ''}/executions/${context.execution.id || ''}`;\nreturn {\n  json: {\n    chat_id: context.chat_id,\n    summary_html: summaryHtml,\n    cursor_prompt: cached.cursor_prompt || 'Промпт не найден в кэше',\n    error_hash: context.error_hash,\n    cached: true\n  }\n};"
+      },
+      "id": "format-cached",
+      "name": "Format Cached Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 80]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE error_analysis_cache\nSET occurrence_count = occurrence_count + 1,\n    last_seen = NOW(),\n    updated_at = NOW()\nWHERE error_hash = $1",
+        "additionalFields": {
+          "queryParams": "={{ $json.error_hash }}"
+        }
+      },
+      "id": "update-cache",
+      "name": "Update Cache Counter",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [460, 40],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "Ты — Error Handler AI Agent n8n. Всегда возвращай JSON с ключами: summary_html, cursor_prompt, ai_model_used, ai_notes. Работай на русском языке. cursor_prompt ≤ 3500 символов. Используй доступные инструменты если нужно."
+        }
+      },
+      "id": "ai-agent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [420, 340]
+    },
+    {
+      "parameters": {
+        "name": "read_files",
+        "description": "Прочитать файлы из репозитория GitHub для анализа контекста (доступны файлы из geodrive_n8n-agents). Полезно для понимания структуры проекта.",
+        "toolCode": "const owner = 'your-github-username';\nconst repo = 'geodrive_n8n-agents';\nconst path = items[0].json.path || 'claude.md';\n\nconst response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {\n  headers: { 'User-Agent': 'n8n-workflow' }\n});\n\nif (!response.ok) {\n  return { json: { error: `HTTP ${response.status}` } };\n}\n\nconst data = await response.json();\nconst content = Buffer.from(data.content, 'base64').toString('utf-8');\n\nreturn { json: { path, content: content.substring(0, 5000) } };"
+      },
+      "id": "github-tool",
+      "name": "GitHub Documentation Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1,
+      "position": [200, 520]
+    },
+    {
+      "parameters": {
+        "name": "analyze_error",
+        "description": "Анализирует контекст ошибки и формирует структурированный ответ в JSON с ключами: summary_html (краткое резюме для Telegram), cursor_prompt (детальный промпт для Cursor AI), ai_model_used (модель), ai_notes (заметки анализа)",
+        "toolCode": "const context = items[0].json;\n\nconst summaryHtml = `🔴 <b>ОШИБКА В WORKFLOW</b>\\n\\n📋 <b>Workflow:</b> ${context.workflow_name || 'Unknown'}\\n   • ID: <code>${context.workflow_id || 'n/a'}</code>\\n🔴 <b>Node:</b> ${context.node_name || 'Unknown'}\\n⏰ <b>Время:</b> ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Tbilisi' })}\\n\\n❌ <b>Ошибка:</b>\\n<code>${(context.error_message || 'Unknown error').substring(0, 300)}</code>\\n\\n📊 <b>Классификация:</b>\\n• Тип: ${context.error_type || 'unknown'}\\n• Сложность: ${context.error_complexity || 'medium'}\\n• Модель: ${context.suggested_model || 'gpt-5-codex'}`;\n\nconst cursorPrompt = `ОШИБКА В N8N WORKFLOW\\n\\nКонтекст:\\n- Workflow: ${context.workflow_name || 'Unknown'} (${context.workflow_id || 'n/a'})\\n- Node: ${context.node_name || 'Unknown'}\\n- Ошибка: ${context.error_message || 'Unknown'}\\n\\nКлассификация:\\n- Тип: ${context.error_type || 'unknown'}\\n- Сложность: ${context.error_complexity || 'medium'}\\n\\nРекомендации:\\n1. Проверь конфигурацию ноды\\n2. Валидируй входные данные\\n3. Проверь креденшелы и подключения\\n\\nПожалуйста, исправь ошибку в workflow.`;\n\nreturn { \n  json: {\n    summary_html: summaryHtml,\n    cursor_prompt: cursorPrompt,\n    ai_model_used: context.suggested_model || 'gpt-5-codex',\n    ai_notes: `Анализ выполнен AI Agent. Тип: ${context.error_type || 'unknown'}. Сложность: ${context.error_complexity || 'medium'}.`\n  }\n};"
+      },
+      "id": "analyze-tool",
+      "name": "Analyze Error Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1,
+      "position": [420, 520]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {}
+      },
+      "id": "openai-model",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [620, 520],
+      "credentials": {
+        "openAiApi": {
+          "id": "r7gKTMOJGyO0hMmF",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const context = $item(0, 'Extract Error Context').json;\nconst prompt = `Ты — Error Handler AI Agent. Проанализируй ошибку n8n workflow.\\n\\nКонтекст (JSON):\\n${JSON.stringify({\n  workflow: { id: context.workflow.id, name: context.workflow.name },\n  execution: { id: context.execution.id, mode: context.execution.mode },\n  node: { name: context.node.name, type: context.node.type },\n  error: {\n    message: context.error.message,\n    stack: context.error.stack || null,\n  },\n  classification: {\n    type: context.error_type,\n    complexity: context.error_complexity,\n    suggested_model: context.ai_model\n  }\n}, null, 2)}\\n\\nИспользуй инструмент analyze_error для формирования ответа. Верни JSON с ключами:\\n- summary_html: краткое резюме для Telegram (HTML)\\n- cursor_prompt: детальный промпт для Cursor AI (plain text, ≤3500 символов)\\n- ai_model_used: модель для анализа\\n- ai_notes: заметки\\n\\nВызови analyze_error с параметрами:\\n- workflow_name: ${context.workflow.name || 'Unknown'}\\n- workflow_id: ${context.workflow.id || 'n/a'}\\n- node_name: ${context.node.name || 'Unknown'}\\n- error_message: ${context.error.message || 'Unknown'}\\n- error_type: ${context.error_type || 'unknown'}\\n- error_complexity: ${context.error_complexity || 'medium'}\\n- suggested_model: ${context.ai_model || 'gpt-5-codex'}`;\n\nreturn {\n  json: {\n    text: prompt,\n    chat_id: context.chat_id,\n    error_hash: context.error_hash,\n    workflow_id: context.workflow.id || null,\n    workflow_name: context.workflow.name || null,\n    node_name: context.node.name || null,\n    error_message: context.error.message || null,\n    error_type: context.error_type || 'unknown',\n    error_complexity: context.error_complexity || 'medium',\n    suggested_model: context.ai_model || 'gpt-5-codex'\n  }\n};"
+      },
+      "id": "build-agent-input",
+      "name": "Build Agent Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 340]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const payload = $item(0, 'Build Agent Input').json;\nconst raw = $json.output || $json.text || $json.response || $json.data || $json;\nlet parsed;\n\nif (typeof raw === 'string') {\n  try { \n    parsed = JSON.parse(raw); \n  } catch (error) { \n    parsed = { summary_html: raw, cursor_prompt: raw }; \n  }\n} else {\n  parsed = raw;\n}\n\nconst summaryHtml = parsed.summary_html || '⚠️ Не удалось сформировать summary';\nconst cursorPrompt = parsed.cursor_prompt || 'Не удалось создать промпт';\n\nreturn { \n  json: { \n    chat_id: payload.chat_id, \n    summary_html: summaryHtml, \n    cursor_prompt: cursorPrompt, \n    error_hash: payload.error_hash, \n    workflow_id: payload.workflow_id, \n    workflow_name: payload.workflow_name, \n    node_name: payload.node_name, \n    error_message: payload.error_message, \n    error_type: payload.error_type, \n    ai_model: parsed.ai_model_used || payload.suggested_model || 'gpt-5-codex', \n    ai_notes: parsed.ai_notes || 'Анализ выполнен AI Agent', \n    cached: false \n  } \n};"
+      },
+      "id": "parse-agent-output",
+      "name": "Parse Agent Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 340]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO error_analysis_cache (\n  error_hash,\n  workflow_id,\n  workflow_name,\n  node_name,\n  error_message,\n  error_type,\n  ai_model_used,\n  ai_analysis,\n  cursor_prompt,\n  estimated_cost,\n  occurrence_count,\n  first_seen,\n  last_seen\n) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,0,1,NOW(),NOW())\nON CONFLICT (error_hash) DO NOTHING",
+        "additionalFields": {
+          "queryParams": "={{ [$json.error_hash,$json.workflow_id,$json.workflow_name,$json.node_name,$json.error_message,$json.error_type,$json.ai_model,$json.ai_notes,$json.cursor_prompt] }}"
+        }
+      },
+      "id": "save-cache",
+      "name": "Save to Cache",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [880, 340],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.summary_html }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        },
+        "resource": "message",
+        "operation": "sendMessage"
+      },
+      "id": "send-summary",
+      "name": "Send Summary to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [460, 140],
+      "continueOnFail": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram_alert_bot",
+          "name": "Telegram Bot (@n8n_alert_geodrive_bot)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=```\\n{{ $json.cursor_prompt }}\\n```",
+        "additionalFields": {
+          "parse_mode": "MarkdownV2"
+        },
+        "resource": "message",
+        "operation": "sendMessage"
+      },
+      "id": "send-prompt",
+      "name": "Send Cursor Prompt",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [680, 140],
+      "continueOnFail": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram_alert_bot",
+          "name": "Telegram Bot (@n8n_alert_geodrive_bot)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [[{"node": "Merge Inputs", "type": "main", "index": 0}]]
+    },
+    "Manual Trigger": {
+      "main": [[{"node": "Manual Error Text", "type": "main", "index": 0}]]
+    },
+    "Manual Error Text": {
+      "main": [[{"node": "Merge Inputs", "type": "main", "index": 0}]]
+    },
+    "Merge Inputs": {
+      "main": [[{"node": "Extract Error Context", "type": "main", "index": 0}]]
+    },
+    "Extract Error Context": {
+      "main": [[{"node": "Check Cache", "type": "main", "index": 0}]]
+    },
+    "Check Cache": {
+      "main": [[{"node": "Is Cached?", "type": "main", "index": 0}]]
+    },
+    "Is Cached?": {
+      "main": [
+        [{"node": "Format Cached Response", "type": "main", "index": 0}],
+        [{"node": "Build Agent Input", "type": "main", "index": 0}]
+      ]
+    },
+    "Format Cached Response": {
+      "main": [
+        [{"node": "Update Cache Counter", "type": "main", "index": 0}],
+        [{"node": "Send Summary to Telegram", "type": "main", "index": 0}]
+      ]
+    },
+    "Build Agent Input": {
+      "main": [[{"node": "AI Agent", "type": "main", "index": 0}]]
+    },
+    "AI Agent": {
+      "main": [[{"node": "Parse Agent Output", "type": "main", "index": 0}]]
+    },
+    "Parse Agent Output": {
+      "main": [
+        [{"node": "Save to Cache", "type": "main", "index": 0}],
+        [{"node": "Send Summary to Telegram", "type": "main", "index": 0}]
+      ]
+    },
+    "Send Summary to Telegram": {
+      "main": [[{"node": "Send Cursor Prompt", "type": "main", "index": 0}]]
+    },
+    "GitHub Documentation Tool": {
+      "ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]
+    },
+    "Analyze Error Tool": {
+      "ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [[{"node": "AI Agent", "type": "ai_languageModel", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "triggerCount": 1
+}
+

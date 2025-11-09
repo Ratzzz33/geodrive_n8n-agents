@@ -4,7 +4,7 @@
  * и выполняет автоматическое сопоставление с cars
  */
 
-import { StarlineClient } from '../integrations/starline-client';
+import { getStarlineScraper } from './starline-scraper';
 import { getDatabase, getSqlConnection } from '../db/index';
 import { sql } from 'drizzle-orm';
 import { logger } from '../utils/logger';
@@ -25,10 +25,8 @@ interface MatchResult {
 }
 
 export class StarlineDevicesSyncService {
-  private client: StarlineClient;
-
   constructor() {
-    this.client = new StarlineClient();
+    // Используем singleton scraper, который уже инициализирован
   }
 
   /**
@@ -46,15 +44,16 @@ export class StarlineDevicesSyncService {
     };
 
     try {
-      // Получаем все устройства из Starline
-      const devices = await this.client.getDevices();
+      // Получаем все устройства из Starline через persistent scraper
+      const scraper = getStarlineScraper();
+      const devices = await scraper.getDevices();
       result.total = devices.length;
       console.log(`📡 Получено ${devices.length} устройств из Starline`);
 
       for (const device of devices) {
         try {
           // Получаем детальную информацию
-          const details = await this.client.getDeviceDetails(device.device_id);
+          const details = await scraper.getDeviceDetails(device.device_id);
 
           // Upsert в таблицу starline_devices
           const sqlConnection = getSqlConnection();

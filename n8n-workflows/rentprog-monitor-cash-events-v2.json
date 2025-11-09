@@ -1,0 +1,570 @@
+{
+  "name": "RentProg Monitor - Cash & Events",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Bearer токены для каждого филиала (из src/services/importEmployees.ts)\nconst TOKENS = {\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc',\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs'\n};\n\nconst branches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];\n\nreturn branches.map(branch => ({\n  json: {\n    branch,\n    token: TOKENS[branch]\n  }\n}));"
+      },
+      "id": "prepare-branches",
+      "name": "Prepare Branches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Формируем URL с датами (последние 30 дней)\nconst now = new Date();\nconst monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);\n\nconst formatDate = (date) => {\n  const year = date.getFullYear();\n  const month = String(date.getMonth() + 1).padStart(2, '0');\n  const day = String(date.getDate()).padStart(2, '0');\n  return `${year}-${month}-${day}`;\n};\n\nconst startDate = formatDate(monthAgo);\nconst endDate = formatDate(now);\n\nconst items = $input.all();\nreturn items.map(item => ({\n  json: {\n    ...item.json,\n    cashUrl: `https://rentprog.net/api/v1/company_counts_v2?start_date=${startDate}&end_date=${endDate}`\n  }\n}));"
+      },
+      "id": "build-urls",
+      "name": "Build URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [540, 400]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.cashUrl }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "get-company-cash",
+      "name": "Get Company Cash",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [740, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "=https://rentprog.net/api/v1/bookings",
+        "authentication": "none",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "updated_at_from",
+              "value": "={{ $now.minus({minutes: 10}).toISO() }}"
+            },
+            {
+              "name": "per_page",
+              "value": "50"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "get-recent-bookings",
+      "name": "Get Recent Bookings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [740, 500],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $('Prepare Branches').item.json.branch;\n\n// Безопасное получение данных со всех входов\nconst inputs = $input.all();\nlet companyCash = null;\nlet bookings = null;\n\n// Проходим по всем входным данным\ninputs.forEach(input => {\n  const json = input.json;\n  \n  // Определяем, откуда пришли данные\n  if (json && json.data && Array.isArray(json.data)) {\n    // Это данные о bookings\n    bookings = json;\n  } else if (json && (json.error || json.counts || json.cash_gel !== undefined)) {\n    // Это данные о кассе компании\n    companyCash = json;\n  }\n});\n\n// Обработка кассы компании\nlet cashData = [];\nif (companyCash && !companyCash.error) {\n  // company_counts_v2 возвращает {counts: {data: [...]}}\n  let payments = [];\n  if (companyCash.counts && companyCash.counts.data && Array.isArray(companyCash.counts.data)) {\n    payments = companyCash.counts.data;\n  } else if (companyCash.counts && Array.isArray(companyCash.counts)) {\n    payments = companyCash.counts;\n  }\n  \n  payments.forEach(item => {\n    // Извлекаем attributes (новый формат) или используем item напрямую (старый формат)\n    const payment = item.attributes || item;\n    cashData.push({\n      branch,\n      type: 'company_cash',\n      payment_id: payment.id,\n      sum: payment.sum,\n      cash: payment.cash,\n      cashless: payment.cashless,\n      group: payment.group,\n      subgroup: payment.subgroup,\n      description: payment.description,\n      car_id: payment.car_id,\n      booking_id: payment.booking_id,\n      client_id: payment.client_id,\n      user_id: payment.user_id,\n      created_at: payment.created_at,\n      raw_data: JSON.stringify(payment)\n    });\n  });\n}\n\n// Обработка событий (bookings)\nlet eventsData = [];\nif (bookings && Array.isArray(bookings.data)) {\n  bookings.data.forEach(booking => {\n    eventsData.push({\n      branch,\n      type: 'booking_event',\n      booking_id: booking.id,\n      event_type: booking.state,\n      car_id: booking.car_id,\n      client_id: booking.client_id,\n      issue_at: booking.issue_at,\n      return_at: booking.return_at,\n      raw_data: JSON.stringify(booking)\n    });\n  });\n}\n\nconst result = [];\ncashData.forEach(c => result.push({ json: c }));\neventsData.forEach(e => result.push({ json: e }));\n\nreturn result.length > 0 ? result : [{ json: { branch, status: 'no_data' } }];"
+      },
+      "id": "process-data",
+      "name": "Process & Format Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-data",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "no_data",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-data",
+      "name": "If Has Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1240, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-payment",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "company_cash",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "is-payment",
+      "name": "Is Payment?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1440, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-event",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "booking_event",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "is-event",
+      "name": "Is Event?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1440, 500]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "options": {}
+      },
+      "id": "merge-http-results",
+      "name": "Merge HTTP Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [940, 400]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {
+          "waitForAllInputs": true,
+          "waitTimeout": 30
+        }
+      },
+      "id": "merge-save-results",
+      "name": "Merge Save Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1840, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO payments (\n  sum, cash, cashless, \"group\", subgroup, description,\n  car_id, booking_id, client_id, user_id, created_at, raw_data\n) VALUES (\n  {{ $json.sum }},\n  {{ $json.cash }},\n  {{ $json.cashless }},\n  '{{ $json.group }}',\n  {{ $json.subgroup ? \"'\" + $json.subgroup + \"'\" : \"NULL\" }},\n  '{{ $json.description.replace(/'/g, \"''\") }}',\n  {{ $json.car_id || \"NULL\" }},\n  {{ $json.booking_id || \"NULL\" }},\n  {{ $json.client_id || \"NULL\" }},\n  {{ $json.user_id || \"NULL\" }},\n  '{{ $json.created_at }}',\n  '{{ $json.raw_data.replace(/'/g, \"''\") }}'\n)\nON CONFLICT (id) DO NOTHING",
+        "options": {}
+      },
+      "id": "save-payment",
+      "name": "Save Payment to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1640, 300],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO events (\n  branch, type, ext_id, ok, reason\n) VALUES (\n  '{{ $json.branch }}',\n  '{{ $json.event_type }}',\n  '{{ $json.booking_id }}',\n  true,\n  NULL\n)\nON CONFLICT (branch, type, ext_id) DO UPDATE SET\n  ok = true,\n  ts = NOW()",
+        "options": {}
+      },
+      "id": "save-event",
+      "name": "Save Event to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1640, 500],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const saved = $input.all();\nconst successCount = saved.filter(s => !s.json.error).length;\nconst errorCount = saved.filter(s => s.json.error).length;\n\nconst branch = $('Prepare Branches').item.json.branch;\n\nlet message = `✅ ${branch.toUpperCase()} - Обработано\\n`;\nmessage += `Успешно: ${successCount}\\n`;\nif (errorCount > 0) {\n  message += `⚠️ Ошибок: ${errorCount}`;\n}\n\nreturn [{ json: { message, branch, success: errorCount === 0 } }];"
+      },
+      "id": "format-result",
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2040, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-error",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-error",
+      "name": "If Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2240, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "id": "send-alert",
+      "name": "Send Error Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2440, 500],
+      "credentials": {
+        "telegramApi": {
+          "id": "nONqDN52rBYnhODp",
+          "name": "Telegram Bot (@n8n_alert_geodrive_bot)"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {},
+      "id": "no-op-success",
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2440, 300]
+    },
+    {
+      "parameters": {},
+      "id": "no-op-no-data",
+      "name": "No Data to Process",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1440, 600]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Prepare Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Branches": {
+      "main": [
+        [
+          {
+            "node": "Build URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build URLs": {
+      "main": [
+        [
+          {
+            "node": "Get Company Cash",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Recent Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Company Cash": {
+      "main": [
+        [
+          {
+            "node": "Merge HTTP Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recent Bookings": {
+      "main": [
+        [
+          {
+            "node": "Merge HTTP Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge HTTP Results": {
+      "main": [
+        [
+          {
+            "node": "Process & Format Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process & Format Data": {
+      "main": [
+        [
+          {
+            "node": "If Has Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Has Data": {
+      "main": [
+        [
+          {
+            "node": "Is Payment?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Is Event?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Data to Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Payment?": {
+      "main": [
+        [
+          {
+            "node": "Save Payment to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Event?": {
+      "main": [
+        [
+          {
+            "node": "Save Event to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Payment to DB": {
+      "main": [
+        [
+          {
+            "node": "Merge Save Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Event to DB": {
+      "main": [
+        [
+          {
+            "node": "Merge Save Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Save Results": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "If Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error": {
+      "main": [
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Asia/Tbilisi",
+    "executionOrder": "v1",
+    "errorWorkflow": "H3UBEp425F5SMyrX",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}
+

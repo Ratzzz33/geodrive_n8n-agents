@@ -1,0 +1,238 @@
+{
+  "name": "RentProg Exchange Rates Parser",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "hourly-trigger",
+      "name": "Every Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Токен для Tbilisi\nconst TBILISI_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzEyNjUyMDAsInVzZXJfaWQiOjE2MDQ2LCJjb21wYW55X2lkIjoyfQ.t8eWOWKmGx5N4Ol-6-mNh4bD82xZAFaT4Ii96f_KBXI';\n\nreturn [{\n  json: {\n    branch: 'tbilisi',\n    token: TBILISI_TOKEN\n  }\n}];"
+      },
+      "id": "prepare-tbilisi",
+      "name": "Prepare Tbilisi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://web.rentprog.ru/company_profile",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "get-company-profile",
+      "name": "Get Company Profile Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $('Prepare Tbilisi').item.json.branch;\nconst html = $json.body || $json;\n\nconsole.log('Parsing HTML for exchange rates...');\n\n// Ищем все поля с курсами (формат: \"GEL <-> $\")\nconst rates = {};\n\n// Регулярка для курсов: \"0.3704\" в input с id типа \"company_profile_currency_coefficients_attributes_X_\"\ntry {\n  // Паттерны для поиска курсов\n  const patterns = [\n    // GEL <-> $ (USD)\n    { pattern: /GEL\\s*<->\\s*\\$[\\s\\S]*?value=\"([0-9.]+)\"/, key: 'gel_to_usd' },\n    // GEL <-> € (EUR)\n    { pattern: /GEL\\s*<->\\s*€[\\s\\S]*?value=\"([0-9.]+)\"/, key: 'gel_to_eur' },\n    // GEL <-> ₽ (RUB)\n    { pattern: /GEL\\s*<->\\s*₽[\\s\\S]*?value=\"([0-9.]+)\"/, key: 'gel_to_rub' }\n  ];\n  \n  patterns.forEach(({ pattern, key }) => {\n    const match = html.match(pattern);\n    if (match && match[1]) {\n      const value = parseFloat(match[1]);\n      rates[key] = value;\n      \n      // Вычисляем обратный курс\n      const reverseKey = key.replace('gel_to_', '') + '_to_gel';\n      rates[reverseKey] = value > 0 ? (1 / value) : null;\n    }\n  });\n  \n  console.log('Parsed rates:', rates);\n  \n  if (Object.keys(rates).length === 0) {\n    return [{\n      json: {\n        branch,\n        status: 'error',\n        error: 'No exchange rates found in HTML'\n      }\n    }];\n  }\n  \n  return [{\n    json: {\n      branch,\n      gel_to_usd: rates.gel_to_usd || null,\n      gel_to_eur: rates.gel_to_eur || null,\n      gel_to_rub: rates.gel_to_rub || null,\n      usd_to_gel: rates.usd_to_gel || null,\n      eur_to_gel: rates.eur_to_gel || null,\n      rub_to_gel: rates.rub_to_gel || null,\n      raw_data: JSON.stringify({\n        parsed_at: new Date().toISOString(),\n        rates: rates\n      })\n    }\n  }];\n  \n} catch (error) {\n  console.error('Parse error:', error);\n  return [{\n    json: {\n      branch,\n      status: 'error',\n      error: error.message\n    }\n  }];\n}"
+      },
+      "id": "parse-exchange-rates",
+      "name": "Parse Exchange Rates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-error",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "error",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-for-errors",
+      "name": "Check for Errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO exchange_rates (\n  branch, \n  gel_to_rub, \n  gel_to_usd, \n  gel_to_eur,\n  usd_to_gel,\n  eur_to_gel,\n  rub_to_gel,\n  raw_data\n) VALUES (\n  '{{ $json.branch }}',\n  {{ $json.gel_to_rub || 'NULL' }},\n  {{ $json.gel_to_usd || 'NULL' }},\n  {{ $json.gel_to_eur || 'NULL' }},\n  {{ $json.usd_to_gel || 'NULL' }},\n  {{ $json.eur_to_gel || 'NULL' }},\n  {{ $json.rub_to_gel || 'NULL' }},\n  '{{ ($json.raw_data || '{}').replace(/'/g, \"''\") }}'\n)\nRETURNING *",
+        "options": {}
+      },
+      "id": "save-to-db",
+      "name": "Save to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1240, 200],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-neon",
+          "name": "PostgreSQL Neon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO events (\n  branch,\n  type,\n  ext_id,\n  ok,\n  reason,\n  processed\n) VALUES (\n  '{{ $json.branch }}',\n  'exchange_rates.parse.failed',\n  NULL,\n  FALSE,\n  '{{ ($json.error || 'Unknown error').replace(/'/g, \"''\") }}',\n  TRUE\n)",
+        "options": {}
+      },
+      "id": "log-error",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1240, 400],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-neon",
+          "name": "PostgreSQL Neon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const saved = $('Save to DB').first()?.json;\nconst branch = saved?.branch || 'unknown';\n\nconst rates = {\n  'GEL → USD': saved?.gel_to_usd,\n  'GEL → EUR': saved?.gel_to_eur,\n  'GEL → RUB': saved?.gel_to_rub\n};\n\nlet message = `💱 EXCHANGE RATES\\n${branch.toUpperCase()}\\n\\n`;\n\nObject.entries(rates).forEach(([pair, rate]) => {\n  if (rate) {\n    message += `${pair}: ${rate.toFixed(4)}\\n`;\n  }\n});\n\nmessage += `\\n✅ Saved at ${new Date().toISOString()}`;\n\nreturn [{ json: { message } }];"
+      },
+      "id": "format-result",
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 200]
+    }
+  ],
+  "connections": {
+    "Every Hour": {
+      "main": [
+        [
+          {
+            "node": "Prepare Tbilisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Tbilisi": {
+      "main": [
+        [
+          {
+            "node": "Get Company Profile Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Company Profile Page": {
+      "main": [
+        [
+          {
+            "node": "Parse Exchange Rates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Exchange Rates": {
+      "main": [
+        [
+          {
+            "node": "Check for Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {
+            "node": "Save to DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to DB": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "executionTimeout": 3600,
+    "errorWorkflow": "H3UBEp425F5SMyrX"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-11-08T00:00:00.000Z",
+  "versionId": "1"
+}
+

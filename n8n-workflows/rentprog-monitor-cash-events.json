@@ -1,0 +1,374 @@
+{
+  "name": "RentProg Monitor - Cash & Events",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Bearer токены для каждого филиала (из src/services/importEmployees.ts)\nconst TOKENS = {\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc',\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs'\n};\n\nconst COMPANY_IDS = {\n  'service-center': 19283,\n  'tbilisi': 9247,\n  'batumi': 9247,\n  'kutaisi': 9360\n};\n\nconst branches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];\n\nreturn branches.map(branch => ({\n  json: {\n    branch,\n    token: TOKENS[branch],\n    company_id: COMPANY_IDS[branch]\n  }\n}));"
+      },
+      "id": "prepare-branches",
+      "name": "Prepare Branches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "url": "=https://rentprog.net/api/v1/public/company_counts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "get-company-cash",
+      "name": "Get Company Cash",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "=https://rentprog.net/api/v1/public/bookings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "updated_at_from",
+              "value": "={{ $now.minus({minutes: 10}).toISO() }}"
+            },
+            {
+              "name": "per_page",
+              "value": "50"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Prepare Branches').item.json.token }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "get-recent-bookings",
+      "name": "Get Recent Bookings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 500],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $('Prepare Branches').item.json.branch;\n\n// Безопасное получение данных со всех входов\nconst inputs = $input.all();\nlet companyCash = null;\nlet bookings = null;\n\n// Проходим по всем входным данным\ninputs.forEach(input => {\n  const json = input.json;\n  \n  // Определяем, откуда пришли данные\n  if (json && json.data && Array.isArray(json.data)) {\n    // Это данные о bookings\n    bookings = json;\n  } else if (json && (json.error || json.counts || json.cash_gel !== undefined)) {\n    // Это данные о кассе компании\n    companyCash = json;\n  }\n});\n\n// Обработка кассы компании\nlet cashData = null;\nif (companyCash && !companyCash.error) {\n  cashData = {\n    type: 'company_cash',\n    branch,\n    data: companyCash,\n    timestamp: new Date().toISOString()\n  };\n}\n\n// Обработка событий (bookings)\nlet eventsData = [];\nif (bookings && Array.isArray(bookings.data)) {\n  eventsData = bookings.data.map(booking => ({\n    type: 'booking_event',\n    branch,\n    booking_id: booking.id,\n    event_type: booking.state,\n    data: booking,\n    timestamp: new Date().toISOString()\n  }));\n}\n\nconst result = [];\nif (cashData) result.push({ json: cashData });\nresult.push(...eventsData.map(e => ({ json: e })));\n\nreturn result.length > 0 ? result : [{ json: { branch, status: 'no_data' } }];"
+      },
+      "id": "process-data",
+      "name": "Process & Format Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 400]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "H3UBEp425F5SMyrX",
+          "mode": "id"
+        }
+      },
+      "id": "error-subworkflow",
+      "name": "Send to Error Handler",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1040, 600]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-data",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "no_data",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-data",
+      "name": "If Has Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1040, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://46.224.17.15:3000/process-rentprog-data",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "send-to-jarvis",
+      "name": "Send to Jarvis API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1240, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $json.branch || 'unknown';\nconst type = $json.type || 'unknown';\nconst response = $('Send to Jarvis API').item.json;\n\nlet message = '';\nif (response && response.ok) {\n  message = `✅ ${branch.toUpperCase()} - ${type}\\n`;\n  message += `Обработано успешно`;\n} else {\n  const error = response?.error || $json.error || 'Unknown error';\n  message = `❌ ${branch.toUpperCase()} - ${type}\\n`;\n  message += `Ошибка: ${error}`;\n}\n\nreturn [{ json: { message, branch, type, success: !!(response && response.ok) } }];"
+      },
+      "id": "format-result",
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-error",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-error",
+      "name": "If Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1640, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "id": "send-alert",
+      "name": "Send Error Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1840, 500],
+      "credentials": {
+        "telegramApi": {
+          "id": "nONqDN52rBYnhODp",
+          "name": "Telegram Bot (@n8n_alert_geodrive_bot)"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {},
+      "id": "no-op-success",
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1840, 300]
+    },
+    {
+      "parameters": {},
+      "id": "no-op-no-data",
+      "name": "No Data to Process",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1240, 500]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Prepare Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Branches": {
+      "main": [
+        [
+          {
+            "node": "Get Company Cash",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Recent Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Company Cash": {
+      "main": [
+        [
+          {
+            "node": "Process & Format Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recent Bookings": {
+      "main": [
+        [
+          {
+            "node": "Process & Format Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process & Format Data": {
+      "main": [
+        [
+          {
+            "node": "If Has Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Error Handler": {
+      "main": [
+        []
+      ]
+    },
+    "If Has Data": {
+      "main": [
+        [
+          {
+            "node": "Send to Jarvis API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Data to Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Jarvis API": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "If Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error": {
+      "main": [
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "H3UBEp425F5SMyrX",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}
+

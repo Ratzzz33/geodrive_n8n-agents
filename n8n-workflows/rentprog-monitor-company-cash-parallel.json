@@ -1,0 +1,315 @@
+{
+  "name": "RentProg Monitor - Company Cash",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {"interval": [{"field": "minutes", "minutesInterval": 3}]}
+      },
+      "id": "trigger",
+      "name": "Every 3 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const TOKENS = {\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc',\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs'\n};\n\nconst now = new Date();\nconst yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);\n\nconst formatDate = (date) => {\n  const year = date.getFullYear();\n  const month = String(date.getMonth() + 1).padStart(2, '0');\n  const day = String(date.getDate()).padStart(2, '0');\n  return `${year}-${month}-${day}`;\n};\n\nconst startDate = formatDate(yesterday);\nconst endDate = formatDate(now);\n\nreturn [{\n  json: {\n    branch: 'tbilisi',\n    token: TOKENS.tbilisi,\n    cashUrl: `https://rentprog.net/api/v1/company_counts_v2?start_date=${startDate}&end_date=${endDate}`\n  }\n}];"
+      },
+      "id": "prep-tbilisi",
+      "name": "Tbilisi Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const TOKENS = {\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc',\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs'\n};\n\nconst now = new Date();\nconst yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);\n\nconst formatDate = (date) => {\n  const year = date.getFullYear();\n  const month = String(date.getMonth() + 1).padStart(2, '0');\n  const day = String(date.getDate()).padStart(2, '0');\n  return `${year}-${month}-${day}`;\n};\n\nconst startDate = formatDate(yesterday);\nconst endDate = formatDate(now);\n\nreturn [{\n  json: {\n    branch: 'batumi',\n    token: TOKENS.batumi,\n    cashUrl: `https://rentprog.net/api/v1/company_counts_v2?start_date=${startDate}&end_date=${endDate}`\n  }\n}];"
+      },
+      "id": "prep-batumi",
+      "name": "Batumi Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 350]
+    },
+    {
+      "parameters": {
+        "jsCode": "const TOKENS = {\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc',\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs'\n};\n\nconst now = new Date();\nconst yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);\n\nconst formatDate = (date) => {\n  const year = date.getFullYear();\n  const month = String(date.getMonth() + 1).padStart(2, '0');\n  const day = String(date.getDate()).padStart(2, '0');\n  return `${year}-${month}-${day}`;\n};\n\nconst startDate = formatDate(yesterday);\nconst endDate = formatDate(now);\n\nreturn [{\n  json: {\n    branch: 'kutaisi',\n    token: TOKENS.kutaisi,\n    cashUrl: `https://rentprog.net/api/v1/company_counts_v2?start_date=${startDate}&end_date=${endDate}`\n  }\n}];"
+      },
+      "id": "prep-kutaisi",
+      "name": "Kutaisi Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const TOKENS = {\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc',\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs'\n};\n\nconst now = new Date();\nconst yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);\n\nconst formatDate = (date) => {\n  const year = date.getFullYear();\n  const month = String(date.getMonth() + 1).padStart(2, '0');\n  const day = String(date.getDate()).padStart(2, '0');\n  return `${year}-${month}-${day}`;\n};\n\nconst startDate = formatDate(yesterday);\nconst endDate = formatDate(now);\n\nreturn [{\n  json: {\n    branch: 'service-center',\n    token: TOKENS['service-center'],\n    cashUrl: `https://rentprog.net/api/v1/company_counts_v2?start_date=${startDate}&end_date=${endDate}`\n  }\n}];"
+      },
+      "id": "prep-service",
+      "name": "Service Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 650]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.cashUrl }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{ $json.token }}"},
+            {"name": "Accept", "value": "application/json, text/plain, */*"},
+            {"name": "Origin", "value": "https://web.rentprog.ru"},
+            {"name": "Referer", "value": "https://web.rentprog.ru/"},
+            {"name": "User-Agent", "value": "Mozilla/5.0"}
+          ]
+        },
+        "options": {"timeout": 30000}
+      },
+      "id": "get-tbilisi",
+      "name": "Get Tbilisi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.cashUrl }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{ $json.token }}"},
+            {"name": "Accept", "value": "application/json, text/plain, */*"},
+            {"name": "Origin", "value": "https://web.rentprog.ru"},
+            {"name": "Referer", "value": "https://web.rentprog.ru/"},
+            {"name": "User-Agent", "value": "Mozilla/5.0"}
+          ]
+        },
+        "options": {"timeout": 30000}
+      },
+      "id": "get-batumi",
+      "name": "Get Batumi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 350],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.cashUrl }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{ $json.token }}"},
+            {"name": "Accept", "value": "application/json, text/plain, */*"},
+            {"name": "Origin", "value": "https://web.rentprog.ru"},
+            {"name": "Referer", "value": "https://web.rentprog.ru/"},
+            {"name": "User-Agent", "value": "Mozilla/5.0"}
+          ]
+        },
+        "options": {"timeout": 30000}
+      },
+      "id": "get-kutaisi",
+      "name": "Get Kutaisi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 500],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.cashUrl }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{ $json.token }}"},
+            {"name": "Accept", "value": "application/json, text/plain, */*"},
+            {"name": "Origin", "value": "https://web.rentprog.ru"},
+            {"name": "Referer", "value": "https://web.rentprog.ru/"},
+            {"name": "User-Agent", "value": "Mozilla/5.0"}
+          ]
+        },
+        "options": {"timeout": 30000}
+      },
+      "id": "get-service",
+      "name": "Get Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 650],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Собираем ВСЕ responses со всех 4 филиалов и распаковываем payments\nconst processed = [];\n\nfunction processItems(items, branchName) {\n  console.log(`\\n=== ${branchName.toUpperCase()} ===`);\n  console.log('Items received:', items.length);\n  \n  items.forEach((item, idx) => {\n    console.log(`\\nItem ${idx}:`, JSON.stringify(item.json).substring(0, 200));\n    \n    let payments = [];\n    \n    // Пробуем разные структуры ответа\n    if (item.json?.counts?.data && Array.isArray(item.json.counts.data)) {\n      payments = item.json.counts.data;\n      console.log('Found counts.data:', payments.length);\n    } else if (item.json?.counts && Array.isArray(item.json.counts)) {\n      payments = item.json.counts;\n      console.log('Found counts:', payments.length);\n    } else if (item.json?.data && Array.isArray(item.json.data)) {\n      payments = item.json.data;\n      console.log('Found data:', payments.length);\n    } else if (Array.isArray(item.json)) {\n      payments = item.json;\n      console.log('Found array:', payments.length);\n    }\n    \n    if (payments.length === 0) {\n      console.log('⚠️  No payments found, marking as no_data');\n      processed.push({ json: { branch: branchName, status: 'no_data' } });\n      return;\n    }\n    \n    console.log(`✓ Processing ${payments.length} payments`);\n    payments.forEach((paymentItem, pIdx) => {\n      const payment = paymentItem.attributes || paymentItem;\n      if (pIdx < 2) console.log(`Payment ${pIdx}:`, JSON.stringify(payment).substring(0, 150));\n      \n      processed.push({\n        json: {\n          branch: branchName,\n          type: 'company_cash',\n          payment_id: payment.id || null,\n          sum: payment.sum || 0,\n          cash: payment.cash || 0,\n          cashless: payment.cashless || 0,\n          group: payment.group || 'unknown',\n          subgroup: payment.subgroup || null,\n          description: payment.description || '',\n          car_id: payment.car_id || null,\n          booking_id: payment.booking_id || null,\n          client_id: payment.client_id || null,\n          user_id: payment.user_id || null,\n          created_at: payment.created_at || new Date().toISOString(),\n          raw_data: JSON.stringify(payment)\n        }\n      });\n    });\n  });\n}\n\n// Обрабатываем все 4 филиала\nprocessItems($('Get Tbilisi').all(), 'tbilisi');\nprocessItems($('Get Batumi').all(), 'batumi');\nprocessItems($('Get Kutaisi').all(), 'kutaisi');\nprocessItems($('Get Service').all(), 'service-center');\n\nconsole.log(`\\n✅ Total processed: ${processed.length} items`);\nreturn processed;"
+      },
+      "id": "merge-process",
+      "name": "Merge & Process",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 400]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {"caseSensitive": true},
+                "conditions": [
+                  {"leftValue": "={{ $json.payment_id }}", "rightValue": null, "operator": {"type": "any", "operation": "equals"}}
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "noData"
+            }
+          ]
+        },
+        "options": {"fallbackOutput": "extra"}
+      },
+      "id": "switch-data",
+      "name": "Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1040, 400]
+    },
+    {
+      "parameters": {},
+      "id": "no-data",
+      "name": "No Data",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1240, 500]
+    },
+    {
+      "parameters": {
+        "batchSize": 20,
+        "options": {}
+      },
+      "id": "split-batches",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO payments (\n  branch, payment_id, sum, cash, cashless, \"group\", subgroup, description,\n  car_id, booking_id, client_id, user_id, created_at, raw_data\n) VALUES (\n  '{{ $json.branch }}',\n  {{ $json.payment_id || \"NULL\" }},\n  {{ $json.sum }},\n  {{ $json.cash }},\n  {{ $json.cashless }},\n  '{{ $json.group }}',\n  {{ $json.subgroup ? \"'\" + $json.subgroup + \"'\" : \"NULL\" }},\n  '{{ ($json.description || '').replace(/'/g, \"''\") }}',\n  {{ $json.car_id || \"NULL\" }},\n  {{ $json.booking_id || \"NULL\" }},\n  {{ $json.client_id || \"NULL\" }},\n  {{ $json.user_id || \"NULL\" }},\n  '{{ $json.created_at }}',\n  '{{ ($json.raw_data || '{}').replace(/'/g, \"''\") }}'\n)\nON CONFLICT (branch, payment_id)\nDO UPDATE SET\n  sum = EXCLUDED.sum,\n  cash = EXCLUDED.cash,\n  cashless = EXCLUDED.cashless,\n  description = EXCLUDED.description,\n  raw_data = EXCLUDED.raw_data,\n  updated_at = NOW()",
+        "options": {}
+      },
+      "id": "save-payment",
+      "name": "Save Payment to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1440, 300],
+      "credentials": {"postgres": {"id": "3I9fyXVlGg4Vl4LZ", "name": "Postgres account"}},
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Возвращаем исходные данные из Split In Batches для продолжения цикла\n// Postgres node возвращает только {success: true}, но Split In Batches нужны исходные данные\nconst originalData = $('Split In Batches').all();\nreturn originalData;"
+      },
+      "id": "pass-through",
+      "name": "Pass Through Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1640, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const saved = $input.all();\nconst successCount = saved.filter(s => !s.json.error).length;\nconst errorCount = saved.filter(s => s.json.error).length;\n\nconst byBranch = {};\nsaved.forEach(item => {\n  if (item.json.branch) {\n    if (!byBranch[item.json.branch]) byBranch[item.json.branch] = { success: 0, error: 0 };\n    if (item.json.error) byBranch[item.json.branch].error++;\n    else byBranch[item.json.branch].success++;\n  }\n});\n\nlet message = '💰 COMPANY CASH\\n';\nObject.keys(byBranch).forEach(branch => {\n  const stats = byBranch[branch];\n  message += `${branch.toUpperCase()}: ${stats.success} ✓`;\n  if (stats.error > 0) message += ` / ${stats.error} ✗`;\n  message += '\\n';\n});\nmessage += `\\nВсего: ${successCount} / ${saved.length}`;\n\nreturn [{ json: { message, success: errorCount === 0, saved_count: successCount, error_count: errorCount, by_branch: byBranch } }];"
+      },
+      "id": "format-result",
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1840, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {"leftValue": "={{ $json.success }}", "rightValue": false, "operator": {"type": "boolean", "operation": "equals"}}
+          ]
+        }
+      },
+      "id": "if-error",
+      "name": "If Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1840, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ $json.message }}"
+      },
+      "id": "send-alert",
+      "name": "Send Error Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2040, 400],
+      "credentials": {"telegramApi": {"id": "nONqDN52rBYnhODp", "name": "Telegram Bot (@n8n_alert_geodrive_bot)"}},
+      "continueOnFail": true
+    },
+    {
+      "parameters": {},
+      "id": "success",
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2040, 200]
+    }
+  ],
+  "connections": {
+    "Every 3 Minutes": {
+      "main": [[
+        {"node": "Tbilisi Pages", "type": "main", "index": 0},
+        {"node": "Batumi Pages", "type": "main", "index": 0},
+        {"node": "Kutaisi Pages", "type": "main", "index": 0},
+        {"node": "Service Pages", "type": "main", "index": 0}
+      ]]
+    },
+    "Tbilisi Pages": {"main": [[{"node": "Get Tbilisi", "type": "main", "index": 0}]]},
+    "Batumi Pages": {"main": [[{"node": "Get Batumi", "type": "main", "index": 0}]]},
+    "Kutaisi Pages": {"main": [[{"node": "Get Kutaisi", "type": "main", "index": 0}]]},
+    "Service Pages": {"main": [[{"node": "Get Service", "type": "main", "index": 0}]]},
+    "Get Tbilisi": {"main": [[{"node": "Merge & Process", "type": "main", "index": 0}]]},
+    "Get Batumi": {"main": [[{"node": "Merge & Process", "type": "main", "index": 1}]]},
+    "Get Kutaisi": {"main": [[{"node": "Merge & Process", "type": "main", "index": 2}]]},
+    "Get Service": {"main": [[{"node": "Merge & Process", "type": "main", "index": 3}]]},
+    "Merge & Process": {"main": [[{"node": "Switch", "type": "main", "index": 0}]]},
+    "Switch": {
+      "main": [
+        [{"node": "No Data", "type": "main", "index": 0}],
+        [{"node": "Split In Batches", "type": "main", "index": 0}]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [{"node": "Save Payment to DB", "type": "main", "index": 0}],
+        [{"node": "Format Result", "type": "main", "index": 0}]
+      ]
+    },
+    "Save Payment to DB": {"main": [[{"node": "Pass Through Data", "type": "main", "index": 0}]]},
+    "Pass Through Data": {"main": [[{"node": "Split In Batches", "type": "main", "index": 0}]]},
+    "Format Result": {"main": [[{"node": "If Error", "type": "main", "index": 0}]]},
+    "If Error": {"main": [[{"node": "Success", "type": "main", "index": 0}], [{"node": "Send Error Alert", "type": "main", "index": 0}]]}
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "executionTimeout": 3600,
+    "errorWorkflow": "H3UBEp425F5SMyrX"
+  }
+}
+

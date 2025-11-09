@@ -1,0 +1,131 @@
+{
+  "name": "RentProg History Parser - Tbilisi Only",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 3
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/search_operations",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"page\":1,\"per_page\":50,\"sort_by\":\"id\",\"direction\":\"desc\",\"search\":null}",
+        "options": {}
+      },
+      "id": "get-operations",
+      "name": "Get Operations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const responseData = $input.first().json;\n\nconsole.log('Response structure:', Object.keys(responseData));\nconsole.log('Operations:', responseData.operations);\n\nif (!responseData.operations || !responseData.operations.data) {\n  console.error('No operations data found');\n  return [];\n}\n\nconst operations = responseData.operations.data;\nconsole.log(`Processing ${operations.length} operations`);\n\nconst results = operations.map(op => {\n  const attr = op.attributes || op;\n  \n  return {\n    json: {\n      branch: 'tbilisi',\n      operation_type: 'history_item',\n      operation_id: String(attr.id || op.id),\n      description: attr.description || '',\n      created_at: attr.created_at || attr.date,\n      raw_data: op\n    }\n  };\n});\n\nconsole.log(`Prepared ${results.length} items for DB`);\nreturn results;"
+      },
+      "id": "process-operations",
+      "name": "Process Operations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO history (\n  branch,\n  operation_type,\n  operation_id,\n  description,\n  created_at,\n  raw_data\n)\nVALUES (\n  '{{ $json.branch }}',\n  '{{ $json.operation_type }}',\n  '{{ $json.operation_id }}',\n  '{{ $json.description }}',\n  '{{ $json.created_at }}',\n  '{{ $json.raw_data }}'::jsonb\n)\nON CONFLICT (branch, operation_type, created_at, entity_id)\nDO UPDATE SET\n  description = EXCLUDED.description,\n  raw_data = EXCLUDED.raw_data,\n  ts = NOW()\nRETURNING id;",
+        "options": {}
+      },
+      "id": "save-to-db",
+      "name": "Save to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [900, 300],
+      "credentials": {
+        "postgres": {
+          "id": "rCT42ZxSDf7BMxCJ",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Operations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Operations": {
+      "main": [
+        [
+          {
+            "node": "Process Operations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Operations": {
+      "main": [
+        [
+          {
+            "node": "Save to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}
+

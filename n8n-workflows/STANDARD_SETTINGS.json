@@ -1,0 +1,24 @@
+{
+  "description": "Стандартные настройки для всех n8n workflows",
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "executionTimeout": 3600,
+    "errorWorkflow": "H3UBEp425F5SMyrX"
+  },
+  "notes": {
+    "executionOrder": "v1 (recommended) - новый порядок выполнения",
+    "timezone": "Asia/Tbilisi - часовой пояс Грузии",
+    "saveDataErrorExecution": "all - сохранять все failed executions",
+    "saveDataSuccessExecution": "all - сохранять все successful executions",
+    "saveManualExecutions": "true - сохранять ручные запуски",
+    "saveExecutionProgress": "true - сохранять прогресс выполнения",
+    "executionTimeout": "3600 секунд (1 час) - таймаут выполнения",
+    "errorWorkflow": "H3UBEp425F5SMyrX - Error Handler - AI Agent"
+  }
+}
+

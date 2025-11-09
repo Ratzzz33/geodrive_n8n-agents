@@ -5,6 +5,7 @@
 import { initDatabase, closeDatabase } from './db/index.js';
 import { logger } from './utils/logger.js';
 import { initApiServer, stopApiServer } from './api/index.js';
+import { getStarlineScraper } from './services/starline-scraper.js';
 
 /**
  * Главная функция
@@ -29,6 +30,18 @@ async function main(): Promise<void> {
       }
     }
 
+    // Инициализация Starline Scraper (persistent browser session)
+    try {
+      const scraper = getStarlineScraper();
+      await scraper.initialize();
+      logger.info('✅ Starline Scraper initialized (persistent browser session)');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn('⚠️  Starline Scraper initialization failed');
+      logger.warn(`   Error: ${errorMessage}`);
+      logger.warn('   Starline monitoring will not work');
+    }
+
     // Запуск HTTP API сервера
     const port = Number(process.env.API_PORT) || 3000;
     initApiServer(port);
@@ -51,6 +64,11 @@ process.on('SIGINT', async () => {
   logger.info('\n👋 Shutting down gracefully...');
   try {
     await stopApiServer();
+    
+    // Закрываем Starline Scraper (браузер)
+    const scraper = getStarlineScraper();
+    await scraper.shutdown();
+    
     await closeDatabase();
     logger.info('✅ Shutdown complete');
     process.exit(0);
@@ -64,6 +82,11 @@ process.on('SIGTERM', async () => {
   logger.info('\n👋 Received SIGTERM, shutting down...');
   try {
     await stopApiServer();
+    
+    // Закрываем Starline Scraper (браузер)
+    const scraper = getStarlineScraper();
+    await scraper.shutdown();
+    
     await closeDatabase();
     logger.info('✅ Shutdown complete');
     process.exit(0);

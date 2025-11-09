@@ -1,0 +1,275 @@
+{
+  "name": "RentProg History Parser",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 3
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 3 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const TOKENS = {\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc',\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs'\n};\n\nconst branches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];\n\nreturn branches.map(branch => ({\n  json: {\n    branch,\n    token: TOKENS[branch]\n  }\n}));"
+      },
+      "id": "prepare-branches",
+      "name": "Prepare Branches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Формируем URL для истории операций\n// Парсим последние 10 минут операций\nconst now = new Date();\nconst tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);\n\nconst formatDate = (date) => {\n  const year = date.getFullYear();\n  const month = String(date.getMonth() + 1).padStart(2, '0');\n  const day = String(date.getDate()).padStart(2, '0');\n  return `${year}-${month}-${day}`;\n};\n\nconst formatDateTime = (date) => {\n  return date.toISOString();\n};\n\nconst items = $input.all();\nreturn items.map(item => ({\n  json: {\n    ...item.json,\n    // Используем API endpoint для истории операций\n    historyUrl: `https://rentprog.net/api/v1/history_items`,\n    from_date: formatDateTime(tenMinutesAgo),\n    to_date: formatDateTime(now)\n  }\n}));"
+      },
+      "id": "build-urls",
+      "name": "Build URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.historyUrl }}",
+        "authentication": "none",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "created_at_from",
+              "value": "={{ $json.from_date }}"
+            },
+            {
+              "name": "created_at_to",
+              "value": "={{ $json.to_date }}"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/history"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "get-history",
+      "name": "Get History Operations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [840, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $('Prepare Branches').item.json.branch;\nconst historyResponse = $json;\n\nlet historyData = [];\n\nif (historyResponse && !historyResponse.error) {\n  let items = [];\n  \n  // Обработка разных форматов ответа\n  if (historyResponse.data && Array.isArray(historyResponse.data)) {\n    items = historyResponse.data;\n  } else if (historyResponse.history_items && Array.isArray(historyResponse.history_items)) {\n    items = historyResponse.history_items;\n  } else if (Array.isArray(historyResponse)) {\n    items = historyResponse;\n  }\n  \n  items.forEach(item => {\n    const operation = item.attributes || item;\n    \n    historyData.push({\n      json: {\n        branch,\n        operation_type: operation.operation_type || operation.type || 'unknown',\n        operation_id: operation.id ? String(operation.id) : null,\n        description: operation.description || operation.message || '',\n        entity_type: operation.entity_type || operation.object_type || null,\n        entity_id: operation.entity_id ? String(operation.entity_id) : null,\n        user_name: operation.user_name || operation.user || operation.author || null,\n        created_at: operation.created_at || operation.timestamp || new Date().toISOString(),\n        raw_data: JSON.stringify(operation)\n      }\n    });\n  });\n}\n\nreturn historyData.length > 0 ? historyData : [{ json: { branch, status: 'no_data' } }];"
+      },
+      "id": "process-data",
+      "name": "Process History Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-data",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "no_data",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-data",
+      "name": "If Has Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1240, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO history (\n  branch, operation_type, operation_id, description,\n  entity_type, entity_id, user_name, created_at, raw_data,\n  matched, processed\n) VALUES (\n  '{{ $json.branch }}',\n  '{{ ($json.operation_type || 'unknown').replace(/'/g, \"''\") }}',\n  {{ $json.operation_id ? \"'\" + $json.operation_id + \"'\" : \"NULL\" }},\n  '{{ ($json.description || '').replace(/'/g, \"''\") }}',\n  {{ $json.entity_type ? \"'\" + $json.entity_type.replace(/'/g, \"''\") + \"'\" : \"NULL\" }},\n  {{ $json.entity_id ? \"'\" + $json.entity_id + \"'\" : \"NULL\" }},\n  {{ $json.user_name ? \"'\" + $json.user_name.replace(/'/g, \"''\") + \"'\" : \"NULL\" }},\n  '{{ $json.created_at }}',\n  '{{ ($json.raw_data || '{}').replace(/'/g, \"''\") }}',\n  FALSE,\n  FALSE\n)\nON CONFLICT (branch, operation_type, created_at, entity_id)\nDO UPDATE SET\n  description = EXCLUDED.description,\n  raw_data = EXCLUDED.raw_data,\n  ts = NOW()",
+        "options": {}
+      },
+      "id": "save-history",
+      "name": "Save to History",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1440, 300],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const saved = $input.all();\nconst successCount = saved.filter(s => !s.json.error).length;\nconst errorCount = saved.filter(s => s.json.error).length;\n\nconst branch = $('Prepare Branches').item.json.branch;\n\nlet message = `📜 HISTORY: ${branch.toUpperCase()}\\n`;\nmessage += `Сохранено операций: ${successCount}\\n`;\nif (errorCount > 0) {\n  message += `⚠️ Ошибок: ${errorCount}`;\n}\n\nreturn [{ json: { message, branch, success: errorCount === 0, saved_count: successCount } }];"
+      },
+      "id": "format-result",
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1640, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-error",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-error",
+      "name": "If Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1840, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "id": "send-alert",
+      "name": "Send Error Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2040, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "nONqDN52rBYnhODp",
+          "name": "Telegram Bot (@n8n_alert_geodrive_bot)"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {},
+      "id": "no-op-success",
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2040, 200]
+    },
+    {
+      "parameters": {},
+      "id": "no-op-no-data",
+      "name": "No Data to Process",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1440, 500]
+    }
+  ],
+  "connections": {
+    "Every 3 Minutes": {
+      "main": [[{"node": "Prepare Branches", "type": "main", "index": 0}]]
+    },
+    "Prepare Branches": {
+      "main": [[{"node": "Build URLs", "type": "main", "index": 0}]]
+    },
+    "Build URLs": {
+      "main": [[{"node": "Get History Operations", "type": "main", "index": 0}]]
+    },
+    "Get History Operations": {
+      "main": [[{"node": "Process History Data", "type": "main", "index": 0}]]
+    },
+    "Process History Data": {
+      "main": [[{"node": "If Has Data", "type": "main", "index": 0}]]
+    },
+    "If Has Data": {
+      "main": [
+        [{"node": "Save to History", "type": "main", "index": 0}],
+        [{"node": "No Data to Process", "type": "main", "index": 0}]
+      ]
+    },
+    "Save to History": {
+      "main": [[{"node": "Format Result", "type": "main", "index": 0}]]
+    },
+    "Format Result": {
+      "main": [[{"node": "If Error", "type": "main", "index": 0}]]
+    },
+    "If Error": {
+      "main": [
+        [{"node": "Success", "type": "main", "index": 0}],
+        [{"node": "Send Error Alert", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Asia/Tbilisi",
+    "executionOrder": "v1",
+    "errorWorkflow": "H3UBEp425F5SMyrX",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}
+

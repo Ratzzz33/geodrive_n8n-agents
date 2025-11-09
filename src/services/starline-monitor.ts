@@ -4,10 +4,11 @@
  * и обновляет GPS данные
  */
 
-import { StarlineClient } from '../integrations/starline-client';
+import { getStarlineScraper } from './starline-scraper';
 import { getDatabase, getSqlConnection } from '../db/index';
 import { sql } from 'drizzle-orm';
 import { logger } from '../utils/logger';
+import { getCarStatus, calculateDistance } from '../utils/starline-helpers';
 
 interface CarMatch {
   carId: string;
@@ -43,10 +44,8 @@ interface GPSUpdate {
 }
 
 export class StarlineMonitorService {
-  private client: StarlineClient;
-
   constructor() {
-    this.client = new StarlineClient();
+    // Используем singleton scraper, который уже инициализирован
   }
 
   /**
@@ -83,8 +82,9 @@ export class StarlineMonitorService {
   async matchCars(): Promise<CarMatch[]> {
     console.log('🔍 Сопоставление машин Starline с таблицей cars...');
 
-    // Получаем все устройства из Starline
-    const devices = await this.client.getDevices();
+    // Получаем все устройства из Starline через persistent scraper
+    const scraper = getStarlineScraper();
+    const devices = await scraper.getDevices();
     console.log(`📡 Получено ${devices.length} устройств из Starline`);
 
     // Получаем все машины из нашей БД
@@ -165,8 +165,9 @@ export class StarlineMonitorService {
 
     for (const match of matches) {
       try {
-        // Получаем детальные данные устройства
-        const deviceDetails = await this.client.getDeviceDetails(match.starlineDeviceId);
+        // Получаем детальные данные устройства через scraper
+        const scraper = getStarlineScraper();
+        const deviceDetails = await scraper.getDeviceDetails(match.starlineDeviceId);
         
         // Получаем текущие координаты из БД (чтобы сохранить как previous)
         const existingResult = await sqlConnection`
@@ -209,7 +210,7 @@ export class StarlineMonitorService {
         let distanceMoved = 0;
 
         if (previousLat && previousLng) {
-          distanceMoved = this.client.calculateDistance(
+          distanceMoved = calculateDistance(
             { x: previousLng, y: previousLat, sat_qty: previousSatQty || 0, ts: 0 },
             { x: currentLng, y: currentLat, sat_qty: currentSatQty, ts: pos.ts }
           );
@@ -218,7 +219,7 @@ export class StarlineMonitorService {
         }
 
         // Определяем статус
-        const status = this.client.getCarStatus(deviceDetails);
+        const status = getCarStatus(deviceDetails);
 
         // Подготавливаем данные для обновления
         const gpsUpdate: GPSUpdate = {

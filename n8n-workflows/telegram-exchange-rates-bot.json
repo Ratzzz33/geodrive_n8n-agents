@@ -1,0 +1,255 @@
+{
+  "name": "Telegram Exchange Rates Bot with AI Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"]
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "telegram-exchange-bot",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $json.message;\nconst chatId = message.chat.id;\nconst text = message.text || '';\nconst username = message.from.username || message.from.first_name || 'Unknown';\n\nconsole.log(`Message from ${username}: ${text}`);\n\nif (text === '/start') {\n  return [{\n    json: {\n      chatId,\n      response: '💱 Привет! Я помощник по курсам валют RentProg.\\n\\nСпроси меня:\\n- Какой курс доллара?\\n- Покажи курсы по всем филиалам\\n- Какой был курс евро вчера?',\n      isCommand: true\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    chatId,\n    text,\n    username,\n    isCommand: false\n  }\n}];"
+      },
+      "id": "process-message",
+      "name": "Process Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-command",
+              "leftValue": "={{ $json.isCommand }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-command",
+      "name": "Is Command?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=Ты — помощник по курсам валют в системе RentProg.\n\nТвоя задача:\n1. Отвечать на вопросы о курсах валют (GEL, USD, EUR, RUB)\n2. Использовать инструмент Query Exchange Rates для получения данных из БД\n3. Давать четкие и понятные ответы на русском языке\n\nФилиалы: tbilisi, batumi, kutaisi, service-center\n\nПримеры вопросов:\n- Какой курс доллара сейчас?\n- Сколько стоит евро в тбилиси?\n- Покажи курсы по всем филиалам\n- Какой был курс рубля вчера?\n\nФормат ответа:\n- Используй эмодзи 💱 для курсов\n- Округляй до 4 знаков после запятой\n- Указывай время последнего обновления\n- Если данных нет — объясни почему"
+        }
+      },
+      "id": "ai-agent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [840, 180]
+    },
+    {
+      "parameters": {
+        "name": "Query Exchange Rates",
+        "description": "Получить курсы валют из базы данных",
+        "workflowId": {
+          "__rl": true,
+          "value": "CsiMxujfHQZvB8b4",
+          "mode": "id"
+        },
+        "toolDescription": "Используй этот инструмент для получения текущих или исторических курсов валют (GEL, USD, EUR, RUB) для филиалов RentProg. Ты ОБЯЗАН использовать этот инструмент для любого вопроса о курсах.",
+        "fields": {
+          "values": [
+            {
+              "name": "branch",
+              "type": "string",
+              "description": "Филиал (tbilisi/batumi/kutaisi/service-center) или all для всех. По умолчанию: tbilisi"
+            },
+            {
+              "name": "date",
+              "type": "string",
+              "description": "Дата в формате YYYY-MM-DD. Опционально. Если не указано - вернет последние данные"
+            }
+          ]
+        }
+      },
+      "id": "tool-query-rates",
+      "name": "Tool: Query Exchange Rates",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [1080, 360]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "openai-model",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [680, 400],
+      "credentials": {
+        "openAiApi": {
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": {
+          "__rl": true,
+          "value": "={{ $('Process Message').item.json.chatId }}",
+          "mode": "expression"
+        },
+        "text": "={{ $json.output || 'Произошла ошибка. Попробуйте еще раз.' }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-response",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1040, 180],
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": {
+          "__rl": true,
+          "value": "={{ $json.chatId }}",
+          "mode": "expression"
+        },
+        "text": "={{ $json.response }}",
+        "additionalFields": {}
+      },
+      "id": "send-command-response",
+      "name": "Send Command Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [840, 400],
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Process Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Message": {
+      "main": [
+        [
+          {
+            "node": "Is Command?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Command?": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Command Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Query Exchange Rates": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "executionTimeout": 3600,
+    "errorWorkflow": "H3UBEp425F5SMyrX"
+  }
+}
+

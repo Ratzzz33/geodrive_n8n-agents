@@ -1,0 +1,443 @@
+{
+  "name": "RentProg History Parser",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "minutes", "minutesInterval": 3}]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 3 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const TOKENS = {\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc',\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs'\n};\n\nconst branches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];\n\nconst items = branches.map(branch => ({\n  json: {\n    branch,\n    token: TOKENS[branch]\n  }\n}));\n\nreturn items;"
+      },
+      "id": "prepare-branches",
+      "name": "Prepare 4 Branches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $json.branch;\nconst token = $json.token;\n\nconst items = [];\nfor (let page = 1; page <= 3; page++) {\n  items.push({\n    json: { branch, token, page }\n  });\n}\n\nreturn items;"
+      },
+      "id": "prepare-pages-tbilisi",
+      "name": "Prepare Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $json.branch;\nconst token = $json.token;\n\nconst items = [];\nfor (let page = 1; page <= 3; page++) {\n  items.push({\n    json: { branch, token, page }\n  });\n}\n\nreturn items;"
+      },
+      "id": "prepare-pages-batumi",
+      "name": "Prepare Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 350]
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $json.branch;\nconst token = $json.token;\n\nconst items = [];\nfor (let page = 1; page <= 3; page++) {\n  items.push({\n    json: { branch, token, page }\n  });\n}\n\nreturn items;"
+      },
+      "id": "prepare-pages-kutaisi",
+      "name": "Prepare Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $json.branch;\nconst token = $json.token;\n\nconst items = [];\nfor (let page = 1; page <= 3; page++) {\n  items.push({\n    json: { branch, token, page }\n  });\n}\n\nreturn items;"
+      },
+      "id": "prepare-pages-service",
+      "name": "Prepare Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 650]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/search_operations",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"page\":{{ $json.page }},\"per_page\":50,\"sort_by\":\"id\",\"direction\":\"desc\",\"search\":null}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{ $json.token }}"},
+            {"name": "Accept", "value": "application/json, text/plain, */*"},
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Origin", "value": "https://web.rentprog.ru"},
+            {"name": "Referer", "value": "https://web.rentprog.ru/"},
+            {"name": "User-Agent", "value": "Mozilla/5.0"}
+          ]
+        },
+        "options": {"timeout": 30000}
+      },
+      "id": "get-ops-tbilisi",
+      "name": "Get Operations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [840, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/search_operations",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"page\":{{ $json.page }},\"per_page\":50,\"sort_by\":\"id\",\"direction\":\"desc\",\"search\":null}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{ $json.token }}"},
+            {"name": "Accept", "value": "application/json, text/plain, */*"},
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Origin", "value": "https://web.rentprog.ru"},
+            {"name": "Referer", "value": "https://web.rentprog.ru/"},
+            {"name": "User-Agent", "value": "Mozilla/5.0"}
+          ]
+        },
+        "options": {"timeout": 30000}
+      },
+      "id": "get-ops-batumi",
+      "name": "Get Operations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [840, 350],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/search_operations",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"page\":{{ $json.page }},\"per_page\":50,\"sort_by\":\"id\",\"direction\":\"desc\",\"search\":null}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{ $json.token }}"},
+            {"name": "Accept", "value": "application/json, text/plain, */*"},
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Origin", "value": "https://web.rentprog.ru"},
+            {"name": "Referer", "value": "https://web.rentprog.ru/"},
+            {"name": "User-Agent", "value": "Mozilla/5.0"}
+          ]
+        },
+        "options": {"timeout": 30000}
+      },
+      "id": "get-ops-kutaisi",
+      "name": "Get Operations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [840, 500],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/search_operations",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"page\":{{ $json.page }},\"per_page\":50,\"sort_by\":\"id\",\"direction\":\"desc\",\"search\":null}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{ $json.token }}"},
+            {"name": "Accept", "value": "application/json, text/plain, */*"},
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Origin", "value": "https://web.rentprog.ru"},
+            {"name": "Referer", "value": "https://web.rentprog.ru/"},
+            {"name": "User-Agent", "value": "Mozilla/5.0"}
+          ]
+        },
+        "options": {"timeout": 30000}
+      },
+      "id": "get-ops-service",
+      "name": "Get Operations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [840, 650],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $('Prepare Pages').first().json.branch;\nconst operations = $json.operations?.data || $json.data || [];\n\nif (operations.length === 0) {\n  return [{ json: { branch, status: 'no_data' } }];\n}\n\nconst items = operations.map(item => {\n  const op = item.attributes || item;\n  return {\n    json: {\n      branch,\n      operation_type: op.operation_type || op.type || 'unknown',\n      operation_id: op.id ? String(op.id) : null,\n      description: op.description || op.message || '',\n      entity_type: op.entity_type || op.object_type || null,\n      entity_id: op.entity_id ? String(op.entity_id) : null,\n      user_name: op.user_name || op.user || op.author || null,\n      created_at: op.created_at || op.timestamp || new Date().toISOString(),\n      raw_data: JSON.stringify(op)\n    }\n  };\n});\n\nreturn items;"
+      },
+      "id": "process-tbilisi",
+      "name": "Process",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $('Prepare Pages').first().json.branch;\nconst operations = $json.operations?.data || $json.data || [];\n\nif (operations.length === 0) {\n  return [{ json: { branch, status: 'no_data' } }];\n}\n\nconst items = operations.map(item => {\n  const op = item.attributes || item;\n  return {\n    json: {\n      branch,\n      operation_type: op.operation_type || op.type || 'unknown',\n      operation_id: op.id ? String(op.id) : null,\n      description: op.description || op.message || '',\n      entity_type: op.entity_type || op.object_type || null,\n      entity_id: op.entity_id ? String(op.entity_id) : null,\n      user_name: op.user_name || op.user || op.author || null,\n      created_at: op.created_at || op.timestamp || new Date().toISOString(),\n      raw_data: JSON.stringify(op)\n    }\n  };\n});\n\nreturn items;"
+      },
+      "id": "process-batumi",
+      "name": "Process",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 350]
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $('Prepare Pages').first().json.branch;\nconst operations = $json.operations?.data || $json.data || [];\n\nif (operations.length === 0) {\n  return [{ json: { branch, status: 'no_data' } }];\n}\n\nconst items = operations.map(item => {\n  const op = item.attributes || item;\n  return {\n    json: {\n      branch,\n      operation_type: op.operation_type || op.type || 'unknown',\n      operation_id: op.id ? String(op.id) : null,\n      description: op.description || op.message || '',\n      entity_type: op.entity_type || op.object_type || null,\n      entity_id: op.entity_id ? String(op.entity_id) : null,\n      user_name: op.user_name || op.user || op.author || null,\n      created_at: op.created_at || op.timestamp || new Date().toISOString(),\n      raw_data: JSON.stringify(op)\n    }\n  };\n});\n\nreturn items;"
+      },
+      "id": "process-kutaisi",
+      "name": "Process",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const branch = $('Prepare Pages').first().json.branch;\nconst operations = $json.operations?.data || $json.data || [];\n\nif (operations.length === 0) {\n  return [{ json: { branch, status: 'no_data' } }];\n}\n\nconst items = operations.map(item => {\n  const op = item.attributes || item;\n  return {\n    json: {\n      branch,\n      operation_type: op.operation_type || op.type || 'unknown',\n      operation_id: op.id ? String(op.id) : null,\n      description: op.description || op.message || '',\n      entity_type: op.entity_type || op.object_type || null,\n      entity_id: op.entity_id ? String(op.entity_id) : null,\n      user_name: op.user_name || op.user || op.author || null,\n      created_at: op.created_at || op.timestamp || new Date().toISOString(),\n      raw_data: JSON.stringify(op)\n    }\n  };\n});\n\nreturn items;"
+      },
+      "id": "process-service",
+      "name": "Process",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 650]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "has-data",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "no_data",
+              "operator": {"type": "string", "operation": "notEquals"}
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-data-tbilisi",
+      "name": "If Has Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1240, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "has-data",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "no_data",
+              "operator": {"type": "string", "operation": "notEquals"}
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-data-batumi",
+      "name": "If Has Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1240, 350]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "has-data",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "no_data",
+              "operator": {"type": "string", "operation": "notEquals"}
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-data-kutaisi",
+      "name": "If Has Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1240, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "has-data",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "no_data",
+              "operator": {"type": "string", "operation": "notEquals"}
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-data-service",
+      "name": "If Has Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1240, 650]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO history (\n  branch, operation_type, operation_id, description,\n  entity_type, entity_id, user_name, created_at, raw_data,\n  matched, processed\n) VALUES (\n  '{{ $json.branch }}',\n  '{{ ($json.operation_type || 'unknown').replace(/'/g, \"''\") }}',\n  {{ $json.operation_id ? \"'\" + $json.operation_id + \"'\" : \"NULL\" }},\n  '{{ ($json.description || '').replace(/'/g, \"''\") }}',\n  {{ $json.entity_type ? \"'\" + $json.entity_type.replace(/'/g, \"''\") + \"'\" : \"NULL\" }},\n  {{ $json.entity_id ? \"'\" + $json.entity_id + \"'\" : \"NULL\" }},\n  {{ $json.user_name ? \"'\" + $json.user_name.replace(/'/g, \"''\") + \"'\" : \"NULL\" }},\n  '{{ $json.created_at }}',\n  '{{ ($json.raw_data || '{}').replace(/'/g, \"''\") }}'::jsonb,\n  FALSE,\n  FALSE\n)\nON CONFLICT (branch, operation_type, created_at, entity_id)\nDO UPDATE SET\n  description = EXCLUDED.description,\n  raw_data = EXCLUDED.raw_data,\n  ts = NOW()",
+        "options": {}
+      },
+      "id": "save-history",
+      "name": "Save to History",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1440, 400],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {"values": []},
+        "options": {}
+      },
+      "id": "merge-all",
+      "name": "Merge All Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1640, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const saved = $input.all();\nconst successCount = saved.filter(s => !s.json.error).length;\nconst errorCount = saved.filter(s => s.json.error).length;\n\nconst byBranch = {};\nsaved.forEach(item => {\n  if (item.json.branch) {\n    if (!byBranch[item.json.branch]) {\n      byBranch[item.json.branch] = { success: 0, error: 0 };\n    }\n    if (item.json.error) {\n      byBranch[item.json.branch].error++;\n    } else {\n      byBranch[item.json.branch].success++;\n    }\n  }\n});\n\nlet message = `📜 HISTORY PARSER\\n`;\nObject.keys(byBranch).forEach(branch => {\n  const stats = byBranch[branch];\n  message += `${branch.toUpperCase()}: ${stats.success} ✓`;\n  if (stats.error > 0) message += ` / ${stats.error} ✗`;\n  message += `\\n`;\n});\nmessage += `\\nВсего: ${successCount} / ${saved.length}`;\n\nreturn [{ json: { message, success: errorCount === 0, saved_count: successCount, error_count: errorCount, by_branch: byBranch } }];"
+      },
+      "id": "format-result",
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1840, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "is-error",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": false,
+              "operator": {"type": "boolean", "operation": "equals"}
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-error",
+      "name": "If Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2040, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "id": "send-alert",
+      "name": "Send Error Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2240, 500],
+      "credentials": {
+        "telegramApi": {
+          "id": "nONqDN52rBYnhODp",
+          "name": "Telegram Bot (@n8n_alert_geodrive_bot)"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {},
+      "id": "success",
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2240, 300]
+    }
+  ],
+  "connections": {
+    "Every 3 Minutes": {
+      "main": [[{"node": "Prepare 4 Branches", "type": "main", "index": 0}]]
+    },
+    "Prepare 4 Branches": {
+      "main": [[
+        {"node": "Prepare Pages", "type": "main", "index": 0},
+        {"node": "Prepare Pages", "type": "main", "index": 0},
+        {"node": "Prepare Pages", "type": "main", "index": 0},
+        {"node": "Prepare Pages", "type": "main", "index": 0}
+      ]]
+    },
+    "Prepare Pages": {
+      "main": [[{"node": "Get Operations", "type": "main", "index": 0}]]
+    },
+    "Get Operations": {
+      "main": [[{"node": "Process", "type": "main", "index": 0}]]
+    },
+    "Process": {
+      "main": [[{"node": "If Has Data", "type": "main", "index": 0}]]
+    },
+    "If Has Data": {
+      "main": [[{"node": "Save to History", "type": "main", "index": 0}], [{"node": "Merge All Results", "type": "main", "index": 0}]]
+    },
+    "Save to History": {
+      "main": [[{"node": "Merge All Results", "type": "main", "index": 0}]]
+    },
+    "Merge All Results": {
+      "main": [[{"node": "Format Result", "type": "main", "index": 0}]]
+    },
+    "Format Result": {
+      "main": [[{"node": "If Error", "type": "main", "index": 0}]]
+    },
+    "If Error": {
+      "main": [[{"node": "Success", "type": "main", "index": 0}], [{"node": "Send Error Alert", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "timezone": "Asia/Tbilisi",
+    "executionOrder": "v1",
+    "errorWorkflow": "H3UBEp425F5SMyrX",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}
+
