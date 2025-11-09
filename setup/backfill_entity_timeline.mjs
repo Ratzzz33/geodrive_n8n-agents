@@ -22,19 +22,17 @@ const sql = postgres(CONNECTION_STRING, {
  * Добавить платеж в timeline
  */
 async function addPaymentToTimeline(payment) {
-  // Определить operation из raw_data
-  let operation = 'create'; // По умолчанию
-  if (payment.raw_data?.operation) {
-    const op = payment.raw_data.operation.toLowerCase();
-    if (op.includes('delete') || op.includes('destroy')) operation = 'delete';
-    else if (op.includes('update') || op.includes('edit')) operation = 'update';
-  }
+  // Определить operation - в RentProg это boolean, используем created_at/updated_at
+  let operation = 'create'; // По умолчанию для всех платежей
 
   // Получить branch_code
-  const [branch] = await sql`
-    SELECT code FROM branches WHERE id = ${payment.branch_id} LIMIT 1
-  `;
-  const branchCode = branch?.code;
+  let branchCode = null;
+  if (payment.branch_id) {
+    const [branch] = await sql`
+      SELECT code FROM branches WHERE id = ${payment.branch_id} LIMIT 1
+    `;
+    branchCode = branch?.code || null;
+  }
 
   // Получить имя сотрудника
   let userName = null;
@@ -42,7 +40,7 @@ async function addPaymentToTimeline(payment) {
     const [employee] = await sql`
       SELECT name FROM employees WHERE id = ${payment.employee_id} LIMIT 1
     `;
-    userName = employee?.name;
+    userName = employee?.name || null;
   }
 
   // Найти связанные сущности
@@ -83,7 +81,7 @@ async function addPaymentToTimeline(payment) {
   }
 
   // Сформировать summary
-  const amount = payment.amount;
+  const amount = payment.amount || 0;
   const currency = payment.currency || 'GEL';
   const paymentType = payment.payment_type || 'unknown';
   const summary = `Платеж ${amount} ${currency} (${paymentType})`;
@@ -93,13 +91,20 @@ async function addPaymentToTimeline(payment) {
     amount: String(amount),
     currency,
     payment_type: paymentType,
-    payment_method: payment.payment_method,
-    description: payment.description,
-    rentprog_count_id: payment.raw_data?.count_id,
+    payment_method: payment.payment_method || null,
+    description: payment.description || null,
+    rentprog_count_id: payment.raw_data?.id || null,  // используем "id" из raw_data
   };
 
   // Вставить в timeline
   try {
+    // Определить timestamp (payment_date или created_at)
+    const timestamp = payment.payment_date || payment.created_at;
+    if (!timestamp) {
+      console.warn(`  ⚠️  Пропущен платеж ${payment.id}: нет timestamp`);
+      return false;
+    }
+
     await sql`
       INSERT INTO entity_timeline (
         ts,
@@ -116,17 +121,17 @@ async function addPaymentToTimeline(payment) {
         confidence,
         related_entities
       ) VALUES (
-        ${payment.payment_date || payment.created_at},
+        ${timestamp},
         'payment',
         ${payment.id},
-        'rentprog_history',
-        ${String(payment.raw_data?.count_id || payment.id)},
+        'rentprog_payment',
+        ${String(payment.raw_data?.id || payment.id)},
         'payment.recorded',
         ${operation},
         ${summary},
         ${JSON.stringify(details)},
-        ${branchCode},
-        ${userName},
+        ${branchCode || null},
+        ${userName || null},
         'high',
         ${relatedEntities.length > 0 ? JSON.stringify(relatedEntities) : null}
       )

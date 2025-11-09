@@ -186,7 +186,7 @@ async function findCarWithoutPrices() {
       AND er.system = 'rentprog'
     LEFT JOIN car_prices cp ON cp.car_id = c.id
     LEFT JOIN car_price_checks cpc ON cpc.car_id = c.id 
-      AND cpc.checked_at::date = CURRENT_DATE
+      AND DATE(cpc.checked_at) = CURRENT_DATE
     WHERE cpc.id IS NULL
     GROUP BY c.id, c.branch_id, b.code, er.external_id
     HAVING COUNT(cp.id) < 3
@@ -216,7 +216,7 @@ async function saveCheckResult(car, hasPrices, foundBranch = null) {
         (branch_code, car_id, rentprog_car_id, has_prices, checked_at, resolved, meta)
       VALUES 
         (${car.branch_code}, ${car.car_uuid}, ${car.rentprog_car_id}, ${hasPrices}, NOW(), FALSE, ${JSON.stringify({ found_in_branch: foundBranch })})
-      ON CONFLICT (rentprog_car_id, branch_code, checked_at::date) 
+      ON CONFLICT (rentprog_car_id, branch_code, DATE(checked_at)) 
       DO UPDATE SET 
         has_prices = ${hasPrices},
         meta = ${JSON.stringify({ found_in_branch: foundBranch })}
