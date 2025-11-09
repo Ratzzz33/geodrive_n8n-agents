@@ -12,7 +12,7 @@ import { getCarStatus, calculateDistance } from '../utils/starline-helpers.js';
 
 interface CarMatch {
   carId: string;
-  licensePlate: string;
+  plate: string;
   brand: string;
   model: string;
   starlineDeviceId: number;
@@ -101,18 +101,16 @@ export class StarlineMonitorService {
     const cars = await sqlConnection`
       SELECT 
         c.id,
-        c.license_plate,
-        c.brand,
-        c.model,
-        c.branch
+        c.plate,
+        c.car_visual_name as brand,
+        c.model
       FROM cars c
-      WHERE c.license_plate IS NOT NULL
+      WHERE c.plate IS NOT NULL
     ` as Array<{
       id: string;
-      license_plate: string;
+      plate: string;
       brand: string;
       model: string;
-      branch: string;
     }>;
 
     console.log(`🚗 Найдено ${cars.length} машин в БД`);
@@ -132,7 +130,7 @@ export class StarlineMonitorService {
 
       // Ищем совпадение в таблице cars
       const matchedCar = cars.find(car => {
-        const carDigits = this.extractLast3Digits(car.license_plate);
+        const carDigits = this.extractLast3Digits(car.plate);
         if (!carDigits || carDigits !== starlineDigits) return false;
 
         // Проверяем совпадение модели (частичное)
@@ -145,13 +143,13 @@ export class StarlineMonitorService {
       if (matchedCar) {
         matches.push({
           carId: matchedCar.id,
-          licensePlate: matchedCar.license_plate,
+          plate: matchedCar.plate,
           brand: matchedCar.brand,
           model: matchedCar.model,
           starlineDeviceId: device.device_id,
           starlineAlias: device.alias
         });
-        console.log(`✅ Сопоставлено: ${device.alias} -> ${matchedCar.brand} ${matchedCar.model} (${matchedCar.license_plate})`);
+        console.log(`✅ Сопоставлено: ${device.alias} -> ${matchedCar.brand} ${matchedCar.model} (${matchedCar.plate})`);
       } else {
         console.log(`❌ Не найдено совпадение для: ${device.alias} (${starlineDigits})`);
       }
