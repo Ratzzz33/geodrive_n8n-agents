@@ -381,7 +381,21 @@ export function initApiServer(port: number = 3000): void {
   app.post('/upsert-car', async (req, res) => {
     try {
       const { dynamicUpsertEntity } = await import('../db/upsert');
-      const { rentprog_id, data_hex } = req.body;
+      
+      // Обработка странной структуры от n8n, где данные могут приходить под пустым ключом
+      let rentprog_id = req.body.rentprog_id;
+      let data_hex = req.body.data_hex;
+      
+      // Если данных нет напрямую, проверяем пустой ключ (n8n bodyParameters bug)
+      if (!rentprog_id && !data_hex && req.body['']) {
+        try {
+          const parsed = JSON.parse(req.body['']);
+          rentprog_id = parsed.rentprog_id;
+          data_hex = parsed.data_hex;
+        } catch (e) {
+          // Если не удалось распарсить, продолжаем с пустыми значениями
+        }
+      }
 
       if (!rentprog_id || !data_hex) {
         res.status(400).json({ ok: false, error: 'Missing required fields: rentprog_id, data_hex' });
@@ -410,7 +424,21 @@ export function initApiServer(port: number = 3000): void {
   app.post('/upsert-client', async (req, res) => {
     try {
       const { dynamicUpsertEntity } = await import('../db/upsert');
-      const { rentprog_id, data_hex } = req.body;
+      
+      // Обработка странной структуры от n8n, где данные могут приходить под пустым ключом
+      let rentprog_id = req.body.rentprog_id;
+      let data_hex = req.body.data_hex;
+      
+      // Если данных нет напрямую, проверяем пустой ключ (n8n bodyParameters bug)
+      if (!rentprog_id && !data_hex && req.body['']) {
+        try {
+          const parsed = JSON.parse(req.body['']);
+          rentprog_id = parsed.rentprog_id;
+          data_hex = parsed.data_hex;
+        } catch (e) {
+          // Если не удалось распарсить, продолжаем с пустыми значениями
+        }
+      }
 
       if (!rentprog_id || !data_hex) {
         res.status(400).json({ ok: false, error: 'Missing required fields: rentprog_id, data_hex' });
