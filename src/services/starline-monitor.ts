@@ -253,12 +253,12 @@ export class StarlineMonitorService {
           distanceMoved,
           speed, // Скорость от Starline в км/ч
           googleMapsLink, // Ссылка на Google Maps
-          gpsLevel: deviceDetails.gps_lvl || 0,
-          gsmLevel: deviceDetails.gsm_lvl || 0,
-          ignitionOn: deviceDetails.car_state?.ign || false,
-          engineRunning: deviceDetails.car_state?.run || false,
-          parkingBrake: deviceDetails.car_state?.pbrake || false,
-          batteryVoltage: deviceDetails.battery || null,
+          gpsLevel: deviceDetails.gps_lvl ?? 0,
+          gsmLevel: deviceDetails.gsm_lvl ?? 0,
+          ignitionOn: deviceDetails.car_state?.ign ?? false,
+          engineRunning: deviceDetails.car_state?.run ?? false,
+          parkingBrake: deviceDetails.car_state?.pbrake ?? false,
+          batteryVoltage: deviceDetails.battery ?? null,
           lastActivity: deviceDetails.ts_activity ? new Date(deviceDetails.ts_activity * 1000) : new Date()
         };
 
