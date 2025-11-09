@@ -1,0 +1,26 @@
+# Dockerfile для AmoCRM Playwright Service
+FROM mcr.microsoft.com/playwright:v1.40.0-jammy
+
+WORKDIR /app
+
+# Установить зависимости
+COPY package.json ./
+RUN npm install --production
+
+# Скопировать исходники
+COPY playwright-amocrm.ts ./
+COPY tsconfig.json ./
+
+# Собрать TypeScript
+RUN npm install -g typescript
+RUN npx tsc
+
+# Создать директорию для данных
+RUN mkdir -p /data
+
+# Открыть порт
+EXPOSE 3002
+
+# Запуск
+CMD ["node", "dist/playwright-amocrm.js"]
+

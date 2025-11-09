@@ -1,0 +1,26 @@
+# Dockerfile для Umnico Playwright Service
+FROM mcr.microsoft.com/playwright:v1.40.0-jammy
+
+WORKDIR /app
+
+# Установить зависимости
+COPY package.json ./
+RUN npm install --production
+
+# Скопировать исходники
+COPY playwright-umnico.ts ./
+COPY tsconfig.json ./
+
+# Собрать TypeScript
+RUN npm install -g typescript
+RUN npx tsc
+
+# Создать директорию для данных
+RUN mkdir -p /data
+
+# Открыть порт
+EXPOSE 3001
+
+# Запуск
+CMD ["node", "dist/playwright-umnico.js"]
+

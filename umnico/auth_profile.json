@@ -1,0 +1,58 @@
+{
+  "baseUrl": "https://umnico.com/",
+  "credentials": {
+    "email": "geodrive.ge@gmail.com",
+    "password": "2GeoDriveumnicopassword!!))"
+  },
+  "cookies_needed": [
+    "_ym_uid",
+    "_ym_d",
+    "___dc",
+    "_ym_visorc",
+    "AMP_MKTG_c375942e33",
+    "FPLC",
+    "_gcl_au",
+    "_gid",
+    "__stripe_mid",
+    "__stripe_sid",
+    "AMP_c375942e33",
+    "_ga",
+    "FPGSID",
+    "_ga_5WTRNRCFWK",
+    "roistat_visit",
+    "roistat_first_visit"
+  ],
+  "storage_keys": {
+    "localStorage": [
+      "umnico-bug-report-time",
+      "umnico-filters",
+      "umnico-app-nav-items-order",
+      "umnico-current-section",
+      "umnico-text-draft"
+    ],
+    "sessionStorage": [
+      "approve_visit_3247578",
+      "__ym_tab_guid"
+    ]
+  },
+  "headers_required": [
+    "X-Requested-With: XMLHttpRequest",
+    "Referer: https://umnico.com/",
+    "Origin: https://umnico.com/",
+    "Content-Type: application/json"
+  ],
+  "oauth": {
+    "type": "session-based (cookie authentication)",
+    "token_url": "N/A (session cookies после логина)",
+    "refresh_url": "N/A",
+    "scopes": "N/A"
+  },
+  "notes": [
+    "Авторизация через session cookies (httpOnly)",
+    "Токен НЕ хранится в localStorage/sessionStorage",
+    "Требуется полный login flow для получения session",
+    "Cookies автоматически отправляются браузером",
+    "API работает на том же домене (https://umnico.com/api/v1/...)"
+  ]
+}
+

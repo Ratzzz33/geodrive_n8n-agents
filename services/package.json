@@ -1,0 +1,24 @@
+{
+  "name": "@geodrive/playwright-services",
+  "version": "1.0.0",
+  "description": "Persistent Playwright browsers for Umnico and AmoCRM",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "umnico": "node dist/playwright-umnico.js",
+    "amocrm": "node dist/playwright-amocrm.js",
+    "dev:umnico": "ts-node playwright-umnico.ts",
+    "dev:amocrm": "ts-node playwright-amocrm.ts"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "playwright": "^1.40.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
+

@@ -172,6 +172,7 @@ export class StarlineMonitorService {
     let updated = 0;
 
     for (const match of matches) {
+      let gpsUpdate: GPSUpdate | undefined;
       try {
         // Получаем детальные данные устройства через scraper
         const scraper = getStarlineScraper();
@@ -236,7 +237,7 @@ export class StarlineMonitorService {
         const googleMapsLink = this.generateGoogleMapsLink(currentLat, currentLng);
 
         // Подготавливаем данные для обновления
-        const gpsUpdate: GPSUpdate = {
+        gpsUpdate = {
           carId: match.carId,
           starlineDeviceId: match.starlineDeviceId,
           starlineAlias: match.starlineAlias,
@@ -366,6 +367,12 @@ export class StarlineMonitorService {
       } catch (error) {
         const errorMsg = `Ошибка обновления ${match.starlineAlias}: ${error instanceof Error ? error.message : 'Unknown error'}`;
         console.error(`❌ ${errorMsg}`);
+        console.error(`❌ Детали ошибки:`, error);
+        try {
+          console.error(`❌ GPSUpdate данные:`, JSON.stringify(gpsUpdate, null, 2));
+        } catch (e) {
+          console.error(`❌ Не удалось сериализовать gpsUpdate`);
+        }
         errors.push(errorMsg);
       }
     }

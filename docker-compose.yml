@@ -1,10 +1,74 @@
 services:
+  # Playwright Service для Umnico (persistent browser)
+  playwright-umnico:
+    build:
+      context: ./services
+      dockerfile: Dockerfile.umnico
+    container_name: playwright-umnico
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - UMNICO_EMAIL=${UMNICO_EMAIL}
+      - UMNICO_PASSWORD=${UMNICO_PASSWORD}
+      - UMNICO_PLAYWRIGHT_PORT=3001
+      - UMNICO_STATE_FILE=/data/umnico-session.json
+    volumes:
+      - playwright_umnico_data:/data
+    networks:
+      - n8n-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # Playwright Service для AmoCRM (persistent browser)
+  playwright-amocrm:
+    build:
+      context: ./services
+      dockerfile: Dockerfile.amocrm
+    container_name: playwright-amocrm
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    environment:
+      - AMOCRM_EMAIL=${AMOCRM_EMAIL}
+      - AMOCRM_PASSWORD=${AMOCRM_PASSWORD}
+      - AMOCRM_SUBDOMAIN=${AMOCRM_SUBDOMAIN:-geodrive}
+      - AMOCRM_PLAYWRIGHT_PORT=3002
+      - AMOCRM_STATE_FILE=/data/amocrm-session.json
+    volumes:
+      - playwright_amocrm_data:/data
+    networks:
+      - n8n-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
   n8n:
     image: n8nio/n8n:1.117.3
     container_name: n8n
     restart: unless-stopped
     ports:
       - "5678:5678"
+    depends_on:
+      - playwright-umnico
+      - playwright-amocrm
     environment:
       # Базовые настройки
       - N8N_BASIC_AUTH_ACTIVE=true
@@ -114,6 +178,10 @@ services:
 
 volumes:
   n8n_data:
+    driver: local
+  playwright_umnico_data:
+    driver: local
+  playwright_amocrm_data:
     driver: local
 
 networks:
