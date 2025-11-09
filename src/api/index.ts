@@ -3,11 +3,11 @@
  */
 
 import express from 'express';
-import { healthCheck } from '../integrations/rentprog';
-import { sendHealthToN8n } from '../integrations/n8n';
-import { logger } from '../utils/logger';
+import { healthCheck } from '../integrations/rentprog.js';
+import { sendHealthToN8n } from '../integrations/n8n.js';
+import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
-import type { BranchName } from '../integrations/rentprog';
+import type { BranchName } from '../integrations/rentprog.js';
 
 const app = express();
 app.use(express.json());
