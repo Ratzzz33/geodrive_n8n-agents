@@ -29,12 +29,6 @@ export function initApiServer(port: number = 3000): void {
     return;
   }
 
-  // TEST ENDPOINT
-  app.post('/test-endpoint', (req, res) => {
-    logger.info('TEST ENDPOINT HIT!');
-    res.json({ ok: true, message: 'Test endpoint works!' });
-  });
-
   // Подключаем роутеры
   // app.use('/api/cars', carSearchRouter); // Временно закомментировано
   // app.use('/process-history', processHistoryRouter); // Временно отключено
@@ -429,7 +423,6 @@ export function initApiServer(port: number = 3000): void {
   // Endpoint для upsert клиента (вызывается из n8n workflow)
   app.post('/upsert-client', async (req, res) => {
     try {
-      logger.debug('upsert-client: Received request', { body: req.body, headers: req.headers });
       const { dynamicUpsertEntity } = await import('../db/upsert');
       
       // Обработка странной структуры от n8n, где данные могут приходить под пустым ключом
