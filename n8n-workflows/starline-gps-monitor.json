@@ -78,6 +78,16 @@
     },
     {
       "parameters": {
+        "errorMessage": "={{ '❌ HTTP запрос к API не выполнен: ' + ($('Update GPS Data').item.json.error?.message || $('Update GPS Data').item.json.error || 'Unknown error') }}"
+      },
+      "id": "stop-and-error-node",
+      "name": "Stop and Error",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [1072, 464]
+    },
+    {
+      "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
@@ -283,6 +293,9 @@
       ]
     },
     "Send HTTP Error Alert": {
+      "main": [[{"node": "Stop and Error", "type": "main", "index": 0}]]
+    },
+    "Stop and Error": {
       "main": []
     },
     "Check Status": {
