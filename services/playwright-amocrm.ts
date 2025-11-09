@@ -193,7 +193,7 @@ class AmoCRMPlaywrightService {
         pipelineId = '8580102',
         statusId,
         limit = 250,
-        page = 1,
+        page: pageNum = 1,
         updatedSince
       } = params;
 
@@ -202,7 +202,7 @@ class AmoCRMPlaywrightService {
       queryParams.set('filter[pipeline_id]', pipelineId);
       if (statusId) queryParams.set('filter[status_id]', statusId);
       queryParams.set('limit', limit.toString());
-      queryParams.set('page', page.toString());
+      queryParams.set('page', pageNum.toString());
       if (updatedSince) {
         queryParams.set('filter[updated_at][from]', updatedSince);
       }
