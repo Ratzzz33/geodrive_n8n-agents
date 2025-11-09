@@ -3,9 +3,9 @@
  * Преобразует входящие события в внутренние типы системы
  */
 
-import { SystemEvent, EventType } from '../types/events';
-import { BranchName } from './rentprog';
-import { logger } from '../utils/logger';
+import { SystemEvent, EventType } from '../types/events.js';
+import { BranchName } from './rentprog.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Структура входящего вебхука от RentProg

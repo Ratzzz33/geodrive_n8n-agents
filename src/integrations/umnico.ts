@@ -5,7 +5,7 @@
 
 import axios, { AxiosInstance } from 'axios';
 import { config } from '../config/index.js';
-import { logger } from '../utils/logger';
+import { logger } from '../utils/logger.js';
 
 let client: AxiosInstance | null = null;
 

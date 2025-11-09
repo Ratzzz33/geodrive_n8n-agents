@@ -6,7 +6,7 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import crypto from 'crypto';
 import { config } from '../config/index.js';
-import { logger } from '../utils/logger';
+import { logger } from '../utils/logger.js';
 
 // Типы филиалов
 export type BranchName = 'tbilisi' | 'batumi' | 'kutaisi' | 'service-center';

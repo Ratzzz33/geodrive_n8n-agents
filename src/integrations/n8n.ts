@@ -4,8 +4,8 @@
 
 import axios from 'axios';
 import { config } from '../config/index.js';
-import { logger } from '../utils/logger';
-import type { BranchName } from './rentprog';
+import { logger } from '../utils/logger.js';
+import type { BranchName } from './rentprog.js';
 
 /**
  * Отправка события в n8n для мониторинга
