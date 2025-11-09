@@ -28,6 +28,7 @@ interface StarlineDeviceDetails {
     ts: number;
     x: number;
     y: number;
+    speed?: number; // скорость в км/ч
   };
   status: number;
   position?: {
@@ -36,6 +37,7 @@ interface StarlineDeviceDetails {
     x: number;
     y: number;
     dir?: number;
+    speed?: number; // скорость в км/ч
   };
   gps_lvl: number;
   gsm_lvl: number;

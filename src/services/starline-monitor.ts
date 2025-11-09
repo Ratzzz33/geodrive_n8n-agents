@@ -34,6 +34,8 @@ interface GPSUpdate {
   status: string;
   isMoving: boolean;
   distanceMoved: number;
+  speed: number; // Скорость в км/ч от Starline
+  googleMapsLink: string; // Ссылка на Google Maps
   gpsLevel: number;
   gsmLevel: number;
   ignitionOn: boolean;
@@ -46,6 +48,13 @@ interface GPSUpdate {
 export class StarlineMonitorService {
   constructor() {
     // Используем singleton scraper, который уже инициализирован
+  }
+
+  /**
+   * Сгенерировать ссылку на Google Maps по координатам
+   */
+  private generateGoogleMapsLink(lat: number, lng: number): string {
+    return `https://www.google.com/maps?q=${lat},${lng}`;
   }
 
   /**
@@ -221,6 +230,12 @@ export class StarlineMonitorService {
         // Определяем статус
         const status = getCarStatus(deviceDetails);
 
+        // Извлекаем скорость из Starline (уже в км/ч)
+        const speed = pos.speed || 0;
+
+        // Генерируем Google Maps ссылку
+        const googleMapsLink = this.generateGoogleMapsLink(currentLat, currentLng);
+
         // Подготавливаем данные для обновления
         const gpsUpdate: GPSUpdate = {
           carId: match.carId,
@@ -237,6 +252,8 @@ export class StarlineMonitorService {
           status,
           isMoving,
           distanceMoved,
+          speed, // Скорость от Starline в км/ч
+          googleMapsLink, // Ссылка на Google Maps
           gpsLevel: deviceDetails.gps_lvl || 0,
           gsmLevel: deviceDetails.gsm_lvl || 0,
           ignitionOn: deviceDetails.car_state?.ign || false,
@@ -263,6 +280,8 @@ export class StarlineMonitorService {
             status,
             is_moving,
             distance_moved,
+            speed,
+            google_maps_link,
             gps_level,
             gsm_level,
             ignition_on,
@@ -286,6 +305,8 @@ export class StarlineMonitorService {
             ${gpsUpdate.status},
             ${gpsUpdate.isMoving},
             ${gpsUpdate.distanceMoved},
+            ${gpsUpdate.speed},
+            ${gpsUpdate.googleMapsLink},
             ${gpsUpdate.gpsLevel},
             ${gpsUpdate.gsmLevel},
             ${gpsUpdate.ignitionOn},
@@ -309,6 +330,8 @@ export class StarlineMonitorService {
             status = EXCLUDED.status,
             is_moving = EXCLUDED.is_moving,
             distance_moved = EXCLUDED.distance_moved,
+            speed = EXCLUDED.speed,
+            google_maps_link = EXCLUDED.google_maps_link,
             gps_level = EXCLUDED.gps_level,
             gsm_level = EXCLUDED.gsm_level,
             ignition_on = EXCLUDED.ignition_on,
@@ -320,7 +343,7 @@ export class StarlineMonitorService {
         `;
 
         updated++;
-        console.log(`✅ ${match.starlineAlias}: ${status} ${isMoving ? '🚗 (движется)' : '🅿️ (стоит)'} ${distanceMoved.toFixed(0)}m`);
+        console.log(`✅ ${match.starlineAlias}: ${status} ${isMoving ? '🚗 (движется)' : '🅿️ (стоит)'} ${speed.toFixed(0)} км/ч, ${distanceMoved.toFixed(0)}m`);
 
       } catch (error) {
         const errorMsg = `Ошибка обновления ${match.starlineAlias}: ${error instanceof Error ? error.message : 'Unknown error'}`;
