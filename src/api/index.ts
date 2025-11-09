@@ -168,7 +168,6 @@ export function initApiServer(port: number = 3000): void {
           }
         });
       }
-      
     } catch (error) {
       logger.error(`[Price Check] Error:`, error);
       res.status(500).json({
