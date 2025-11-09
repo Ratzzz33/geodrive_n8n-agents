@@ -162,12 +162,13 @@ export class StarlineMonitorService {
   /**
    * Обновить GPS данные для всех сопоставленных машин
    */
-  async updateGPSData(): Promise<{ updated: number; errors: string[] }> {
+  async updateGPSData(): Promise<{ updated: number; errors: string[]; details: any[] }> {
     console.log('📍 Начинаем обновление GPS данных...');
 
     const sqlConnection = getSqlConnection();
     const matches = await this.matchCars();
     const errors: string[] = [];
+    const details: any[] = [];
     let updated = 0;
 
     for (const match of matches) {
@@ -341,6 +342,25 @@ export class StarlineMonitorService {
         `;
 
         updated++;
+        details.push({
+          plate: match.plate,
+          brand: match.brand,
+          model: match.model,
+          alias: match.starlineAlias,
+          status,
+          isMoving,
+          speed: Math.round(speed),
+          distanceMoved: Math.round(distanceMoved),
+          lat: currentLat,
+          lng: currentLng,
+          googleMapsLink,
+          ignitionOn: gpsUpdate.ignitionOn,
+          engineRunning: gpsUpdate.engineRunning,
+          batteryVoltage: gpsUpdate.batteryVoltage,
+          satQty: currentSatQty,
+          gpsLevel: gpsUpdate.gpsLevel,
+          gsmLevel: gpsUpdate.gsmLevel
+        });
         console.log(`✅ ${match.starlineAlias}: ${status} ${isMoving ? '🚗 (движется)' : '🅿️ (стоит)'} ${speed.toFixed(0)} км/ч, ${distanceMoved.toFixed(0)}m`);
 
       } catch (error) {
@@ -355,7 +375,7 @@ export class StarlineMonitorService {
       console.log(`⚠️ Ошибок: ${errors.length}`);
     }
 
-    return { updated, errors };
+    return { updated, errors, details };
   }
 }
 

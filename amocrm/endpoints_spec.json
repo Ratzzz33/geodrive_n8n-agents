@@ -238,14 +238,40 @@
       }
     },
     "chats": {
+      "CRITICAL_NOTE": "ВСЕ СООБЩЕНИЯ ХРАНЯТСЯ В UMNICO! AmoCRM только отображает их через iframe.",
+      "imbox_url_structure": {
+        "path": "/imbox/{scope_id}/leads/detail/{lead_id}",
+        "example": "/imbox/38187/leads/detail/38638793",
+        "description": "scope_id - ID диалога, lead_id - ID сделки"
+      },
+      "inbox_list": {
+        "method": "GET",
+        "path": "/ajax/v4/inbox/list",
+        "description": "Получить список диалогов",
+        "query_params": {
+          "limit": "50",
+          "order[sort_by]": "last_message_at",
+          "order[sort_type]": "desc"
+        },
+        "example": "/ajax/v4/inbox/list?limit=50&order[sort_by]=last_message_at&order[sort_type]=desc",
+        "returns": "Список scope_id диалогов без содержимого сообщений"
+      },
+      "sources": {
+        "method": "GET",
+        "path": "/ajax/v4/sources",
+        "query_params": {
+          "only": "chats"
+        },
+        "description": "Получить источники чатов (каналы)"
+      },
       "talks_endpoint": {
         "method": "GET",
         "path": "/ajax/v2/talks",
-        "description": "Система чатов AmoCRM (Amojo)",
+        "description": "Система чатов AmoCRM (Amojo) - УСТАРЕЛА",
         "notes": [
           "Требуется amojo_token из localStorage",
           "Не работает через стандартный /api/v4/",
-          "Интеграция с Umnico для внешних каналов"
+          "НЕ СОДЕРЖИТ СООБЩЕНИЙ - только метаданные"
         ]
       },
       "templates": {
@@ -266,16 +292,57 @@
         }
       },
       "umnico_integration": {
+        "CRITICAL": "ЕДИНСТВЕННЫЙ СПОСОБ получить содержимое сообщений!",
         "base_url": "https://umnico.com/api",
+        "authentication": {
+          "type": "separate_auth_required",
+          "note": "Требуется отдельная авторизация в Umnico (не через AmoCRM cookies)"
+        },
         "endpoints": {
-          "user_manage": "/user/manage",
-          "integrations": "/user/integrations",
-          "sources": "/integrations/amocrm3/sources"
+          "user_manage": {
+            "path": "/user/manage",
+            "description": "Управление пользователем Umnico",
+            "auth_required": true
+          },
+          "user_integrations": {
+            "path": "/user/integrations",
+            "description": "Список интеграций пользователя",
+            "auth_required": true
+          },
+          "amocrm_sources": {
+            "path": "/integrations/amocrm3/sources",
+            "description": "Источники (каналы) интеграции AmoCRM",
+            "auth_required": true
+          },
+          "amocrm_settings": {
+            "path": "/integrations/amocrm3/settings/1",
+            "query_params": {
+              "domain": "geodrive.amocrm.ru"
+            },
+            "description": "Настройки интеграции AmoCRM",
+            "auth_required": true
+          }
+        },
+        "iframe_widget": {
+          "path": "data:text/html;charset=utf-8,<html lang=\"ru\"><body><script>window.location=\"https://umnico.com/deals?umnico_plugin_id=92e8c9f4-05d5-423a-bce5-fda956d1cfb4&umnico_user_id=11479478&showHandShake=1\"",
+          "description": "AmoCRM загружает Umnico через iframe для отображения чатов",
+          "widget_params": {
+            "umnico_plugin_id": "92e8c9f4-05d5-423a-bce5-fda956d1cfb4",
+            "umnico_user_id": "11479478"
+          }
         },
         "description": "Внешняя интеграция для работы с мультиканальными чатами",
+        "architecture": [
+          "1. Клиент пишет в WhatsApp/Telegram/etc",
+          "2. Umnico получает сообщение",
+          "3. Umnico синхронизирует с AmoCRM (только метаданные)",
+          "4. AmoCRM отображает iframe с Umnico для чтения сообщений",
+          "5. САМИ СООБЩЕНИЯ хранятся ТОЛЬКО в Umnico"
+        ],
         "notes": [
-          "Umnico используется как основной канал для чатов",
-          "Требуется отдельная авторизация в Umnico",
+          "Umnico - единственный способ получить текст сообщений",
+          "AmoCRM хранит только scope_id и lead_id связки",
+          "Для автоматизации требуется доступ к Umnico API",
           "AmoCRM → Umnico → Внешние каналы (WhatsApp, Telegram, etc.)"
         ]
       }

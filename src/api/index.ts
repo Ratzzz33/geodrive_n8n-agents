@@ -335,6 +335,7 @@ export function initApiServer(port: number = 3000): void {
         ok: true,
         updated: result.updated,
         errors: result.errors,
+        details: result.details,
         timestamp: new Date().toISOString()
       });
     } catch (error) {
