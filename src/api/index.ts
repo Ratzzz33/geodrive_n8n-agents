@@ -14,7 +14,7 @@ app.use(express.json());
 
 // Подключаем роутеры
 // import carSearchRouter from './car-search'; // Временно закомментировано
-import processHistoryRouter from './routes/processHistory.js';
+// import processHistoryRouter from './routes/processHistory.js'; // Временно отключено
 import eventLinksRouter from './routes/eventLinks.js';
 
 let server: ReturnType<typeof app.listen> | null = null;
@@ -30,7 +30,7 @@ export function initApiServer(port: number = 3000): void {
 
   // Подключаем роутеры
   // app.use('/api/cars', carSearchRouter); // Временно закомментировано
-  app.use('/process-history', processHistoryRouter);
+  // app.use('/process-history', processHistoryRouter); // Временно отключено
   app.use('/event-links', eventLinksRouter);
 
   // Health check для RentProg
