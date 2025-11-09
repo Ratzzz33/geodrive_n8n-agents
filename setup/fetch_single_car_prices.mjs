@@ -213,15 +213,13 @@ async function saveCheckResult(car, hasPrices, foundBranch = null) {
   try {
     await sql`
       INSERT INTO car_price_checks 
-        (branch_code, car_id, rentprog_car_id, has_prices, checked_at, resolved, meta)
+        (branch, car_id, rentprog_car_id, checked_at, resolved)
       VALUES 
-        (${car.branch_code}, ${car.car_uuid}, ${car.rentprog_car_id}, ${hasPrices}, NOW(), FALSE, ${JSON.stringify({ found_in_branch: foundBranch })})
-      ON CONFLICT (rentprog_car_id, branch_code, DATE(checked_at)) 
-      DO UPDATE SET 
-        has_prices = ${hasPrices},
-        meta = ${JSON.stringify({ found_in_branch: foundBranch })}
+        (${car.branch_code}, ${car.car_uuid}, ${car.rentprog_car_id}, NOW(), FALSE)
+      ON CONFLICT (rentprog_car_id, branch, DATE(checked_at)) 
+      DO NOTHING
     `;
-    console.log(`  📝 Результат проверки сохранен в БД`);
+    console.log(`  📝 Результат проверки сохранен в БД (branch=${car.branch_code}, has_prices=${hasPrices}${foundBranch ? `, found_in=${foundBranch}` : ''})`);
   } catch (error) {
     console.log(`  ⚠️  Ошибка сохранения результата: ${error.message}`);
   }
