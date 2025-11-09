@@ -1,0 +1,362 @@
+{
+  "baseUrl": "https://geodrive.amocrm.ru",
+  "account_id": 31933214,
+  "subdomain": "geodrive",
+  "endpoints": {
+    "pipelines": {
+      "get_all": {
+        "method": "GET",
+        "path": "/api/v4/leads/pipelines",
+        "description": "Получить все воронки"
+      },
+      "get_single": {
+        "method": "GET",
+        "path": "/api/v4/leads/pipelines/{pipeline_id}",
+        "description": "Получить воронку по ID с полной структурой статусов",
+        "example": "/api/v4/leads/pipelines/8580102",
+        "response_includes": ["statuses", "is_main", "is_unsorted_on"]
+      },
+      "primaryka": {
+        "pipeline_id": 8580102,
+        "name": "Первичка",
+        "is_main": true,
+        "description": "Основная воронка продаж (этапы аренды от начала до конца)",
+        "statuses": [
+          {
+            "id": 69641334,
+            "name": "Неразобранное",
+            "sort": 10,
+            "type": 1,
+            "color": "#c1c1c1",
+            "is_editable": false
+          },
+          {
+            "id": 76072006,
+            "name": "Партнерские сделки",
+            "sort": 20,
+            "color": "#fff000"
+          },
+          {
+            "id": 76057418,
+            "name": "Объедини сделку",
+            "sort": 30,
+            "color": "#87f2c0"
+          },
+          {
+            "id": 69641338,
+            "name": "Новый лид",
+            "sort": 40,
+            "color": "#ff8f92"
+          },
+          {
+            "id": 69641342,
+            "name": "Взят в работу",
+            "sort": 50,
+            "color": "#eb93ff"
+          },
+          {
+            "id": 75648530,
+            "name": "Подбор отправлен",
+            "sort": 60,
+            "color": "#99ccff"
+          },
+          {
+            "id": 69695126,
+            "name": "Нет ответа на предложение",
+            "sort": 70,
+            "color": "#ccc8f9"
+          },
+          {
+            "id": 75558642,
+            "name": "Финальный контакт",
+            "sort": 80,
+            "color": "#f3beff"
+          },
+          {
+            "id": 70390022,
+            "name": "Не отвечают",
+            "sort": 90,
+            "color": "#87f2c0"
+          },
+          {
+            "id": 70363398,
+            "name": "Ожидаем Доки",
+            "sort": 100,
+            "color": "#ebffb1"
+          },
+          {
+            "id": 69717006,
+            "name": "Получены доки",
+            "sort": 110,
+            "color": "#c1e0ff"
+          },
+          {
+            "id": 72457238,
+            "name": "Брони из Rentprog",
+            "sort": 120,
+            "color": "#ff8f92"
+          },
+          {
+            "id": 71150590,
+            "name": "Синхронизация с Rentprog",
+            "sort": 130,
+            "color": "#ffc8c8"
+          },
+          {
+            "id": 69695130,
+            "name": "Отправлен дог",
+            "sort": 140,
+            "color": "#ffce5a"
+          },
+          {
+            "id": 70724666,
+            "name": "Выдача",
+            "sort": 150,
+            "color": "#99ccff"
+          },
+          {
+            "id": 72177974,
+            "name": "Аренда",
+            "sort": 160,
+            "color": "#99ccff"
+          },
+          {
+            "id": 70724674,
+            "name": "Приемка",
+            "sort": 170,
+            "color": "#99ccff"
+          },
+          {
+            "id": 75235938,
+            "name": "Электронный договор",
+            "sort": 180,
+            "color": "#99ccff"
+          },
+          {
+            "id": 71480394,
+            "name": "Для разработки - не удалять",
+            "sort": 190,
+            "color": "#99ccff"
+          },
+          {
+            "id": 142,
+            "name": "Успешно реализовано",
+            "sort": 10000,
+            "type": 0,
+            "color": "#CCFF66",
+            "is_editable": false,
+            "hidden": true,
+            "visible_via_filter": "filter[pipe][8580102][]=142"
+          },
+          {
+            "id": 143,
+            "name": "Закрыто и не реализовано",
+            "sort": 11000,
+            "type": 0,
+            "color": "#D5D8DB",
+            "is_editable": false,
+            "hidden": true,
+            "visible_via_filter": "filter[pipe][8580102][]=143"
+          }
+        ]
+      }
+    },
+    "leads": {
+      "list": {
+        "method": "GET",
+        "path": "/api/v4/leads",
+        "description": "Получить список сделок",
+        "pagination": "page-based",
+        "query_params": {
+          "filter[pipeline_id]": "ID воронки",
+          "filter[status_id]": "ID статуса",
+          "filter[main_user][]": "ID ответственного",
+          "with": "contacts,companies"
+        }
+      },
+      "get": {
+        "method": "GET",
+        "path": "/api/v4/leads/{id}",
+        "description": "Получить сделку по ID",
+        "example": "/api/v4/leads/38617385"
+      },
+      "files": {
+        "method": "GET",
+        "path": "/ajax/v4/leads/{id}/files",
+        "description": "Получить файлы сделки",
+        "example": "/ajax/v4/leads/38617385/files?{}"
+      },
+      "filters": {
+        "open_deals": {
+          "url": "/leads/pipeline/8580102/?skip_filter=Y",
+          "description": "Открытые сделки (все активные статусы)"
+        },
+        "my_deals": {
+          "url": "/leads/pipeline/8580102/?filter[main_user][]=11479478&filter[!status_id][]=142&filter[!status_id][]=143&useFilter=y",
+          "description": "Только мои сделки (исключая успешные и неуспешные)"
+        },
+        "success": {
+          "url": "/leads/pipeline/8580102/?filter[pipe][8580102][]=142&useFilter=y",
+          "description": "Успешно завершенные (status_id=142)"
+        },
+        "failed": {
+          "url": "/leads/pipeline/8580102/?filter[pipe][8580102][]=143&useFilter=y",
+          "description": "Нереализованные сделки (status_id=143)"
+        }
+      }
+    },
+    "contacts": {
+      "list": {
+        "method": "GET",
+        "path": "/api/v4/contacts",
+        "description": "Получить список контактов",
+        "example": "/api/v4/contacts?{}"
+      },
+      "get": {
+        "method": "GET",
+        "path": "/api/v4/contacts/{id}",
+        "description": "Получить контакт по ID"
+      }
+    },
+    "catalogs": {
+      "elements": {
+        "method": "GET",
+        "path": "/api/v4/catalogs/{catalog_id}/elements",
+        "description": "Получить элементы каталога",
+        "example": "/api/v4/catalogs/5915/elements?filter[id]=&{}"
+      },
+      "list_ajax": {
+        "method": "GET",
+        "path": "/ajax/v1/catalog_elements/list/",
+        "description": "Получить список элементов каталога (AJAX)",
+        "query_params": {
+          "catalog_id": "ID каталога",
+          "json": "1",
+          "page": "Номер страницы"
+        },
+        "example": "/ajax/v1/catalog_elements/list/?catalog_id=5915&json=1&page=1&{}"
+      }
+    },
+    "chats": {
+      "talks_endpoint": {
+        "method": "GET",
+        "path": "/ajax/v2/talks",
+        "description": "Система чатов AmoCRM (Amojo)",
+        "notes": [
+          "Требуется amojo_token из localStorage",
+          "Не работает через стандартный /api/v4/",
+          "Интеграция с Umnico для внешних каналов"
+        ]
+      },
+      "templates": {
+        "method": "GET",
+        "path": "/ajax/v4/chats/templates",
+        "description": "Получить шаблоны сообщений",
+        "query_params": {
+          "with": "favorite"
+        },
+        "example": "/ajax/v4/chats/templates?with=favorite"
+      },
+      "bots": {
+        "method": "GET",
+        "path": "/api/v4/bots",
+        "description": "Получить ботов",
+        "query_params": {
+          "with": "favorite"
+        }
+      },
+      "umnico_integration": {
+        "base_url": "https://umnico.com/api",
+        "endpoints": {
+          "user_manage": "/user/manage",
+          "integrations": "/user/integrations",
+          "sources": "/integrations/amocrm3/sources"
+        },
+        "description": "Внешняя интеграция для работы с мультиканальными чатами",
+        "notes": [
+          "Umnico используется как основной канал для чатов",
+          "Требуется отдельная авторизация в Umnico",
+          "AmoCRM → Umnico → Внешние каналы (WhatsApp, Telegram, etc.)"
+        ]
+      }
+    },
+    "files": {
+      "issue_token": {
+        "method": "GET",
+        "path": "/ajax/v4/files/issue_token",
+        "description": "Получить токен для работы с файлами"
+      },
+      "drive": {
+        "base_url": "https://drive-b.amocrm.ru",
+        "get_files": {
+          "method": "GET",
+          "path": "/v1.0/files",
+          "description": "Получить файлы по UUID",
+          "query_params": {
+            "filter[uuid]": "UUID файлов через запятую"
+          },
+          "example": "/v1.0/files?filter[uuid]=69a48579-dec2-4a56-b2de-42ef71bece29,66cbfbc1-4cbc-4a2f-8791-60ea17e3c32f"
+        }
+      }
+    },
+    "integrations": {
+      "disposable_token": {
+        "method": "GET",
+        "path": "/ajax/v2/integrations/{integration_id}/disposable_token",
+        "description": "Получить одноразовый токен для интеграции"
+      }
+    },
+    "account": {
+      "info": {
+        "method": "GET",
+        "path": "/api/v4/account",
+        "description": "Информация о текущем аккаунте",
+        "response_includes": ["id", "subdomain", "currency", "users", "groups"]
+      }
+    }
+  },
+  "common_patterns": {
+    "authentication": {
+      "type": "session-based (cookies)",
+      "login_flow": [
+        "1. GET https://geodrive.amocrm.ru/ (получить csrf_token)",
+        "2. POST форма логина с credentials + csrf_token",
+        "3. Cookies автоматически устанавливаются",
+        "4. Для чатов: получить amojo_token из localStorage"
+      ]
+    },
+    "ajax_requests": {
+      "headers": {
+        "X-Requested-With": "XMLHttpRequest",
+        "Content-Type": "application/json"
+      },
+      "credentials": "include"
+    },
+    "pagination": {
+      "type": "page-based",
+      "default_limit": 50,
+      "max_limit": 250
+    }
+  },
+  "limitations": {
+    "chats_api": {
+      "status": "limited",
+      "details": [
+        "/api/v4/talks/chats - НЕ ДОСТУПЕН (404)",
+        "Работает только /ajax/v2/talks",
+        "Требуется интеграция с Umnico для полноценной работы",
+        "Amojo токен обновляется автоматически"
+      ],
+      "workaround": "Использовать Umnico API как основной канал для чатов"
+    }
+  },
+  "notes": [
+    "Все запросы требуют session cookies",
+    "Для AJAX запросов обязателен заголовок X-Requested-With: XMLHttpRequest",
+    "Чаты работают через отдельную систему Amojo + интеграция Umnico",
+    "Основная воронка 'Первичка' (ID: 8580102) содержит 21 статус",
+    "Скрытые статусы (142, 143) доступны только через фильтры",
+    "OAuth НЕ используется для веб-интерфейса"
+  ]
+}
+

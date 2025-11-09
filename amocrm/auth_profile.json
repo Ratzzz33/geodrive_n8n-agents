@@ -1,0 +1,95 @@
+{
+  "system": "amocrm",
+  "baseUrl": "https://geodrive.amocrm.ru",
+  "subdomain": "geodrive",
+  "loginUrl": "https://geodrive.amocrm.ru/",
+  "credentials": {
+    "email": "geodrive.ge@gmail.com",
+    "password": "wnr3c4%UqN@jY23"
+  },
+  "cookies_needed": [
+    "last_login",
+    "access_token_expires_at",
+    "user_lang",
+    "LAST_PLACE_TODO",
+    "LAST_PLACE_DEALS",
+    "LAST_PLACE_REPORTS",
+    "LAST_PLACE_CATALOGS",
+    "LAST_PLACE_CONTACTS",
+    "LAST_PLACE_CUSTOMERS",
+    "server_time"
+  ],
+  "localStorage_keys": [
+    "amojo_token",
+    "amojo_templates",
+    "amojo_next_page_link",
+    "NOVA_SERVER",
+    "__nova_id__",
+    "amocrm_write_first_lead_sources",
+    "browser_log_v1",
+    "amo_cms",
+    "NOVA_KERNEL_VERSION"
+  ],
+  "sessionStorage_keys": [],
+  "headers_required": [
+    {
+      "name": "Cookie",
+      "description": "Session cookies для авторизации",
+      "required": true
+    },
+    {
+      "name": "X-Requested-With",
+      "value": "XMLHttpRequest",
+      "description": "Для AJAX запросов",
+      "required": true
+    },
+    {
+      "name": "Content-Type",
+      "value": "application/json",
+      "required": false
+    },
+    {
+      "name": "Referer",
+      "value": "https://geodrive.amocrm.ru/",
+      "required": false,
+      "recommended": true
+    },
+    {
+      "name": "Origin",
+      "value": "https://geodrive.amocrm.ru",
+      "required": false,
+      "recommended": true
+    }
+  ],
+  "amojo_token": {
+    "description": "Токен для системы чатов AmoCRM (Amojo)",
+    "storage": "localStorage",
+    "key": "amojo_token",
+    "format": {
+      "expiredAt": "timestamp",
+      "refreshToken": "uuid",
+      "token": "uuid",
+      "user": "integer (user_id)"
+    },
+    "example": {
+      "expiredAt": 1762926664,
+      "refreshToken": "0bb9fe5c-118e-4547-b899-6795a5ecf010",
+      "token": "ca8405c3-f1c0-4a1d-9a30-8ab432f8ad56",
+      "user": 11479478
+    }
+  },
+  "csrf_token": {
+    "description": "CSRF токен для форм авторизации",
+    "location": "HTML форма (hidden input)",
+    "name": "csrf_token",
+    "required_for": ["login", "password_reset"]
+  },
+  "notes": [
+    "Авторизация через веб-форму (cookie-based session)",
+    "OAuth НЕ используется для веб-интерфейса",
+    "Для чатов используется отдельный Amojo токен",
+    "Интеграция с Umnico для работы с внешними каналами",
+    "Session cookies истекают по времени (access_token_expires_at)"
+  ]
+}
+
