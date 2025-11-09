@@ -171,6 +171,7 @@ async function findCarWithoutPrices() {
   console.log('🔍 Поиск автомобиля без цен...\n');
   
   // Находим авто, у которого либо нет записей в car_prices, либо их мало
+  // И которое ещё не проверяли сегодня
   const cars = await sql`
     SELECT 
       c.id as car_uuid,
@@ -184,8 +185,11 @@ async function findCarWithoutPrices() {
       AND er.entity_type = 'car' 
       AND er.system = 'rentprog'
     LEFT JOIN car_prices cp ON cp.car_id = c.id
+    LEFT JOIN car_price_checks cpc ON cpc.car_id = c.id 
+      AND cpc.checked_at::date = CURRENT_DATE
+    WHERE cpc.id IS NULL
     GROUP BY c.id, c.branch_id, b.code, er.external_id
-    HAVING COUNT(cp.id) = 0
+    HAVING COUNT(cp.id) < 3
     ORDER BY c.created_at DESC
     LIMIT 1
   `;
@@ -205,11 +209,32 @@ async function findCarWithoutPrices() {
   return car;
 }
 
+async function saveCheckResult(car, hasPrices, foundBranch = null) {
+  try {
+    await sql`
+      INSERT INTO car_price_checks 
+        (branch_code, car_id, rentprog_car_id, has_prices, checked_at, resolved, meta)
+      VALUES 
+        (${car.branch_code}, ${car.car_uuid}, ${car.rentprog_car_id}, ${hasPrices}, NOW(), FALSE, ${JSON.stringify({ found_in_branch: foundBranch })})
+      ON CONFLICT (rentprog_car_id, branch_code, checked_at::date) 
+      DO UPDATE SET 
+        has_prices = ${hasPrices},
+        meta = ${JSON.stringify({ found_in_branch: foundBranch })}
+    `;
+    console.log(`  📝 Результат проверки сохранен в БД`);
+  } catch (error) {
+    console.log(`  ⚠️  Ошибка сохранения результата: ${error.message}`);
+  }
+}
+
 async function fetchAndSaveCarPrices(car) {
   const primaryBranch = car.branch_code;
   const carId = car.rentprog_car_id;
   
   console.log(`🚀 Получение данных автомобиля ${carId}...\n`);
+  
+  let foundData = false;
+  let foundBranch = null;
   
   // Пробуем сначала в основном филиале
   try {
@@ -223,7 +248,11 @@ async function fetchAndSaveCarPrices(car) {
       console.log(`  📊 Сезонов: ${carData.seasons?.length || 0}`);
       
       if (carData.seasons && carData.seasons.length > 0) {
-        await upsertCarPrices(car.car_uuid, carData);
+        const result = await upsertCarPrices(car.car_uuid, carData);
+        foundData = result.inserted > 0 || result.updated > 0;
+        foundBranch = primaryBranch;
+        
+        await saveCheckResult(car, foundData, foundBranch);
         return { success: true, branch: primaryBranch };
       } else {
         console.log(`  ⚠️  Нет сезонов у автомобиля в ${primaryBranch}`);
@@ -251,7 +280,11 @@ async function fetchAndSaveCarPrices(car) {
         console.log(`  ✅ Данные найдены в ${branch}!`);
         console.log(`  📊 Сезонов: ${carData.seasons.length}`);
         
-        await upsertCarPrices(car.car_uuid, carData);
+        const result = await upsertCarPrices(car.car_uuid, carData);
+        foundData = result.inserted > 0 || result.updated > 0;
+        foundBranch = branch;
+        
+        await saveCheckResult(car, foundData, foundBranch);
         return { success: true, branch };
       }
     } catch (error) {
@@ -260,6 +293,7 @@ async function fetchAndSaveCarPrices(car) {
   }
   
   console.log(`\n❌ Не удалось найти данные автомобиля ни в одном филиале`);
+  await saveCheckResult(car, false, null);
   return { success: false };
 }
 
