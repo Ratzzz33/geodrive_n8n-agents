@@ -222,9 +222,14 @@ export async function handleRentProgEvent(
           if (entityIds.carId) relatedEntities.push({ type: 'car', id: entityIds.carId });
           if (entityIds.clientId) relatedEntities.push({ type: 'client', id: entityIds.clientId });
           
+          // Определяем operation из payload или типа события
+          const operation = (payload.operation || 
+            (event.type.includes('created') ? 'create' : 
+             event.type.includes('destroy') ? 'delete' : 'update')) as any;
+          
           await addWebhookToTimeline('booking', entityIds.bookingId, {
             eventType: event.type,
-            operation: event.operation as any,
+            operation,
             summary: `Бронь ${event.type}: ${extId}`,
             details: { rentprog_id: extId, ...fullPayload },
             branchCode: branch,
@@ -263,9 +268,14 @@ export async function handleRentProgEvent(
       if (entityIds.carId) {
         try {
           const { addWebhookToTimeline } = await import('../db/entityTimeline');
+          // Определяем operation из payload или типа события
+          const operation = (payload.operation || 
+            (event.type.includes('created') ? 'create' : 
+             event.type.includes('destroy') ? 'delete' : 'update')) as any;
+          
           await addWebhookToTimeline('car', entityIds.carId, {
             eventType: event.type,
-            operation: event.operation as any,
+            operation,
             summary: `Авто ${event.type}: ${fullPayload.plate || fullPayload.car_name || extId}`,
             details: { rentprog_id: extId, ...fullPayload },
             branchCode: branch,

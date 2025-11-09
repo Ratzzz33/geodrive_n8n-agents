@@ -5,7 +5,7 @@
  */
 
 import { getDatabase } from './index';
-import { entityTimeline, type EntityTimelineInsert } from './schema';
+import { entityTimeline, type EntityTimeline, type EntityTimelineInsert } from './schema';
 import { sql } from 'drizzle-orm';
 import type { BranchName } from '../integrations/rentprog';
 
