@@ -216,7 +216,13 @@
       "name": "Log to Health Table",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1456, 304]
+      "position": [1456, 304],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "PostgreSQL"
+        }
+      }
     }
   ],
   "connections": {
