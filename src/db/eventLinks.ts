@@ -10,7 +10,7 @@
 import { getDatabase } from './index';
 import { eventLinks, payments, externalRefs, type EventLink } from './schema';
 import { eq, and, sql, or, isNull, isNotNull } from 'drizzle-orm';
-import type { BranchName } from '../types/common';
+import type { BranchName } from '../integrations/rentprog';
 
 // =====================================================
 // Типы
@@ -155,8 +155,8 @@ export async function linkPayment(
     LIMIT 1
   `;
 
-  const events = await db.execute(eventQuery);
-  const event = events.rows[0] as { id: number; ts: Date; rentprog_id: string; payload: any } | undefined;
+  const events = await db.execute(eventQuery) as any[];
+  const event = events[0] as { id: number; ts: Date; rentprog_id: string; payload: any } | undefined;
 
   // 2. Поиск записи в history по operation_type и entity_id
   const historyQuery = sql`
@@ -171,8 +171,8 @@ export async function linkPayment(
     LIMIT 1
   `;
 
-  const historyRecords = await db.execute(historyQuery);
-  const history = historyRecords.rows[0] as { id: number; operation_type: string; created_at: Date; raw_data: any } | undefined;
+  const historyRecords = await db.execute(historyQuery) as any[];
+  const history = historyRecords[0] as { id: number; operation_type: string; created_at: Date; raw_data: any } | undefined;
 
   // 3. Вычисляем метрики для определения уверенности
   const hasEvent = !!event;
@@ -320,8 +320,8 @@ export async function linkEvent(
     LIMIT 1
   `;
 
-  const historyRecords = await db.execute(historyQuery);
-  const history = historyRecords.rows[0] as { id: number; created_at: Date } | undefined;
+  const historyRecords = await db.execute(historyQuery) as any[];
+  const history = historyRecords[0] as { id: number; created_at: Date } | undefined;
 
   const hasPayment = !!paymentId;
   const hasHistory = !!history;
@@ -442,6 +442,6 @@ export async function getLinksStats() {
     ORDER BY total_links DESC
   `);
 
-  return stats.rows;
+  return (stats as any[]) || [];
 }
 

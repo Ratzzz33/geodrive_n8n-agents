@@ -217,6 +217,44 @@ export const webhookDedup = pgTable('webhook_dedup', {
   receivedIdx: index('webhook_dedup_received_idx').on(table.received_at),
 }));
 
+// Связи между events, payments и history
+export const eventLinks = pgTable('event_links', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  
+  // Связь с основными сущностями
+  entity_type: text('entity_type').notNull(), // 'car' | 'booking' | 'client' | 'payment' | 'employee'
+  entity_id: uuid('entity_id'), // UUID из базовых таблиц
+  
+  // Связи с источниками данных
+  event_id: integer('event_id'), // Событие из вебхука (BIGINT в БД)
+  payment_id: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
+  history_id: integer('history_id'), // Запись из истории (BIGINT в БД)
+  
+  // RentProg идентификаторы
+  rp_entity_id: text('rp_entity_id'), // ID сущности в RentProg
+  rp_company_id: integer('rp_company_id'), // ID филиала в RentProg
+  
+  // Метаданные связи
+  link_type: text('link_type'), // 'webhook_to_payment' | 'history_to_payment' | 'webhook_to_history' | 'all'
+  confidence: text('confidence'), // 'high' | 'medium' | 'low'
+  matched_at: timestamp('matched_at', { withTimezone: true }),
+  matched_by: text('matched_by'), // 'auto' | 'manual' | 'workflow'
+  
+  // Дополнительные данные
+  metadata: jsonb('metadata'),
+  
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  entityIdx: index('idx_event_links_entity').on(table.entity_type, table.entity_id),
+  eventIdx: index('idx_event_links_event').on(table.event_id),
+  paymentIdx: index('idx_event_links_payment').on(table.payment_id),
+  historyIdx: index('idx_event_links_history').on(table.history_id),
+  rpIdx: index('idx_event_links_rp').on(table.rp_entity_id, table.rp_company_id),
+  typeIdx: index('idx_event_links_type').on(table.link_type),
+  confidenceIdx: index('idx_event_links_confidence').on(table.confidence),
+}));
+
 // Типы для TypeScript
 export type Branch = typeof branches.$inferSelect;
 export type BranchInsert = typeof branches.$inferInsert;
@@ -236,4 +274,6 @@ export type ExternalRef = typeof externalRefs.$inferSelect;
 export type ExternalRefInsert = typeof externalRefs.$inferInsert;
 export type WebhookDedup = typeof webhookDedup.$inferSelect;
 export type WebhookDedupInsert = typeof webhookDedup.$inferInsert;
+export type EventLink = typeof eventLinks.$inferSelect;
+export type EventLinkInsert = typeof eventLinks.$inferInsert;
 

@@ -15,6 +15,7 @@ app.use(express.json());
 // Подключаем роутеры
 // import carSearchRouter from './car-search'; // Временно закомментировано
 import processHistoryRouter from './routes/processHistory.js';
+import eventLinksRouter from './routes/eventLinks.js';
 
 let server: ReturnType<typeof app.listen> | null = null;
 
@@ -30,6 +31,7 @@ export function initApiServer(port: number = 3000): void {
   // Подключаем роутеры
   // app.use('/api/cars', carSearchRouter); // Временно закомментировано
   app.use('/process-history', processHistoryRouter);
+  app.use('/event-links', eventLinksRouter);
 
   // Health check для RentProg
   app.get('/rentprog/health', async (req, res) => {
@@ -543,6 +545,53 @@ export function initApiServer(port: number = 3000): void {
       res.status(500).json({ 
         ok: false, 
         error: error instanceof Error ? error.message : 'Internal server error' 
+      });
+    }
+  });
+
+  // Endpoint для парсинга курсов валют из RentProg через Playwright
+  app.post('/scrape-exchange-rates', async (req, res) => {
+    try {
+      const { branch } = req.body;
+      
+      const validBranches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];
+      if (!branch || !validBranches.includes(branch)) {
+        res.status(400).json({ 
+          success: false, 
+          error: `Invalid branch. Must be one of: ${validBranches.join(', ')}` 
+        });
+        return;
+      }
+      
+      logger.info(`[Exchange Rates] Parsing rates for ${branch}...`);
+      
+      // Импортируем функцию парсинга
+      const { scrapeExchangeRatesForBranch } = await import('../services/exchangeRatesService.js');
+      
+      const rates = await scrapeExchangeRatesForBranch(branch);
+      
+      if (!rates || Object.keys(rates).length === 0) {
+        res.status(500).json({ 
+          success: false, 
+          error: 'No exchange rates found' 
+        });
+        return;
+      }
+      
+      logger.info(`[Exchange Rates] Parsed successfully for ${branch}:`, rates);
+      
+      res.json({
+        success: true,
+        branch,
+        rates,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      logger.error(`[Exchange Rates] Error:`, error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
       });
     }
   });

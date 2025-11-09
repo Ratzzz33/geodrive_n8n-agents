@@ -4,7 +4,7 @@
 
 import { Router } from 'express';
 import { linkPayment, linkEvent, getLinksForPayment, getLinksStats } from '../../db/eventLinks';
-import type { BranchName } from '../../types/common';
+import type { BranchName } from '../../integrations/rentprog';
 
 const router = Router();
 
@@ -132,8 +132,15 @@ router.get('/stats', async (req, res) => {
  */
 router.get('/unlinked', async (req, res) => {
   try {
-    const { db } = await import('../../db');
+    const { getDatabase } = await import('../../db');
     const { sql } = await import('drizzle-orm');
+    const db = getDatabase();
+    if (!db) {
+      return res.status(500).json({
+        ok: false,
+        error: 'Database not available',
+      });
+    }
 
     const unlinked = await db.execute(sql`
       SELECT * FROM unlinked_records
@@ -141,10 +148,12 @@ router.get('/unlinked', async (req, res) => {
       LIMIT 100
     `);
 
+    const rows = unlinked as any[];
+
     res.json({
       ok: true,
-      unlinked: unlinked.rows,
-      count: unlinked.rows.length,
+      unlinked: rows,
+      count: rows.length,
     });
   } catch (error: any) {
     console.error('Error getting unlinked records:', error);

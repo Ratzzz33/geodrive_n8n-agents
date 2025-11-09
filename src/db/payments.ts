@@ -160,6 +160,21 @@ export async function savePaymentFromRentProg(
       data: payment.rawData,
     });
     
+    // 6. Автоматически связать с events и history
+    try {
+      const { linkPayment } = await import('./eventLinks');
+      await linkPayment(
+        newPayment.id,
+        payment.branch as any,
+        Number(rentprogCountId),
+        new Date(payment.paymentDate),
+        { timeWindowSeconds: 300, autoCreate: true }
+      );
+    } catch (linkError) {
+      // Не критично, если связывание не удалось - логируем и продолжаем
+      console.warn('Failed to link payment:', linkError);
+    }
+    
     return { paymentId: newPayment.id, created: true };
     
   } catch (error) {
