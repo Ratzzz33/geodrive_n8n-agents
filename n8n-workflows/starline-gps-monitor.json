@@ -39,7 +39,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 1
           },
           "conditions": [
             {
@@ -64,9 +65,10 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "chatId": "=-5004140602",
         "text": "={{ '🔴 **Starline GPS Monitor - HTTP Ошибка**\\n\\n' + '❌ Не удалось подключиться к API\\n\\n' + '**Ошибка:**\\n' + ($json.error?.message || $json.error || 'Unknown error') + '\\n\\n🕐 ' + $now.toISO() }}",
         "additionalFields": {
+          "appendAttribution": false,
           "parse_mode": "Markdown"
         }
       },
@@ -74,7 +76,13 @@
       "name": "Send HTTP Error Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [864, 464]
+      "position": [864, 464],
+      "credentials": {
+        "telegramApi": {
+          "id": "1tKryXxL5Gq395nN",
+          "name": "Telegram account"
+        }
+      }
     },
     {
       "parameters": {
@@ -92,7 +100,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 1
           },
           "conditions": [
             {
@@ -223,7 +232,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 1
           },
           "conditions": [
             {
@@ -248,9 +258,10 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "chatId": "=-5004140602",
         "text": "={{ '🚨 **Starline GPS Monitor - Критичные ошибки**\\n\\n' + '✅ Обновлено: ' + $json.updated + ' машин\\n' + '❌ Ошибок: ' + $json.error_count + '\\n\\n' + '**Список ошибок:**\\n' + $json.errors.join('\\n') + '\\n\\n🕐 ' + $now.toISO() }}",
         "additionalFields": {
+          "appendAttribution": false,
           "parse_mode": "Markdown"
         }
       },
@@ -258,7 +269,13 @@
       "name": "Send Telegram Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1456, 440]
+      "position": [1456, 440],
+      "credentials": {
+        "telegramApi": {
+          "id": "1tKryXxL5Gq395nN",
+          "name": "Telegram account"
+        }
+      }
     },
     {
       "parameters": {
@@ -280,7 +297,7 @@
     }
   ],
   "connections": {
-    "Every Minute": {
+    "Every 2 Minutes": {
       "main": [[{"node": "Update GPS Data", "type": "main", "index": 0}]]
     },
     "Update GPS Data": {
