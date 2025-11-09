@@ -14,6 +14,7 @@ app.use(express.json());
 
 // Подключаем роутеры
 // import carSearchRouter from './car-search'; // Временно закомментировано
+import processHistoryRouter from './routes/processHistory.js';
 
 let server: ReturnType<typeof app.listen> | null = null;
 
@@ -28,6 +29,7 @@ export function initApiServer(port: number = 3000): void {
 
   // Подключаем роутеры
   // app.use('/api/cars', carSearchRouter); // Временно закомментировано
+  app.use('/process-history', processHistoryRouter);
 
   // Health check для RentProg
   app.get('/rentprog/health', async (req, res) => {
@@ -79,6 +81,101 @@ export function initApiServer(port: number = 3000): void {
     } catch (error) {
       logger.error('Webhook handler error:', error);
       res.status(500).json({ ok: false, error: 'Internal server error' });
+    }
+  });
+
+  // Endpoint для синхронизации цен филиала
+  app.get('/sync-prices/:branch', async (req, res) => {
+    try {
+      const { branch } = req.params;
+      
+      // Валидация филиала
+      const validBranches: BranchName[] = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];
+      if (!validBranches.includes(branch as BranchName)) {
+        res.status(400).json({ 
+          ok: false, 
+          error: `Invalid branch. Must be one of: ${validBranches.join(', ')}` 
+        });
+        return;
+      }
+      
+      logger.info(`[Price Sync] Starting sync for ${branch}...`);
+      
+      // Динамический импорт модуля синхронизации
+      // @ts-expect-error - .mjs module без типов
+      const { syncPricesForBranch } = await import('../../setup/sync_prices_module.mjs');
+      
+      const result = await syncPricesForBranch(branch);
+      
+      logger.info(`[Price Sync] Completed for ${branch}: +${result.inserted} ~${result.updated} -${result.skipped} !${result.errors}`);
+      
+      res.json(result);
+      
+    } catch (error) {
+      logger.error(`[Price Sync] Error:`, error);
+      res.status(500).json({
+        ok: false,
+        branch: req.params.branch,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Endpoint для проверки автомобилей без цен на сезоны
+  app.get('/check-cars-without-prices/:branch?', async (req, res) => {
+    try {
+      const { branch } = req.params;
+      
+      logger.info(`[Price Check] Starting check${branch ? ` for ${branch}` : ' for all branches'}...`);
+      
+      if (branch) {
+        // Проверка конкретного филиала
+        const validBranches: BranchName[] = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];
+        if (!validBranches.includes(branch as BranchName)) {
+          res.status(400).json({ 
+            ok: false, 
+            error: `Invalid branch. Must be one of: ${validBranches.join(', ')}` 
+          });
+          return;
+        }
+        
+        // @ts-expect-error - .mjs module без типов
+        const { checkBranchCarsWithoutPrices } = await import('../../setup/check_cars_without_prices.mjs');
+        const result = await checkBranchCarsWithoutPrices(branch);
+        
+        logger.info(`[Price Check] Completed for ${branch}: ${result.withoutPrices}/${result.total} без цен`);
+        res.json(result);
+      } else {
+        // Проверка всех филиалов
+        // @ts-expect-error - .mjs module без типов
+        const { checkAllBranches } = await import('../../setup/check_cars_without_prices.mjs');
+        const results = await checkAllBranches();
+        
+        const totals = results.reduce((acc: { total: number; withoutPrices: number }, r: any) => ({
+          total: acc.total + r.total,
+          withoutPrices: acc.withoutPrices + r.withoutPrices
+        }), { total: 0, withoutPrices: 0 });
+        
+        logger.info(`[Price Check] Completed for all branches: ${totals.withoutPrices}/${totals.total} без цен`);
+        
+        res.json({
+          ok: true,
+          branches: results,
+          summary: {
+            total: totals.total,
+            withoutPrices: totals.withoutPrices,
+            withPrices: totals.total - totals.withoutPrices
+          }
+        });
+      }
+      
+    } catch (error) {
+      logger.error(`[Price Check] Error:`, error);
+      res.status(500).json({
+        ok: false,
+        branch: req.params.branch || 'all',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

@@ -1,0 +1,321 @@
+{
+  "name": "Check Cars Without Prices",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 4 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "=http://46.224.17.15:3000/check-cars-without-prices",
+        "method": "GET",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "check-all-branches",
+      "name": "Check All Branches",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition1",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "condition2",
+              "leftValue": "={{ $json.summary.withoutPrices }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-result",
+      "name": "Has Issues?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "summary-text",
+              "name": "summaryText",
+              "value": "=🚨 <b>Найдены автомобили без цен на сезоны</b>\n\n<b>Общая статистика:</b>\n• Всего автомобилей: {{ $json.summary.total }}\n• Без цен: {{ $json.summary.withoutPrices }}\n• С ценами: {{ $json.summary.withPrices }}\n\n<b>По филиалам:</b>\n{{ $json.branches.map(b => `• ${b.branch}: ${b.withoutPrices}/${b.total} без цен`).join('\\n') }}\n\n⚠️ Требуется проверка и добавление цен в RentProg",
+              "type": "string"
+            },
+            {
+              "id": "branch-details",
+              "name": "branchDetails",
+              "value": "={{ $json.branches }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-summary",
+      "name": "Format Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [910, 200]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ $json.summaryText }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "send-telegram-alert",
+      "name": "Send Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1130, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-alerts",
+          "name": "Telegram Bot (Alerts)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM unresolved_price_issues WHERE branch = ANY(ARRAY[{{ $json.branches.map(b => `'${b.branch}'`).join(',') }}]) ORDER BY checked_at DESC LIMIT 20",
+        "options": {}
+      },
+      "id": "get-db-issues",
+      "name": "Get DB Issues",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1130, 400],
+      "credentials": {
+        "postgres": {
+          "id": "neon-db",
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "details-text",
+              "name": "detailsText",
+              "value": "=📋 <b>Детали автомобилей без цен:</b>\n\n{{ $json.map((car, i) => `${i+1}. ${car.car_number || car.car_code} (${car.car_model || 'N/A'})\n   Филиал: ${car.branch}\n   Сезонов: ${car.seasons_count}, Цен: ${car.prices_count}\n   Не хватает: ${car.missing_prices_count} цен`).join('\\n\\n') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-details",
+      "name": "Format Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1350, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ $json.detailsText }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "send-details-alert",
+      "name": "Send Details",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1570, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-alerts",
+          "name": "Telegram Bot (Alerts)"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "no-issues",
+      "name": "No Issues",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [910, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM get_price_issues_stats() ORDER BY unresolved_issues DESC",
+        "options": {}
+      },
+      "id": "get-stats",
+      "name": "Get Stats",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1350, 200],
+      "credentials": {
+        "postgres": {
+          "id": "neon-db",
+          "name": "Neon PostgreSQL"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check All Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check All Branches": {
+      "main": [
+        [
+          {
+            "node": "Has Issues?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Issues?": {
+      "main": [
+        [
+          {
+            "node": "Format Summary",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Summary": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram Alert": {
+      "main": [
+        [
+          {
+            "node": "Get DB Issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get DB Issues": {
+      "main": [
+        [
+          {
+            "node": "Format Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Details": {
+      "main": [
+        [
+          {
+            "node": "Send Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "H3UBEp425F5SMyrX",
+    "timezone": "Asia/Tbilisi",
+    "executionTimeout": 3600
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "id": "prices",
+      "name": "Prices"
+    },
+    {
+      "id": "monitoring",
+      "name": "Monitoring"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-11-09T00:00:00.000Z",
+  "versionId": "1"
+}
+

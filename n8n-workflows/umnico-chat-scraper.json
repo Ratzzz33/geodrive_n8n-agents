@@ -1,0 +1,288 @@
+{
+  "name": "Umnico Chat Scraper",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "umnico-cron-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "=http://playwright-umnico:3001/api/conversations?limit=50",
+        "authentication": "none",
+        "options": {}
+      },
+      "id": "get-conversations",
+      "name": "Get Conversations from Umnico Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT MAX(last_message_at) as last_check FROM conversations WHERE status = 'active'",
+        "options": {}
+      },
+      "id": "get-last-check",
+      "name": "Get Last Check Timestamp",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [470, 120],
+      "credentials": {
+        "postgres": {
+          "id": "neon-postgres",
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Фильтруем только новые/обновленные диалоги\nconst lastCheck = $input.first().json.last_check;\nconst conversations = $input.all()[1].json.data || [];\n\nif (!lastCheck) {\n  // Первый запуск - берем все\n  return conversations.map(c => ({ json: c }));\n}\n\nconst lastCheckDate = new Date(lastCheck);\n\n// Фильтруем (в реальности нужно добавить timestamp в API)\nreturn conversations.map(c => ({ json: c }));"
+      },
+      "id": "filter-new-conversations",
+      "name": "Filter New Conversations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-conversations",
+      "name": "Loop Through Conversations",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "url": "=http://playwright-umnico:3001/api/conversations/{{ $json.conversationId }}/messages",
+        "authentication": "none",
+        "options": {}
+      },
+      "id": "get-messages",
+      "name": "Get Messages",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1130, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Upsert client by phone\nWITH client_upsert AS (\n  INSERT INTO clients (id, phone, name, updated_at)\n  VALUES (gen_random_uuid(), $1, $2, now())\n  ON CONFLICT (phone) DO UPDATE\n  SET name = COALESCE(EXCLUDED.name, clients.name),\n      updated_at = now()\n  RETURNING id\n),\n-- Add external ref for Umnico\nexternal_ref AS (\n  INSERT INTO external_refs (entity_type, entity_id, system, external_id)\n  SELECT 'client', client_upsert.id, 'umnico', $1\n  FROM client_upsert\n  ON CONFLICT (entity_type, system, external_id) DO NOTHING\n),\n-- Upsert conversation\nconversation_upsert AS (\n  INSERT INTO conversations (\n    id, client_id, umnico_conversation_id, channel, channel_account, status, last_message_at, updated_at\n  )\n  SELECT gen_random_uuid(), client_upsert.id, $3, $4, $5, 'active', now(), now()\n  FROM client_upsert\n  ON CONFLICT (umnico_conversation_id) DO UPDATE\n  SET last_message_at = now(), updated_at = now()\n  RETURNING id\n)\nSELECT * FROM conversation_upsert;",
+        "options": {}
+      },
+      "id": "upsert-client-conversation",
+      "name": "Upsert Client & Conversation",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1350, 300],
+      "credentials": {
+        "postgres": {
+          "id": "neon-postgres",
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Подготовить messages для batch insert\nconst conversationId = $input.first().json.id;\nconst clientId = $input.first().json.client_id;\nconst messages = $input.all()[1].json.data || [];\n\nconst values = messages.map(m => ({\n  conversation_id: conversationId,\n  client_id: clientId,\n  text: m.text,\n  direction: m.direction,\n  channel: m.channel || 'whatsapp',\n  sent_at: m.datetime || new Date().toISOString(),\n  metadata: JSON.stringify({\n    time: m.time,\n    hasAttachments: m.hasAttachments,\n    channelAccount: m.channelAccount\n  })\n}));\n\nreturn values.map(v => ({ json: v }));"
+      },
+      "id": "prepare-messages",
+      "name": "Prepare Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1570, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "messages",
+        "columns": "conversation_id, client_id, text, direction, channel, sent_at, metadata",
+        "options": {
+          "skipOnConflict": true
+        }
+      },
+      "id": "insert-messages",
+      "name": "Insert Messages (Batch)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1790, 300],
+      "credentials": {
+        "postgres": {
+          "id": "neon-postgres",
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Update sync state\nINSERT INTO sync_state (workflow_name, system, last_sync_at, last_marker, status, items_processed, items_added, metadata)\nVALUES ('umnico_scraper', 'umnico', now(), now()::text, 'success', $1, $2, '{}'::jsonb)\nON CONFLICT (workflow_name, system) DO UPDATE\nSET last_sync_at = now(), last_marker = now()::text, status = 'success', items_processed = EXCLUDED.items_processed, items_added = EXCLUDED.items_added;",
+        "options": {}
+      },
+      "id": "update-sync-state",
+      "name": "Update Sync State",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2010, 300],
+      "credentials": {
+        "postgres": {
+          "id": "neon-postgres",
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "✅ Umnico Chat Scraper\n\nСинхронизация: каждые 5 минут\n\nШаги:\n1. Get last check timestamp\n2. Get conversations from Playwright service\n3. Filter new/updated\n4. For each conversation:\n   - Get messages\n   - Upsert client (by phone)\n   - Add external_ref (umnico)\n   - Upsert conversation\n   - Insert messages (batch)\n5. Update sync_state\n\nPlaywright Service: http://playwright-umnico:3001",
+        "height": 340,
+        "width": 380
+      },
+      "id": "sticky-note",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 460]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Get Last Check Timestamp",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Conversations from Umnico Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Last Check Timestamp": {
+      "main": [
+        [
+          {
+            "node": "Filter New Conversations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Conversations from Umnico Service": {
+      "main": [
+        [
+          {
+            "node": "Filter New Conversations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter New Conversations": {
+      "main": [
+        [
+          {
+            "node": "Loop Through Conversations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Through Conversations": {
+      "main": [
+        [
+          {
+            "node": "Get Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Messages": {
+      "main": [
+        [
+          {
+            "node": "Upsert Client & Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Client & Conversation": {
+      "main": [
+        [
+          {
+            "node": "Prepare Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Messages": {
+      "main": [
+        [
+          {
+            "node": "Insert Messages (Batch)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Messages (Batch)": {
+      "main": [
+        [
+          {
+            "node": "Loop Through Conversations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Sync State": {
+      "main": []
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "timezone": "Asia/Tbilisi",
+    "executionTimeout": 3600
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-11-09T00:00:00.000Z",
+  "versionId": "1"
+}
+

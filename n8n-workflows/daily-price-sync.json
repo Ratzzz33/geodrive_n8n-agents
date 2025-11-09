@@ -1,0 +1,182 @@
+{
+  "name": "Daily Price Sync - RentProg",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "name": "Every Day at 3 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "id": "schedule-trigger"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "branches",
+              "value": "tbilisi,batumi,kutaisi,service-center"
+            }
+          ]
+        }
+      },
+      "name": "Set Branches",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "id": "set-branches"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "branches",
+        "options": {}
+      },
+      "name": "Split Branches",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "id": "split-branches"
+    },
+    {
+      "parameters": {
+        "url": "=http://46.224.17.15:3000/sync-prices/{{ $json.branches.split(',')[$itemIndex] }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "name": "Trigger Price Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "id": "trigger-sync"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.ok }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1120, 300],
+      "id": "check-success"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "=✅ Price sync completed for {{ $json.branch }}\\n\\nInserted: {{ $json.inserted }}\\nUpdated: {{ $json.updated }}\\nSkipped: {{ $json.skipped }}\\nErrors: {{ $json.errors }}"
+      },
+      "name": "Success Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1340, 200],
+      "id": "success-alert",
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram_bot",
+          "name": "Telegram Alert Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "=❌ Price sync FAILED for {{ $json.branch }}\\n\\nError: {{ $json.error }}"
+      },
+      "name": "Error Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1340, 400],
+      "id": "error-alert",
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram_bot",
+          "name": "Telegram Alert Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every Day at 3 AM": {
+      "main": [
+        [
+          {
+            "node": "Set Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Branches": {
+      "main": [
+        [
+          {
+            "node": "Split Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Branches": {
+      "main": [
+        [
+          {
+            "node": "Trigger Price Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Price Sync": {
+      "main": [
+        [
+          {
+            "node": "Check Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Success": {
+      "main": [
+        [
+          {
+            "node": "Success Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+

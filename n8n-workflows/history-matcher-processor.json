@@ -1,0 +1,420 @@
+{
+  "name": "History Matcher & Processor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "url": "http://46.224.17.15:3000/process-history",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"limit\": 100\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "process-history",
+      "name": "Process History Batch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-results",
+              "leftValue": "={{ $json.processed + $json.failed }}",
+              "rightValue": "0",
+              "operator": {
+                "type": "number",
+                "operation": "gt",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-work",
+      "name": "Has Processed Items?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Форматируем результат для лога\nconst result = $json;\n\nconst summary = `\n📊 *History Processing Completed*\n\n✅ Processed: ${result.processed}\n⏭️ Skipped: ${result.skipped}\n❌ Failed: ${result.failed}\n\n📈 Total operations: ${result.results?.length || 0}\n`;\n\nlet details = '';\n\n// Топ операций\nif (result.results && result.results.length > 0) {\n  const byType = {};\n  result.results.forEach(r => {\n    if (!byType[r.operation_type]) {\n      byType[r.operation_type] = { ok: 0, failed: 0 };\n    }\n    if (r.result.ok) {\n      byType[r.operation_type].ok++;\n    } else {\n      byType[r.operation_type].failed++;\n    }\n  });\n  \n  details += '\\n🔹 *By operation type:*\\n';\n  Object.entries(byType).forEach(([type, counts]) => {\n    details += `  • ${type}: ${counts.ok} ok, ${counts.failed} failed\\n`;\n  });\n}\n\n// Ошибки\nif (result.errors && result.errors.length > 0) {\n  details += '\\n⚠️ *Errors:*\\n';\n  result.errors.slice(0, 5).forEach(err => {\n    details += `  • ${err}\\n`;\n  });\n  if (result.errors.length > 5) {\n    details += `  ... и еще ${result.errors.length - 5} ошибок\\n`;\n  }\n}\n\nreturn [{\n  json: {\n    summary,\n    details,\n    full_message: summary + details,\n    has_errors: result.failed > 0,\n    result\n  }\n}];"
+      },
+      "id": "format-log",
+      "name": "Format Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-errors",
+              "leftValue": "={{ $json.has_errors }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-errors",
+      "name": "Has Errors?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "generic",
+        "genericAuthType": "httpHeaderAuth",
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "=⚠️ *History Processing Errors*\\n\\n{{ $json.full_message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-error-alert",
+      "name": "Send Error Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1240, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram_bot_credentials_id",
+          "name": "Telegram Bot @n8n_alert_geodrive_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "http://46.224.17.15:3000/process-history/unknown",
+        "authentication": "none",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "check-unknown",
+      "name": "Check Unknown Operations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [840, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-unknown",
+              "leftValue": "={{ $json.count }}",
+              "rightValue": "0",
+              "operator": {
+                "type": "number",
+                "operation": "gt",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-unknown",
+      "name": "Has Unknown?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1040, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Форматируем неизвестные операции\nconst data = $json;\n\nif (!data.unknown_operations || data.unknown_operations.length === 0) {\n  return [];\n}\n\nlet message = '🔍 *Обнаружены новые типы операций в History*\\n\\n';\nmessage += `Всего: ${data.count} неизвестных типов\\n\\n`;\n\n// Топ-10 по частоте\nconst top = data.unknown_operations.slice(0, 10);\ntop.forEach((op, idx) => {\n  message += `${idx + 1}. *${op.operation_type}*\\n`;\n  message += `   • Частота: ${op.frequency}\\n`;\n  message += `   • Филиалы: ${op.branches_count}\\n`;\n  message += `   • Entity: ${op.entity_type || 'N/A'}\\n`;\n  if (op.sample_descriptions && op.sample_descriptions.length > 0) {\n    message += `   • Примеры: ${op.sample_descriptions.slice(0, 2).join(', ')}\\n`;\n  }\n  message += '\\n';\n});\n\nif (data.unknown_operations.length > 10) {\n  message += `... и еще ${data.unknown_operations.length - 10} типов\\n\\n`;\n}\n\nmessage += '💡 Используйте `/process-history/learn` API для создания маппингов';\n\nreturn [{\n  json: {\n    message,\n    unknown_operations: data.unknown_operations\n  }\n}];"
+      },
+      "id": "format-unknown",
+      "name": "Format Unknown Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1240, 500]
+    },
+    {
+      "parameters": {
+        "authentication": "generic",
+        "genericAuthType": "httpHeaderAuth",
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-unknown-alert",
+      "name": "Send Unknown Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1440, 500],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram_bot_credentials_id",
+          "name": "Telegram Bot @n8n_alert_geodrive_bot"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "no-work",
+      "name": "No Work",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [840, 600]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "daily-cron",
+      "name": "Daily at 9 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 800]
+    },
+    {
+      "parameters": {
+        "url": "http://46.224.17.15:3000/process-history/stats",
+        "authentication": "none",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "get-stats",
+      "name": "Get Stats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 800]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Форматируем ежедневную статистику\nconst data = $json;\nconst summary = data.summary;\n\nlet message = '📊 *History Processing - Daily Report*\\n\\n';\n\n// Общая статистика\nmessage += '🔢 *Общая статистика:*\\n';\nmessage += `  • Всего операций: ${summary.total_processed + summary.total_pending}\\n`;\nmessage += `  • Обработано: ${summary.total_processed} (${((summary.total_processed / (summary.total_processed + summary.total_pending)) * 100).toFixed(1)}%)\\n`;\nmessage += `  • Ожидают: ${summary.total_pending}\\n`;\nmessage += `  • Сопоставлено с вебхуками: ${summary.total_matched}\\n`;\nmessage += `  • Уникальных типов: ${summary.unique_operation_types}\\n`;\nmessage += `  • Филиалов: ${summary.branches_count}\\n\\n`;\n\n// Топ операций с необработанными\nmessage += '⏳ *Топ необработанных операций:*\\n';\nconst topPending = data.by_operation_type\n  .filter(op => op.pending_count > 0)\n  .sort((a, b) => b.pending_count - a.pending_count)\n  .slice(0, 10);\n\nif (topPending.length > 0) {\n  topPending.forEach((op, idx) => {\n    message += `${idx + 1}. *${op.operation_type}*: ${op.pending_count} ожидают\\n`;\n    if (op.target_table && op.target_table !== 'skip') {\n      message += `   → ${op.target_table} (${op.processing_strategy})\\n`;\n    }\n  });\n} else {\n  message += '✅ Все операции обработаны!\\n';\n}\n\nmessage += '\\n';\n\n// Топ успешно обработанных\nmessage += '✅ *Топ обработанных (за всё время):*\\n';\nconst topProcessed = data.by_operation_type\n  .filter(op => op.processed_count > 0)\n  .sort((a, b) => b.processed_count - a.processed_count)\n  .slice(0, 5);\n\ntopProcessed.forEach((op, idx) => {\n  message += `${idx + 1}. ${op.operation_type}: ${op.processed_count}\\n`;\n});\n\nmessage += '\\n---\\n';\nmessage += `🕐 Период: ${new Date(summary.oldest_operation).toLocaleDateString()} - ${new Date(summary.newest_operation).toLocaleDateString()}`;\n\nreturn [{\n  json: {\n    message,\n    stats: data\n  }\n}];"
+      },
+      "id": "format-daily-stats",
+      "name": "Format Daily Stats",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 800]
+    },
+    {
+      "parameters": {
+        "authentication": "generic",
+        "genericAuthType": "httpHeaderAuth",
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-daily-stats",
+      "name": "Send Daily Stats",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [840, 800],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram_bot_credentials_id",
+          "name": "Telegram Bot @n8n_alert_geodrive_bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Process History Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process History Batch": {
+      "main": [
+        [
+          {
+            "node": "Has Processed Items?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Processed Items?": {
+      "main": [
+        [
+          {
+            "node": "Format Log",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check Unknown Operations",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Work",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Log": {
+      "main": [
+        [
+          {
+            "node": "Has Errors?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Errors?": {
+      "main": [
+        [
+          {
+            "node": "Send Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Unknown Operations": {
+      "main": [
+        [
+          {
+            "node": "Has Unknown?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Unknown?": {
+      "main": [
+        [
+          {
+            "node": "Format Unknown Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Unknown Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Unknown Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily at 9 AM": {
+      "main": [
+        [
+          {
+            "node": "Get Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Stats": {
+      "main": [
+        [
+          {
+            "node": "Format Daily Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Daily Stats": {
+      "main": [
+        [
+          {
+            "node": "Send Daily Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "timeout": 3600,
+    "errorWorkflow": "H3UBEp425F5SMyrX"
+  }
+}
+
