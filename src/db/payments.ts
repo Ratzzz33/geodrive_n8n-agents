@@ -175,6 +175,46 @@ export async function savePaymentFromRentProg(
       console.warn('Failed to link payment:', linkError);
     }
     
+    // 7. Записать в timeline
+    try {
+      const { addPaymentToTimeline } = await import('./entityTimeline');
+      
+      // Найти client_id если есть
+      let clientId: string | undefined;
+      if (payment.rawData.client_id) {
+        const [clientRef] = await db
+          .select()
+          .from(externalRefs)
+          .where(
+            and(
+              eq(externalRefs.entity_type, 'client'),
+              eq(externalRefs.system, 'rentprog'),
+              eq(externalRefs.external_id, String(payment.rawData.client_id))
+            )
+          )
+          .limit(1);
+        if (clientRef) {
+          clientId = clientRef.entity_id;
+        }
+      }
+      
+      await addPaymentToTimeline(
+        newPayment.id,
+        payment.branch as any,
+        {
+          amount: String(payment.amount),
+          currency: payment.currency,
+          description: payment.comment,
+          bookingId: bookingId || undefined,
+          clientId,
+          employeeId: undefined, // TODO: связать с employee
+        }
+      );
+    } catch (timelineError) {
+      // Не критично, если запись в timeline не удалась - логируем и продолжаем
+      console.warn('Failed to add payment to timeline:', timelineError);
+    }
+    
     return { paymentId: newPayment.id, created: true };
     
   } catch (error) {

@@ -16,6 +16,7 @@ app.use(express.json());
 // import carSearchRouter from './car-search'; // Временно закомментировано
 // import processHistoryRouter from './routes/processHistory.js'; // Временно отключено
 import eventLinksRouter from './routes/eventLinks.js';
+import entityTimelineRouter from './routes/entityTimeline.js';
 
 let server: ReturnType<typeof app.listen> | null = null;
 
@@ -32,6 +33,7 @@ export function initApiServer(port: number = 3000): void {
   // app.use('/api/cars', carSearchRouter); // Временно закомментировано
   // app.use('/process-history', processHistoryRouter); // Временно отключено
   app.use('/event-links', eventLinksRouter);
+  app.use('/entity-timeline', entityTimelineRouter);
 
   // Health check для RentProg
   app.get('/rentprog/health', async (req, res) => {
@@ -360,7 +362,8 @@ export function initApiServer(port: number = 3000): void {
       }
       
       // Обрабатываем событие (auto-fetch + upsert)
-      const result = await handleRentProgEvent(systemEvent);
+      // Передаем eventId для связи с timeline
+      const result = await handleRentProgEvent(systemEvent, eventId);
       
       res.json({ 
         ok: result.ok, 

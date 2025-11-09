@@ -1,0 +1,21 @@
+# Dockerfile для RentProg Playwright Service
+FROM mcr.microsoft.com/playwright:v1.56.1-jammy
+
+WORKDIR /app
+
+# Установить зависимости
+COPY package.json ./
+RUN npm install --production
+
+# Скопировать собранные JS файлы
+COPY dist/playwright-rentprog.js ./playwright-rentprog.js
+
+# Создать директорию для данных
+RUN mkdir -p /data
+
+# Открыть порт
+EXPOSE 3001
+
+# Запуск
+CMD ["node", "playwright-rentprog.js"]
+

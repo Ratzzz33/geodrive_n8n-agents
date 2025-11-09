@@ -12,33 +12,42 @@
       "name": "Webhook (Service Center)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
-      "position": [240, 400],
+      "position": [
+        240,
+        400
+      ],
       "webhookId": "service-center-webhook"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Парсинг вебхука от RentProg\nconst body = $input.item.json.body || $input.item.json;\n\n// Извлекаем event и payload\nconst eventName = body.event || 'unknown';\nlet payloadStr = body.payload || '{}';\nlet parsedPayload = {};\n\n// Парсим payload (может быть Ruby hash или JSON)\ntry {\n  if (typeof payloadStr === 'string') {\n    // Пробуем JSON\n    try {\n      parsedPayload = JSON.parse(payloadStr);\n    } catch {\n      // Конвертируем Ruby hash → JSON\n      let jsonStr = payloadStr\n        .replace(/=>/g, ':')\n        .replace(/([{, ])([a-zA-Z_][a-zA-Z0-9_]*):/g, '$1\"$2\":')\n        .replace(/nil/g, 'null');\n      parsedPayload = JSON.parse(jsonStr);\n    }\n  } else {\n    parsedPayload = payloadStr;\n  }\n} catch (e) {\n  parsedPayload = { error: 'Failed to parse payload', raw: payloadStr };\n}\n\n// Определяем entity_type и operation\nlet entityType = 'unknown';\nlet operation = 'unknown';\n\nif (eventName.includes('car')) entityType = 'car';\nelse if (eventName.includes('client')) entityType = 'client';\nelse if (eventName.includes('booking')) entityType = 'booking';\n\nif (eventName.includes('create')) operation = 'create';\nelse if (eventName.includes('update')) operation = 'update';\nelse if (eventName.includes('destroy')) operation = 'destroy';\n\n// Извлекаем rentprog_id\nconst rentprogId = parsedPayload.id ? String(parsedPayload.id) : 'unknown';\n\n// Генерируем event_hash (простая детерминированная строка)\nconst eventHash = `service-center_${eventName}_${rentprogId}_${body?.payload?.updated_at || body?.payload?.id || Date.now()}`;\n\nreturn {\n  json: {\n    event_name: eventName,\n    entity_type: entityType,\n    operation: operation,\n    rentprog_id: rentprogId,\n    company_id: 11163,\n    payload: parsedPayload,\n    metadata: {\n      source: 'webhook',\n      branch: 'service-center',\n      received_at: new Date().toISOString()\n    },\n    event_hash: eventHash\n  }\n};"
+        "jsCode": "// Парсинг вебхука от RentProg\nconst body = $input.item.json.body || $input.item.json;\n\n// Извлекаем event и payload\nconst eventName = body.event || 'unknown';\nlet payloadStr = body.payload || '{}';\nlet parsedPayload = {};\n\n// Парсим payload (может быть Ruby hash или JSON)\ntry {\n  if (typeof payloadStr === 'string') {\n    // Пробуем JSON\n    try {\n      parsedPayload = JSON.parse(payloadStr);\n    } catch {\n      // Конвертируем Ruby hash → JSON\n      let jsonStr = payloadStr\n        .replace(/=>/g, ':')\n        .replace(/([{, ])([a-zA-Z_][a-zA-Z0-9_]*):/g, '$1\"$2\":')\n        .replace(/nil/g, 'null');\n      parsedPayload = JSON.parse(jsonStr);\n    }\n  } else {\n    parsedPayload = payloadStr;\n  }\n} catch (e) {\n  parsedPayload = { error: 'Failed to parse payload', raw: payloadStr };\n}\n\n// Определяем entity_type и operation\nlet entityType = 'unknown';\nlet operation = 'unknown';\n\nif (eventName.includes('car')) entityType = 'car';\nelse if (eventName.includes('client')) entityType = 'client';\nelse if (eventName.includes('booking')) entityType = 'booking';\n\nif (eventName.includes('create')) operation = 'create';\nelse if (eventName.includes('update')) operation = 'update';\nelse if (eventName.includes('destroy')) operation = 'destroy';\n\n// Извлекаем rentprog_id\nconst rentprogId = parsedPayload.id ? String(parsedPayload.id) : 'unknown';\n\n// Генерируем event_hash (простая детерминированная строка)\nconst eventHash = `service-center_${eventName}_${rentprogId}_${body?.payload?.updated_at || body?.payload?.id || Date.now()}`;\n\nreturn {\n  json: {\n    execution_id: $execution.id,\n    execution_url: `${$env.N8N_HOST || 'https://n8n.rentflow.rentals'}/workflow/${$workflow.id}/executions/${$execution.id}`,\n    event_name: eventName,\n    entity_type: entityType,\n    operation: operation,\n    rentprog_id: rentprogId,\n    company_id: 11163,\n    payload: parsedPayload,\n    metadata: {\n      source: 'webhook',\n      branch: 'service-center',\n      received_at: new Date().toISOString()\n    },\n    event_hash: eventHash\n  }\n};"
       },
       "id": "parse-webhook",
       "name": "Parse Webhook",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 400]
+      "position": [
+        440,
+        400
+      ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO events (\n  event_name,\n  entity_type,\n  operation,\n  rentprog_id,\n  company_id,\n  type,\n  payload,\n  metadata,\n  event_hash,\n  processed\n)\nVALUES (\n  $1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, false\n)\nON CONFLICT (company_id, type, rentprog_id) \nDO UPDATE SET\n  event_name = EXCLUDED.event_name,\n  payload = EXCLUDED.payload,\n  metadata = EXCLUDED.metadata\nRETURNING *;",
+        "query": "INSERT INTO events (\n  event_name,\n  entity_type,\n  operation,\n  rentprog_id,\n  company_id,\n  type,\n  payload,\n  metadata,\n  event_hash,\n  execution_id,\n  execution_url,\n  processed\n)\nVALUES (\n  $1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10, $11, false\n)\nON CONFLICT (company_id, type, rentprog_id) \nDO UPDATE SET\n  event_name = EXCLUDED.event_name,\n  payload = EXCLUDED.payload,\n  metadata = EXCLUDED.metadata\nRETURNING *;",
         "options": {
-          "queryReplacement": "={{ $json.event_name }},={{ $json.entity_type }},={{ $json.operation }},={{ $json.rentprog_id }},={{ $json.company_id }},={{ $json.operation }},={{ JSON.stringify($json.payload) }},={{ JSON.stringify($json.metadata) }},={{ $json.event_hash }}"
+          "queryReplacement": "={{ $json.event_name }},={{ $json.entity_type }},={{ $json.operation }},={{ $json.rentprog_id }},={{ $json.company_id }},={{ $json.operation }},={{ JSON.stringify($json.payload) }},={{ JSON.stringify($json.metadata) }},={{ $json.event_hash }},={{ $json.execution_id }},={{ $json.execution_url }}"
         }
       },
       "id": "save-to-events",
       "name": "Save to Events",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [640, 400],
+      "position": [
+        640,
+        400
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -55,7 +64,10 @@
       "name": "Pass Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [840, 400]
+      "position": [
+        840,
+        400
+      ]
     },
     {
       "parameters": {
@@ -135,7 +147,10 @@
       "name": "Switch by Operation",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
-      "position": [1040, 400]
+      "position": [
+        1040,
+        400
+      ]
     },
     {
       "parameters": {
@@ -146,7 +161,10 @@
       "name": "Prepare Create",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1240, 200]
+      "position": [
+        1240,
+        200
+      ]
     },
     {
       "parameters": {
@@ -160,7 +178,10 @@
       "name": "Insert Entity",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1440, 200],
+      "position": [
+        1440,
+        200
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -180,7 +201,10 @@
       "name": "Check Exists",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1240, 400],
+      "position": [
+        1240,
+        400
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -215,7 +239,10 @@
       "name": "If Exists",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1440, 400]
+      "position": [
+        1440,
+        400
+      ]
     },
     {
       "parameters": {
@@ -226,7 +253,10 @@
       "name": "Prepare Update",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1640, 300]
+      "position": [
+        1640,
+        300
+      ]
     },
     {
       "parameters": {
@@ -240,7 +270,10 @@
       "name": "Update Entity",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1840, 300],
+      "position": [
+        1840,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -257,7 +290,10 @@
       "name": "Get RentProg Token",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1640, 500]
+      "position": [
+        1640,
+        500
+      ]
     },
     {
       "parameters": {
@@ -337,7 +373,10 @@
       "name": "Switch by Entity",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
-      "position": [1840, 500]
+      "position": [
+        1840,
+        500
+      ]
     },
     {
       "parameters": {
@@ -367,7 +406,10 @@
       "name": "Fetch Car",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2040, 400]
+      "position": [
+        2040,
+        400
+      ]
     },
     {
       "parameters": {
@@ -397,7 +439,10 @@
       "name": "Fetch Client",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2040, 500]
+      "position": [
+        2040,
+        500
+      ]
     },
     {
       "parameters": {
@@ -427,7 +472,10 @@
       "name": "Fetch Booking",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2040, 600]
+      "position": [
+        2040,
+        600
+      ]
     },
     {
       "parameters": {
@@ -438,7 +486,10 @@
       "name": "Extract Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2240, 500]
+      "position": [
+        2240,
+        500
+      ]
     },
     {
       "parameters": {
@@ -452,7 +503,10 @@
       "name": "Insert Fetched Entity",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [2440, 500],
+      "position": [
+        2440,
+        500
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -472,7 +526,10 @@
       "name": "Mark as Deleted",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1240, 600],
+      "position": [
+        1240,
+        600
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -490,7 +547,10 @@
       "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [2640, 400]
+      "position": [
+        2640,
+        400
+      ]
     }
   ],
   "connections": {
@@ -751,4 +811,3 @@
   "updatedAt": "2025-11-04T06:00:00.000Z",
   "versionId": "initial"
 }
-

@@ -116,7 +116,10 @@ async function fetchClientFull(branch: BranchName, clientId: string): Promise<an
 /**
  * Обработка события от RentProg с auto-fetch и upsert
  */
-export async function handleRentProgEvent(event: SystemEvent): Promise<{
+export async function handleRentProgEvent(
+  event: SystemEvent,
+  eventId?: number | string
+): Promise<{
   ok: boolean;
   processed: boolean;
   entityIds?: { carId?: string; clientId?: string; bookingId?: string };
@@ -211,6 +214,28 @@ export async function handleRentProgEvent(event: SystemEvent): Promise<{
         clientId: entityIds.clientId,
       });
 
+      // Запись в timeline
+      if (entityIds.bookingId) {
+        try {
+          const { addWebhookToTimeline } = await import('../db/entityTimeline');
+          const relatedEntities: Array<{ type: 'car' | 'client' | 'booking'; id: string }> = [];
+          if (entityIds.carId) relatedEntities.push({ type: 'car', id: entityIds.carId });
+          if (entityIds.clientId) relatedEntities.push({ type: 'client', id: entityIds.clientId });
+          
+          await addWebhookToTimeline('booking', entityIds.bookingId, {
+            eventType: event.type,
+            operation: event.operation as any,
+            summary: `Бронь ${event.type}: ${extId}`,
+            details: { rentprog_id: extId, ...fullPayload },
+            branchCode: branch,
+            sourceId: String(eventId || extId),
+            relatedEntities: relatedEntities.length > 0 ? relatedEntities : undefined,
+          });
+        } catch (timelineError) {
+          logger.warn('Failed to add booking to timeline:', timelineError);
+        }
+      }
+
       // Отправка в n8n
       await sendEventToN8n({
         ts: new Date().toISOString(),
@@ -233,6 +258,23 @@ export async function handleRentProgEvent(event: SystemEvent): Promise<{
       entityIds.carId = carResult.entityId;
 
       logger.info(`Processed car ${extId} from ${branch}`, { carId: entityIds.carId });
+
+      // Запись в timeline
+      if (entityIds.carId) {
+        try {
+          const { addWebhookToTimeline } = await import('../db/entityTimeline');
+          await addWebhookToTimeline('car', entityIds.carId, {
+            eventType: event.type,
+            operation: event.operation as any,
+            summary: `Авто ${event.type}: ${fullPayload.plate || fullPayload.car_name || extId}`,
+            details: { rentprog_id: extId, ...fullPayload },
+            branchCode: branch,
+            sourceId: String(eventId || extId),
+          });
+        } catch (timelineError) {
+          logger.warn('Failed to add car to timeline:', timelineError);
+        }
+      }
 
       // Отправка в n8n
       await sendEventToN8n({

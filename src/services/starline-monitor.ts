@@ -387,6 +387,36 @@ export class StarlineMonitorService {
         });
         console.log(`✅ ${match.starlineAlias}: ${status} ${isMoving ? '🚗 (движется)' : '🅿️ (стоит)'} ${speed.toFixed(0)} км/ч, ${distanceMoved.toFixed(0)}m`);
 
+        // Запись в timeline (только если координаты изменились или машина движется)
+        if (isMoving || (previousLat !== null && previousLng !== null && distanceMoved > 0)) {
+          try {
+            const { addGPSToTimeline } = await import('../db/entityTimeline');
+            
+            // Получить branch_code для машины
+            const [carData] = await sqlConnection`
+              SELECT b.code as branch_code
+              FROM cars c
+              LEFT JOIN branches b ON b.id = c.branch_id
+              WHERE c.id = ${match.carId}
+              LIMIT 1
+            `;
+            
+            const branchCode = carData?.branch_code || undefined;
+            
+            await addGPSToTimeline(match.carId, {
+              lat: currentLat,
+              lng: currentLng,
+              isMoving,
+              distance: distanceMoved,
+              speed,
+              branchCode,
+            });
+          } catch (timelineError) {
+            // Не критично, если запись в timeline не удалась - логируем и продолжаем
+            console.warn(`Failed to add GPS to timeline for ${match.starlineAlias}:`, timelineError);
+          }
+        }
+
       } catch (error) {
         const errorMsg = `Ошибка обновления ${match.starlineAlias}: ${error instanceof Error ? error.message : 'Unknown error'}`;
         console.error(`❌ ${errorMsg}`);

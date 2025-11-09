@@ -255,6 +255,46 @@ export const eventLinks = pgTable('event_links', {
   confidenceIdx: index('idx_event_links_confidence').on(table.confidence),
 }));
 
+// Entity Timeline - денормализованный лог всех событий
+export const entityTimeline = pgTable('entity_timeline', {
+  id: integer('id').generatedAlwaysAsIdentity().primaryKey(), // BIGSERIAL
+  ts: timestamp('ts', { withTimezone: true }).defaultNow().notNull(),
+  
+  // Связь с сущностью
+  entity_type: text('entity_type').notNull(), // 'car' | 'booking' | 'client' | 'employee' | 'payment' | 'branch'
+  entity_id: uuid('entity_id').notNull(), // UUID из базовых таблиц
+  
+  // Источник события
+  source_type: text('source_type').notNull(), // 'rentprog_webhook' | 'rentprog_history' | 'starline' | 'telegram' | 'manual' | 'system'
+  source_id: text('source_id'), // ID из исходной таблицы
+  
+  // Тип события
+  event_type: text('event_type').notNull(), // 'booking.created' | 'car.gps_updated' | 'payment.received'
+  operation: text('operation'), // 'create' | 'update' | 'delete' | 'move' | 'status_change'
+  
+  // Данные события
+  summary: text('summary'), // Краткое описание
+  details: jsonb('details'), // Детали события
+  
+  // Метаданные
+  branch_code: text('branch_code'), // Код филиала
+  user_name: text('user_name'), // Кто выполнил операцию
+  confidence: text('confidence'), // 'high' | 'medium' | 'low'
+  
+  // Связи с другими сущностями
+  related_entities: jsonb('related_entities'), // [{"type": "booking", "id": "uuid"}, ...]
+  
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  entityIdx: index('idx_entity_timeline_entity').on(table.entity_type, table.entity_id, table.ts),
+  sourceIdx: index('idx_entity_timeline_source').on(table.source_type, table.source_id),
+  eventIdx: index('idx_entity_timeline_event').on(table.event_type, table.ts),
+  branchIdx: index('idx_entity_timeline_branch').on(table.branch_code, table.ts),
+  tsIdx: index('idx_entity_timeline_ts').on(table.ts),
+  operationIdx: index('idx_entity_timeline_operation').on(table.operation),
+  entityTsIdx: index('idx_entity_timeline_entity_ts').on(table.entity_type, table.entity_id, table.ts),
+}));
+
 // Типы для TypeScript
 export type Branch = typeof branches.$inferSelect;
 export type BranchInsert = typeof branches.$inferInsert;
@@ -276,4 +316,6 @@ export type WebhookDedup = typeof webhookDedup.$inferSelect;
 export type WebhookDedupInsert = typeof webhookDedup.$inferInsert;
 export type EventLink = typeof eventLinks.$inferSelect;
 export type EventLinkInsert = typeof eventLinks.$inferInsert;
+export type EntityTimeline = typeof entityTimeline.$inferSelect;
+export type EntityTimelineInsert = typeof entityTimeline.$inferInsert;
 
