@@ -12,6 +12,15 @@ import type { BranchName } from '../integrations/rentprog.js';
 const app = express();
 app.use(express.json());
 
+// Error handler for JSON parsing
+app.use((err: any, req: any, res: any, next: any) => {
+  if (err instanceof SyntaxError && 'body' in err) {
+    logger.error('JSON Parse Error:', err);
+    return res.status(400).json({ ok: false, error: 'Invalid JSON' });
+  }
+  next();
+});
+
 // Подключаем роутеры
 // import carSearchRouter from './car-search'; // Временно закомментировано
 // import processHistoryRouter from './routes/processHistory.js'; // Временно отключено
@@ -28,6 +37,12 @@ export function initApiServer(port: number = 3000): void {
     logger.warn('API server already initialized');
     return;
   }
+
+  // TEST ENDPOINT
+  app.post('/test-endpoint', (req, res) => {
+    logger.info('TEST ENDPOINT HIT!');
+    res.json({ ok: true, message: 'Test endpoint works!' });
+  });
 
   // Подключаем роутеры
   // app.use('/api/cars', carSearchRouter); // Временно закомментировано
