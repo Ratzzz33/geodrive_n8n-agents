@@ -129,7 +129,7 @@ export class StarlineMonitorService {
       }
 
       // Ищем совпадение в таблице cars
-      const matchedCar = cars.find(car => {
+      let matchedCar = cars.find(car => {
         const carDigits = this.extractLast3Digits(car.plate);
         if (!carDigits || carDigits !== starlineDigits) return false;
 
@@ -142,6 +142,17 @@ export class StarlineMonitorService {
 
         return carModel.includes(starlineModelLower) || starlineModelLower.includes(carModel);
       });
+
+      // Если не нашли по модели, пробуем найти только по цифрам (fallback)
+      if (!matchedCar) {
+        matchedCar = cars.find(car => {
+          const carDigits = this.extractLast3Digits(car.plate);
+          return carDigits === starlineDigits;
+        });
+        if (matchedCar) {
+          console.log(`⚠️ Fallback сопоставление по цифрам: ${device.alias} -> ${matchedCar.brand || ''} ${matchedCar.model} (${matchedCar.plate})`);
+        }
+      }
 
       if (matchedCar) {
         matches.push({
