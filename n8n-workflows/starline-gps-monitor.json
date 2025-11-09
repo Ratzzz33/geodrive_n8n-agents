@@ -175,7 +175,7 @@
             {
               "id": "c1",
               "leftValue": "={{ $json.error_count }}",
-              "rightValue": 5,
+              "rightValue": 0,
               "operator": {
                 "type": "number",
                 "operation": "gt"
