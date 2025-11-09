@@ -30,7 +30,51 @@
       "name": "Update GPS Data",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [464, 304]
+      "position": [464, 304],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.error !== undefined }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "http-error-check-node",
+      "name": "HTTP Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [656, 304]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ '🔴 **Starline GPS Monitor - HTTP Ошибка**\\n\\n' + '❌ Не удалось подключиться к API\\n\\n' + '**Ошибка:**\\n' + ($json.error?.message || $json.error || 'Unknown error') + '\\n\\n🕐 ' + $now.toISO() }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "http-error-alert-node",
+      "name": "Send HTTP Error Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [864, 464]
     },
     {
       "parameters": {
@@ -68,7 +112,7 @@
       "name": "Check Status",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [656, 304]
+      "position": [864, 208]
     },
     {
       "parameters": {
@@ -112,7 +156,7 @@
       "name": "Success Log",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [864, 208]
+      "position": [1072, 100]
     },
     {
       "parameters": {
@@ -123,7 +167,7 @@
       "name": "Split Cars Details",
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
-      "position": [1100, 100]
+      "position": [1308, 0]
     },
     {
       "parameters": {
@@ -161,7 +205,7 @@
       "name": "Error Log",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [864, 400]
+      "position": [1072, 300]
     },
     {
       "parameters": {
@@ -190,7 +234,7 @@
       "name": "Critical Errors?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1056, 400]
+      "position": [1264, 300]
     },
     {
       "parameters": {
@@ -204,7 +248,7 @@
       "name": "Send Telegram Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1328, 544]
+      "position": [1456, 440]
     },
     {
       "parameters": {
@@ -216,7 +260,7 @@
       "name": "Log to Health Table",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1456, 304],
+      "position": [1536, 200],
       "credentials": {
         "postgres": {
           "id": "postgres-credentials",
@@ -230,7 +274,16 @@
       "main": [[{"node": "Update GPS Data", "type": "main", "index": 0}]]
     },
     "Update GPS Data": {
-      "main": [[{"node": "Check Status", "type": "main", "index": 0}]]
+      "main": [[{"node": "HTTP Error?", "type": "main", "index": 0}]]
+    },
+    "HTTP Error?": {
+      "main": [
+        [{"node": "Send HTTP Error Alert", "type": "main", "index": 0}],
+        [{"node": "Check Status", "type": "main", "index": 0}]
+      ]
+    },
+    "Send HTTP Error Alert": {
+      "main": []
     },
     "Check Status": {
       "main": [
