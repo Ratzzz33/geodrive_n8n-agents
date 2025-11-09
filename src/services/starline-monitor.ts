@@ -205,7 +205,7 @@ export class StarlineMonitorService {
 
         const currentLat = pos.y;
         const currentLng = pos.x;
-        const currentSatQty = pos.sat_qty;
+        const currentSatQty = pos.sat_qty ?? 0; // Обработка undefined
         const currentTimestamp = new Date(pos.ts * 1000);
 
         // Предыдущие координаты (из БД)
@@ -231,7 +231,7 @@ export class StarlineMonitorService {
         const status = getCarStatus(deviceDetails);
 
         // Извлекаем скорость из Starline (уже в км/ч)
-        const speed = pos.speed || 0;
+        const speed = pos.speed ?? 0; // Используем ?? вместо || чтобы 0 оставался 0
 
         // Генерируем Google Maps ссылку
         const googleMapsLink = this.generateGoogleMapsLink(currentLat, currentLng);
