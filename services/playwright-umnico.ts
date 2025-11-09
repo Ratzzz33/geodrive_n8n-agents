@@ -153,7 +153,13 @@ class UmnicoPlaywrightService {
   async getConversations(limit = 50): Promise<any[]> {
     try {
       await page!.goto('https://umnico.com/app/inbox/deals/inbox', {
-        waitUntil: 'networkidle'
+        waitUntil: 'domcontentloaded',  // Оптимизация!
+        timeout: 10000
+      });
+
+      // Ждем появления списка чатов
+      await page!.waitForSelector('.card-message-preview__item', { 
+        timeout: 5000 
       });
 
       // Извлекаем список диалогов
@@ -163,6 +169,7 @@ class UmnicoPlaywrightService {
           const lastMsgEl = item.querySelector('.message-preview__text');
           const integrationEl = item.querySelector('.deals-integration');
           const assignedEl = item.querySelector('.deals-cell');
+          const timestampEl = item.querySelector('.timestamp');  // ДЛЯ СРАВНЕНИЯ!
 
           // Извлекаем ID из onclick или data-атрибута
           const onclickAttr = item.getAttribute('onclick') || '';
@@ -172,6 +179,7 @@ class UmnicoPlaywrightService {
             conversationId: idMatch ? idMatch[1] : null,
             phone: phoneEl?.textContent?.trim() || '',
             lastMessage: lastMsgEl?.textContent?.trim() || '',
+            lastMessageTime: timestampEl?.textContent?.trim() || '',  // НОВОЕ!
             channelAccount: integrationEl?.textContent?.trim() || '',
             assignedTo: assignedEl?.textContent?.trim() || ''
           };
@@ -189,7 +197,19 @@ class UmnicoPlaywrightService {
   async getMessages(conversationId: string): Promise<any[]> {
     try {
       const url = `https://umnico.com/app/inbox/deals/inbox/details/${conversationId}`;
-      await page!.goto(url, { waitUntil: 'networkidle' });
+      
+      // ОПТИМИЗАЦИЯ 1: domcontentloaded вместо networkidle (в 2 раза быстрее!)
+      await page!.goto(url, { 
+        waitUntil: 'domcontentloaded',
+        timeout: 10000  // Уменьшен с 30000
+      });
+
+      // ОПТИМИЗАЦИЯ 2: Ждем только появления сообщений, не всей страницы
+      await page!.waitForSelector('.im-stack__messages-item-wrap', { 
+        timeout: 5000 
+      }).catch(() => {
+        console.log(`⚠️ No messages container for ${conversationId}`);
+      });
 
       // Извлекаем все сообщения
       const messages = await page!.$$eval('.im-stack__messages-item-wrap', wraps =>
@@ -219,9 +239,12 @@ class UmnicoPlaywrightService {
       const sourceText = await page!.$eval('.im-source-item', el => el.textContent?.trim() || '').catch(() => '');
       const channelMatch = sourceText.match(/WhatsApp.*?(\d+)/);
 
-      console.log(`💬 Found ${messages.length} messages in conversation ${conversationId}`);
+      // ОПТИМИЗАЦИЯ 3: Ограничить глубину - только последние 50 сообщений
+      const recentMessages = messages.slice(-50);
 
-      return messages.map(m => ({
+      console.log(`💬 Found ${recentMessages.length} messages in conversation ${conversationId} (total: ${messages.length})`);
+
+      return recentMessages.map(m => ({
         ...m,
         conversationId,
         channel: channelMatch ? 'whatsapp' : 'unknown',

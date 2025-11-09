@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS conversations (
   
   -- Временные метки
   last_message_at TIMESTAMPTZ,
+  last_message_preview TEXT,              -- Кеш последнего сообщения для быстрого сравнения
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   
@@ -48,6 +49,7 @@ CREATE INDEX idx_conversations_amocrm ON conversations(amocrm_scope_id) WHERE am
 CREATE INDEX idx_conversations_status ON conversations(status);
 CREATE INDEX idx_conversations_updated ON conversations(updated_at DESC);
 CREATE INDEX idx_conversations_last_msg ON conversations(last_message_at DESC);
+CREATE INDEX idx_conversations_recent ON conversations(last_message_at DESC) WHERE last_message_at > NOW() - INTERVAL '1 hour';  -- Оптимизация для инкрементальной синхронизации
 
 COMMENT ON TABLE conversations IS 'Диалоги с клиентами из Umnico и AmoCRM';
 COMMENT ON COLUMN conversations.umnico_conversation_id IS 'ID диалога в Umnico (61965921)';

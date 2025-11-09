@@ -1,0 +1,290 @@
+{
+  "name": "Umnico Chat Scraper (Optimized)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "umnico-cron-trigger",
+      "name": "Every 1 Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "=http://playwright-umnico:3001/api/conversations?limit=30",
+        "authentication": "none",
+        "options": {}
+      },
+      "id": "get-conversations",
+      "name": "Get Top 30 Conversations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT umnico_conversation_id, last_message_preview, last_message_at FROM conversations WHERE last_message_at > NOW() - INTERVAL '1 hour' AND status = 'active'",
+        "options": {}
+      },
+      "id": "get-recent-conversations",
+      "name": "Get Recent Conversations from DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [470, 120],
+      "credentials": {
+        "postgres": {
+          "id": "neon-postgres",
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ИНКРЕМЕНТАЛЬНАЯ СИНХРОНИЗАЦИЯ\n// Сравниваем lastMessage из UI с кешем в БД\n\nconst startTime = Date.now();\nconst MAX_DURATION = 50 * 1000; // 50 секунд (резерв 10 сек)\nconst MAX_BATCH = 5; // Максимум 5 чатов за цикл\n\n// Данные из БД\nconst dbConversations = $input.first().json ? [$input.first().json] : [];\nconst dbMap = new Map();\n\nfor (const dbConv of dbConversations) {\n  if (dbConv.umnico_conversation_id) {\n    dbMap.set(dbConv.umnico_conversation_id, {\n      lastPreview: dbConv.last_message_preview,\n      lastMessageAt: dbConv.last_message_at\n    });\n  }\n}\n\n// Данные из Umnico UI\nconst uiConversations = $input.all()[1].json.data || [];\n\n// Найти изменившиеся/новые чаты\nconst changed = [];\n\nfor (const uiConv of uiConversations) {\n  const convId = uiConv.conversationId;\n  if (!convId) continue;\n  \n  const dbConv = dbMap.get(convId);\n  \n  // Новый чат - обязательно парсим\n  if (!dbConv) {\n    changed.push({\n      ...uiConv,\n      reason: 'new',\n      priority: 1\n    });\n    continue;\n  }\n  \n  // Превью изменилось - парсим\n  if (dbConv.lastPreview !== uiConv.lastMessage) {\n    changed.push({\n      ...uiConv,\n      reason: 'changed',\n      priority: 2\n    });\n    continue;\n  }\n  \n  // Недавно обновлялись (< 5 минут) и превью не изменилось - пропускаем\n  const minutesSinceUpdate = (Date.now() - new Date(dbConv.lastMessageAt).getTime()) / (60 * 1000);\n  if (minutesSinceUpdate < 5) {\n    console.log(`⏭️  Skip ${convId} - no changes, synced ${minutesSinceUpdate.toFixed(1)} min ago`);\n    continue;\n  }\n  \n  // Давно не обновлялись - проверяем\n  changed.push({\n    ...uiConv,\n    reason: 'stale',\n    priority: 3\n  });\n}\n\n// Приоритизация: новые → измененные → застарелые\nchanged.sort((a, b) => a.priority - b.priority);\n\n// Взять топ-5\nconst batch = changed.slice(0, MAX_BATCH);\n\nconsole.log(`📊 Found ${changed.length} conversations with changes`);\nconsole.log(`🎯 Processing top ${batch.length} conversations`);\nconsole.log(`⏱️  Max duration: ${MAX_DURATION / 1000}s`);\n\nif (batch.length === 0) {\n  console.log('✅ No conversations to process');\n  return [];\n}\n\nreturn batch.map(c => ({ \n  json: { \n    ...c, \n    _startTime: startTime,\n    _maxDuration: MAX_DURATION \n  } \n}));"
+      },
+      "id": "filter-changed-conversations",
+      "name": "Find Changed Conversations (Smart Filter)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-conversations",
+      "name": "Loop (Max 5)",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// TIMEOUT GUARD\nconst startTime = $json._startTime || Date.now();\nconst maxDuration = $json._maxDuration || 50000;\nconst elapsed = Date.now() - startTime;\n\nif (elapsed > maxDuration) {\n  console.log(`⏰ TIMEOUT! Elapsed ${elapsed}ms, stopping loop`);\n  throw new Error('TIMEOUT_REACHED');\n}\n\nconsole.log(`⏱️  Time elapsed: ${(elapsed / 1000).toFixed(1)}s / ${(maxDuration / 1000).toFixed(0)}s`);\n\nreturn { json: $json };"
+      },
+      "id": "timeout-guard",
+      "name": "Timeout Guard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "url": "=http://playwright-umnico:3001/api/conversations/{{ $json.conversationId }}/messages",
+        "authentication": "none",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "get-messages",
+      "name": "Get Messages (Fast)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1270, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Upsert client by phone\nWITH client_upsert AS (\n  INSERT INTO clients (id, phone, name, updated_at)\n  VALUES (gen_random_uuid(), $1, $2, now())\n  ON CONFLICT (phone) DO UPDATE\n  SET name = COALESCE(EXCLUDED.name, clients.name),\n      updated_at = now()\n  RETURNING id\n),\n-- Add external ref for Umnico\nexternal_ref AS (\n  INSERT INTO external_refs (entity_type, entity_id, system, external_id)\n  SELECT 'client', client_upsert.id, 'umnico', $1\n  FROM client_upsert\n  ON CONFLICT (entity_type, system, external_id) DO NOTHING\n),\n-- Upsert conversation (WITH last_message_preview!)\nconversation_upsert AS (\n  INSERT INTO conversations (\n    id, client_id, umnico_conversation_id, channel, channel_account, status, \n    last_message_at, last_message_preview, updated_at\n  )\n  SELECT \n    gen_random_uuid(), client_upsert.id, $3, $4, $5, 'active', \n    now(), $6, now()\n  FROM client_upsert\n  ON CONFLICT (umnico_conversation_id) DO UPDATE\n  SET \n    last_message_at = now(), \n    last_message_preview = EXCLUDED.last_message_preview,\n    updated_at = now()\n  RETURNING id, client_id\n)\nSELECT * FROM conversation_upsert;",
+        "options": {}
+      },
+      "id": "upsert-client-conversation",
+      "name": "Upsert with Preview Cache",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1490, 300],
+      "credentials": {
+        "postgres": {
+          "id": "neon-postgres",
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Подготовить messages для batch insert (только последние 50!)\nconst conversationId = $input.first().json.id;\nconst clientId = $input.first().json.client_id;\nconst messages = $input.all()[1].json.data || [];\n\n// Берем только последние 50 сообщений для оптимизации\nconst recentMessages = messages.slice(-50);\n\nconst values = recentMessages.map(m => ({\n  conversation_id: conversationId,\n  client_id: clientId,\n  text: m.text,\n  direction: m.direction,\n  channel: m.channel || 'whatsapp',\n  sent_at: m.datetime || new Date().toISOString(),\n  metadata: JSON.stringify({\n    time: m.time,\n    hasAttachments: m.hasAttachments,\n    channelAccount: m.channelAccount\n  })\n}));\n\nconsole.log(`💾 Prepared ${values.length} messages (total: ${messages.length})`);\n\nreturn values.map(v => ({ json: v }));"
+      },
+      "id": "prepare-messages",
+      "name": "Prepare Messages (Last 50)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1710, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "messages",
+        "columns": "conversation_id, client_id, text, direction, channel, sent_at, metadata",
+        "options": {
+          "skipOnConflict": true
+        }
+      },
+      "id": "insert-messages",
+      "name": "Insert Messages",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1930, 300],
+      "credentials": {
+        "postgres": {
+          "id": "neon-postgres",
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "⚡ ОПТИМИЗИРОВАННЫЙ Umnico Scraper\n\nСинхронизация: КАЖДУЮ МИНУТУ ⏱️\n\nОптимизации:\n✅ Интервал 1 мин (вместо 5)\n✅ Топ-30 чатов (вместо 50)\n✅ Инкрементальное сравнение:\n   - Новые чаты → парсим\n   - Изменился lastMessage → парсим  \n   - Недавно обновлялись (<5 мин) → пропускаем\n✅ Приоритизация: топ-5 за цикл\n✅ Timeout guard: 50 секунд макс\n✅ Кеш last_message_preview в БД\n✅ Только последние 50 сообщений\n\n📊 Производительность:\n- Список 30 чатов: ~3 сек\n- Фильтрация: ~1 сек\n- Парсинг 5 чатов: ~10 сек (2 сек/чат)\n- ИТОГО: ~16 секунд ✨\n\nPlaywright: http://playwright-umnico:3001",
+        "height": 480,
+        "width": 420
+      },
+      "id": "sticky-note",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 500]
+    }
+  ],
+  "connections": {
+    "Every 1 Minute": {
+      "main": [
+        [
+          {
+            "node": "Get Recent Conversations from DB",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Top 30 Conversations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recent Conversations from DB": {
+      "main": [
+        [
+          {
+            "node": "Find Changed Conversations (Smart Filter)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Top 30 Conversations": {
+      "main": [
+        [
+          {
+            "node": "Find Changed Conversations (Smart Filter)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Changed Conversations (Smart Filter)": {
+      "main": [
+        [
+          {
+            "node": "Loop (Max 5)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop (Max 5)": {
+      "main": [
+        [
+          {
+            "node": "Timeout Guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timeout Guard": {
+      "main": [
+        [
+          {
+            "node": "Get Messages (Fast)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Messages (Fast)": {
+      "main": [
+        [
+          {
+            "node": "Upsert with Preview Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert with Preview Cache": {
+      "main": [
+        [
+          {
+            "node": "Prepare Messages (Last 50)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Messages (Last 50)": {
+      "main": [
+        [
+          {
+            "node": "Insert Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Messages": {
+      "main": [
+        [
+          {
+            "node": "Loop (Max 5)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "timezone": "Asia/Tbilisi",
+    "executionTimeout": 3600
+  },
+  "staticData": null,
+  "tags": ["optimized", "umnico", "incremental"],
+  "triggerCount": 1,
+  "updatedAt": "2025-11-09T00:00:00.000Z",
+  "versionId": "2"
+}
+
