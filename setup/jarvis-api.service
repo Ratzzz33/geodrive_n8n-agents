@@ -6,8 +6,8 @@ After=network.target postgresql.service
 Type=simple
 User=root
 WorkingDirectory=/root/geodrive_n8n-agents
-EnvironmentFile=/root/geodrive_n8n-agents/.env
-ExecStart=/usr/bin/node /root/geodrive_n8n-agents/dist/api-only.js
+# Загружаем .env через bash wrapper
+ExecStart=/bin/bash -c 'set -a; source /root/geodrive_n8n-agents/.env 2>/dev/null || true; exec /usr/bin/node /root/geodrive_n8n-agents/dist/api-only.js'
 Restart=always
 RestartSec=10
 StandardOutput=append:/var/log/jarvis-api.log
