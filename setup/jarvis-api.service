@@ -1,0 +1,30 @@
+[Unit]
+Description=Jarvis API with Starline Persistent Browser
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/geodrive_n8n-agents
+EnvironmentFile=/root/geodrive_n8n-agents/.env
+ExecStart=/usr/bin/node /root/geodrive_n8n-agents/dist/api-only.js
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/jarvis-api.log
+StandardError=append:/var/log/jarvis-api.log
+
+# Graceful shutdown
+TimeoutStopSec=30
+KillMode=process
+KillSignal=SIGTERM
+
+# Resource limits
+LimitNOFILE=65536
+
+# Environment
+Environment=NODE_ENV=production
+Environment=TZ=Asia/Tbilisi
+
+[Install]
+WantedBy=multi-user.target
+
