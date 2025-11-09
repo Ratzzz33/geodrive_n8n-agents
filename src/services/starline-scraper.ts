@@ -23,18 +23,19 @@ interface StarlineDeviceOverview {
 interface StarlineDeviceDetails {
   alias: string;
   device_id: number;
-  pos: {
+  pos?: {
     sat_qty: number;
     ts: number;
     x: number;
     y: number;
   };
   status: number;
-  position: {
+  position?: {
     sat_qty: number;
     ts: number;
     x: number;
     y: number;
+    dir?: number;
   };
   gps_lvl: number;
   gsm_lvl: number;
@@ -147,7 +148,7 @@ export class StarlineScraperService {
     logger.info('StarlineScraperService: Logging in...');
 
     // Переходим на главную
-    await this.page.goto(this.LOGIN_URL, { waitUntil: 'networkidle' });
+    await this.page.goto(this.LOGIN_URL, { waitUntil: 'load', timeout: 15000 });
 
     // Кликаем на кнопку "Вход"
     await this.page.click('a[href="#login"]');
@@ -160,8 +161,11 @@ export class StarlineScraperService {
     // Кликаем "Войти" и ждем навигации
     await Promise.all([
       this.page.click('button[type="submit"]'),
-      this.page.waitForNavigation({ waitUntil: 'networkidle', timeout: 10000 }),
+      this.page.waitForNavigation({ waitUntil: 'load', timeout: 15000 }),
     ]);
+
+    // Дополнительно ждем пару секунд чтобы страница стабилизировалась
+    await this.page.waitForTimeout(2000);
 
     // Проверяем что залогинились
     const currentUrl = this.page.url();
@@ -252,10 +256,15 @@ export class StarlineScraperService {
           },
         });
         return res.json();
-      }, deviceId) as StarlineAPIResponse<StarlineDeviceDetails>;
+      }, deviceId);
 
-      if (response.result === 1 && response.answer) {
-        return response.answer;
+      // Проверяем формат ответа: может быть {result: 1, answer: {...}} или напрямую {...}
+      const typedResponse = response as any;
+      if (typedResponse.result === 1 && typedResponse.answer) {
+        return typedResponse.answer as StarlineDeviceDetails;
+      } else if (typedResponse.device_id && typedResponse.alias) {
+        // Ответ напрямую без обертки
+        return typedResponse as StarlineDeviceDetails;
       }
 
       logger.error(`StarlineScraperService: Failed to get details for device ${deviceId}. Response:`, response);
