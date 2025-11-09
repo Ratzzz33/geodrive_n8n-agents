@@ -16,7 +16,7 @@
       "name": "Every Minute",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [250, 300]
+      "position": [256, 304]
     },
     {
       "parameters": {
@@ -30,7 +30,7 @@
       "name": "Update GPS Data",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [450, 300]
+      "position": [464, 304]
     },
     {
       "parameters": {
@@ -68,7 +68,7 @@
       "name": "Check Status",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [650, 300]
+      "position": [656, 304]
     },
     {
       "parameters": {
@@ -91,6 +91,18 @@
               "name": "error_count",
               "value": "0",
               "type": "number"
+            },
+            {
+              "id": "a4",
+              "name": "timestamp",
+              "value": "={{ $json.timestamp }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "full_response",
+              "value": "={{ $json }}",
+              "type": "object"
             }
           ]
         },
@@ -100,7 +112,18 @@
       "name": "Success Log",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [850, 200]
+      "position": [864, 208]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "full_response.details",
+        "options": {}
+      },
+      "id": "9i0j1k2l-3m4n-5o6p-7q8r-9s0t1u2v3w4x",
+      "name": "Split Cars Details",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [1100, 100]
     },
     {
       "parameters": {
@@ -138,7 +161,7 @@
       "name": "Error Log",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [850, 400]
+      "position": [864, 400]
     },
     {
       "parameters": {
@@ -167,7 +190,7 @@
       "name": "Critical Errors?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1050, 400]
+      "position": [1056, 400]
     },
     {
       "parameters": {
@@ -181,7 +204,7 @@
       "name": "Send Telegram Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1250, 300]
+      "position": [1328, 544]
     },
     {
       "parameters": {
@@ -193,7 +216,7 @@
       "name": "Log to Health Table",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1450, 300]
+      "position": [1456, 304]
     }
   ],
   "connections": {
@@ -210,7 +233,10 @@
       ]
     },
     "Success Log": {
-      "main": [[{"node": "Log to Health Table", "type": "main", "index": 0}]]
+      "main": [[{"node": "Split Cars Details", "type": "main", "index": 0}, {"node": "Log to Health Table", "type": "main", "index": 0}]]
+    },
+    "Split Cars Details": {
+      "main": []
     },
     "Error Log": {
       "main": [[{"node": "Critical Errors?", "type": "main", "index": 0}]]
