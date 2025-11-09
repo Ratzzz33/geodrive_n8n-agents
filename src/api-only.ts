@@ -31,15 +31,33 @@ async function main(): Promise<void> {
     }
 
     // Инициализация Starline Scraper (persistent browser session)
+    logger.info('🌐 Initializing Starline Scraper (persistent Playwright session)...');
     try {
       const scraper = getStarlineScraper();
       await scraper.initialize();
-      logger.info('✅ Starline Scraper initialized (persistent browser session)');
+      logger.info('✅ Starline Scraper initialized successfully!');
+      logger.info('   Browser: Chromium (headless)');
+      logger.info('   Status: Logged in and ready');
+      logger.info('   Mode: Persistent session (no re-login needed)');
+      
+      // Проверяем что scraper работает
+      const isHealthy = await scraper.isHealthy();
+      if (isHealthy) {
+        logger.info('✅ Starline Scraper health check passed');
+      } else {
+        logger.warn('⚠️  Starline Scraper health check failed, will retry on next request');
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.warn('⚠️  Starline Scraper initialization failed');
-      logger.warn(`   Error: ${errorMessage}`);
-      logger.warn('   Starline monitoring will not work');
+      logger.error('❌ Starline Scraper initialization failed');
+      logger.error(`   Error: ${errorMessage}`);
+      logger.warn('   Starline GPS monitoring will not work until manual restart');
+      logger.warn('   To restart: systemctl restart jarvis-api');
+      
+      // Детальное логирование для диагностики
+      if (error instanceof Error && error.stack) {
+        logger.debug('Starline initialization error stack:', error.stack);
+      }
     }
 
     // Запуск HTTP API сервера

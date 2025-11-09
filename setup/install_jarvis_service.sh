@@ -1,61 +1,59 @@
 #!/bin/bash
-# Установка Jarvis API как systemd service с автозапуском
+# Установка Jarvis API как systemd сервис
 
 set -e
 
-echo "🚀 Установка Jarvis API как systemd service..."
+echo "🚀 Установка Jarvis API как systemd сервис..."
 echo ""
 
-# Проверяем что мы на сервере
-if [ ! -d "/root/geodrive_n8n-agents" ]; then
-  echo "❌ Ошибка: директория /root/geodrive_n8n-agents не найдена"
-  exit 1
-fi
+# 1. Копируем service файл
+echo "1️⃣  Копирование service файла..."
+sudo cp /root/geodrive_n8n-agents/setup/jarvis-api.service /etc/systemd/system/
+echo "✅ Service файл скопирован"
+echo ""
 
-cd /root/geodrive_n8n-agents
+# 2. Перезагружаем systemd
+echo "2️⃣  Перезагрузка systemd daemon..."
+sudo systemctl daemon-reload
+echo "✅ Daemon перезагружен"
+echo ""
 
-# Останавливаем старый процесс
-echo "1️⃣  Останавливаем старый процесс..."
-pkill -f 'node.*dist/api' || true
+# 3. Включаем автозапуск
+echo "3️⃣  Включение автозапуска..."
+sudo systemctl enable jarvis-api.service
+echo "✅ Автозапуск включен"
+echo ""
+
+# 4. Останавливаем старые процессы
+echo "4️⃣  Остановка старых процессов..."
+pkill -f 'node.*dist/api' 2>/dev/null || true
 sleep 2
-
-# Копируем service файл
-echo "2️⃣  Копируем service файл..."
-cp setup/jarvis-api.service /etc/systemd/system/jarvis-api.service
-chmod 644 /etc/systemd/system/jarvis-api.service
-
-# Перезагружаем systemd
-echo "3️⃣  Перезагружаем systemd..."
-systemctl daemon-reload
-
-# Включаем автозапуск
-echo "4️⃣  Включаем автозапуск..."
-systemctl enable jarvis-api.service
-
-# Запускаем сервис
-echo "5️⃣  Запускаем сервис..."
-systemctl start jarvis-api.service
-
-# Ждем инициализации
-echo "⏳ Ждем 15 секунд для инициализации Starline scraper..."
-sleep 15
-
-# Проверяем статус
+echo "✅ Старые процессы остановлены"
 echo ""
-echo "6️⃣  Проверка статуса:"
-systemctl status jarvis-api.service --no-pager || true
 
+# 5. Запускаем сервис
+echo "5️⃣  Запуск Jarvis API сервиса..."
+sudo systemctl start jarvis-api.service
+sleep 5
+echo "✅ Сервис запущен"
 echo ""
-echo "📊 Проверка логов (последние 30 строк):"
-journalctl -u jarvis-api.service --no-pager -n 30 || tail -30 /var/log/jarvis-api.log
 
+# 6. Проверяем статус
+echo "6️⃣  Проверка статуса..."
+sudo systemctl status jarvis-api.service --no-pager -l
 echo ""
+
+# 7. Проверяем логи
+echo "7️⃣  Последние логи (20 строк)..."
+sudo journalctl -u jarvis-api.service -n 20 --no-pager
+echo ""
+
 echo "✅ Установка завершена!"
 echo ""
-echo "💡 Полезные команды:"
-echo "   systemctl status jarvis-api    # Статус сервиса"
-echo "   systemctl restart jarvis-api   # Перезапуск"
-echo "   systemctl stop jarvis-api      # Остановка"
-echo "   journalctl -u jarvis-api -f    # Логи в реальном времени"
-echo "   systemctl disable jarvis-api   # Отключить автозапуск"
-
+echo "📝 Полезные команды:"
+echo "   sudo systemctl status jarvis-api    # Статус сервиса"
+echo "   sudo systemctl restart jarvis-api   # Перезапуск"
+echo "   sudo systemctl stop jarvis-api      # Остановка"
+echo "   sudo journalctl -u jarvis-api -f    # Логи в реальном времени"
+echo "   tail -f /var/log/jarvis-api.log     # Stdout логи"
+echo "   tail -f /var/log/jarvis-api-error.log # Stderr логи"
