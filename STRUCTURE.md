@@ -246,6 +246,63 @@
 - Напоминания: по `due_at` и `snooze_until` (агент задач выполняет пинги)
 - Эскалация: если просрочка > SLA, копия в группу руководителя филиала
 
+## Подсистема диалогов (AmoCRM)
+
+Используется ночным агентом для RAG и аналитики конверсий.
+
+### Схема БД (Neon + pgvector)
+
+```sql
+-- Диалоги (сессии)
+CREATE TABLE conversations (
+  id UUID PRIMARY KEY,
+  system TEXT NOT NULL DEFAULT 'amocrm',
+  external_id TEXT NOT NULL,              -- Amo conversation id
+  deal_external_id TEXT,                  -- Amo deal id (связка через external_refs)
+  contact_external_id TEXT,
+  last_message_at TIMESTAMPTZ,
+  UNIQUE (system, external_id)
+);
+
+-- Сообщения
+CREATE TABLE messages (
+  id UUID PRIMARY KEY,
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  ts TIMESTAMPTZ NOT NULL,
+  direction TEXT CHECK (direction IN ('in','out')) NOT NULL,
+  author TEXT,
+  text TEXT
+);
+
+-- Чанки для эмбеддингов
+CREATE TABLE message_chunks (
+  id UUID PRIMARY KEY,
+  message_id UUID REFERENCES messages(id) ON DELETE CASCADE,
+  idx INT NOT NULL,
+  content TEXT NOT NULL
+);
+
+-- Эмбеддинги (pgvector)
+-- Перед использованием: CREATE EXTENSION IF NOT EXISTS vector;
+CREATE TABLE message_embeddings (
+  id UUID PRIMARY KEY,
+  chunk_id UUID REFERENCES message_chunks(id) ON DELETE CASCADE,
+  embedding vector(1024)                  -- размер под выбранную модель эмбеддингов
+);
+
+-- Метки/исход диалога
+CREATE TABLE dialog_labels (
+  conversation_id UUID PRIMARY KEY REFERENCES conversations(id) ON DELETE CASCADE,
+  outcome TEXT CHECK (outcome IN ('won','lost','other')),
+  reason TEXT,
+  stage_path TEXT
+);
+```
+
+Связи с сущностями:
+- Через `external_refs` линкуем `deal_external_id`/`contact_external_id` к нашим `deals/clients` (entity_type='deal'|'client', system='amocrm').
+- Сырые сообщения храним в `messages`, векторный поиск — по `message_chunks/message_embeddings`.
+
 ## Объектное хранилище
 
 ### Структура путей
