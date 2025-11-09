@@ -6,31 +6,37 @@
         "rule": {
           "interval": [
             {
-              "field": "minutes",
-              "minutesInterval": 1
+              "field": "cronExpression",
+              "expression": "* * * * *"
             }
           ]
         }
       },
-      "id": "e8f5d9a2-3b4c-4d5e-6f7a-8b9c0d1e2f3a",
-      "name": "Every 1 Minute",
+      "id": "1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p",
+      "name": "Every Minute",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [250, 300]
+      "position": [
+        250,
+        300
+      ]
     },
     {
       "parameters": {
-        "url": "http://46.224.17.15:3000/starline/update-gps",
         "method": "POST",
+        "url": "http://localhost:3000/starline/update-gps",
         "options": {
-          "timeout": 60000
+          "timeout": 30000
         }
       },
-      "id": "a1b2c3d4-5e6f-7g8h-9i0j-1k2l3m4n5o6p",
+      "id": "2b3c4d5e-6f7g-8h9i-0j1k-2l3m4n5o6p7q",
       "name": "Update GPS Data",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [450, 300]
+      "position": [
+        450,
+        300
+      ]
     },
     {
       "parameters": {
@@ -42,11 +48,20 @@
           },
           "conditions": [
             {
-              "id": "condition1",
+              "id": "c1",
               "leftValue": "={{ $json.ok }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.errors.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
                 "operation": "equals"
               }
             }
@@ -55,51 +70,102 @@
         },
         "options": {}
       },
-      "id": "b2c3d4e5-6f7g-8h9i-0j1k-2l3m4n5o6p7q",
-      "name": "Success?",
+      "id": "3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r",
+      "name": "Check Status",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [650, 300]
+      "position": [
+        650,
+        300
+      ]
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO health (ts, branch, ok, reason) VALUES (NOW(), 'starline-gps', true, 'Updated ' || $1 || ' cars') RETURNING *",
-        "options": {
-          "queryParams": "={{ $json.updated }}"
-        }
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "status",
+              "value": "success",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "updated",
+              "value": "={{ $json.updated }}",
+              "type": "number"
+            },
+            {
+              "id": "a3",
+              "name": "timestamp",
+              "value": "={{ $json.timestamp }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "message",
+              "value": "✅ GPS обновлён: {{ $json.updated }} машин",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
       },
-      "id": "c3d4e5f6-7g8h-9i0j-1k2l-3m4n5o6p7q8r",
-      "name": "Log Success",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.4,
-      "position": [850, 200],
-      "credentials": {
-        "postgres": {
-          "id": "neon_postgres",
-          "name": "Neon PostgreSQL"
-        }
-      }
+      "id": "4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s",
+      "name": "Success Log",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        850,
+        200
+      ]
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO health (ts, branch, ok, reason) VALUES (NOW(), 'starline-gps', false, $1) RETURNING *",
-        "options": {
-          "queryParams": "={{ $json.error || 'Unknown error' }}"
-        }
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "status",
+              "value": "error",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "updated",
+              "value": "={{ $json.updated }}",
+              "type": "number"
+            },
+            {
+              "id": "a3",
+              "name": "errors",
+              "value": "={{ $json.errors }}",
+              "type": "array"
+            },
+            {
+              "id": "a4",
+              "name": "error_count",
+              "value": "={{ $json.errors.length }}",
+              "type": "number"
+            },
+            {
+              "id": "a5",
+              "name": "message",
+              "value": "⚠️ GPS обновлён: {{ $json.updated }} машин, {{ $json.errors.length }} ошибок",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
       },
-      "id": "d4e5f6g7-8h9i-0j1k-2l3m-4n5o6p7q8r9s",
-      "name": "Log Error",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.4,
-      "position": [850, 400],
-      "credentials": {
-        "postgres": {
-          "id": "neon_postgres",
-          "name": "Neon PostgreSQL"
-        }
-      }
+      "id": "5e6f7g8h-9i0j-1k2l-3m4n-5o6p7q8r9s0t",
+      "name": "Error Log",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        850,
+        400
+      ]
     },
     {
       "parameters": {
@@ -111,12 +177,12 @@
           },
           "conditions": [
             {
-              "id": "condition1",
-              "leftValue": "={{ $json.errors }}",
-              "rightValue": "",
+              "id": "c1",
+              "leftValue": "={{ $json.error_count }}",
+              "rightValue": 5,
               "operator": {
-                "type": "array",
-                "operation": "notEmpty"
+                "type": "number",
+                "operation": "gt"
               }
             }
           ],
@@ -124,51 +190,62 @@
         },
         "options": {}
       },
-      "id": "e5f6g7h8-9i0j-1k2l-3m4n-5o6p7q8r9s0t",
-      "name": "Has Errors?",
+      "id": "6f7g8h9i-0j1k-2l3m-4n5o-6p7q8r9s0t1u",
+      "name": "Critical Errors?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1050, 200]
+      "position": [
+        1050,
+        400
+      ]
     },
     {
       "parameters": {
         "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
-        "text": "⚠️ Starline GPS Monitor: ошибки при обновлении\n\n📊 Обновлено: {{ $json.updated }}\n❌ Ошибок: {{ $json.errors.length }}\n\n{{ $json.errors.join('\\n') }}",
-        "additionalFields": {}
+        "text": "🚨 **Starline GPS Monitor - Критичные ошибки**\n\n✅ Обновлено: {{ $json.updated }} машин\n❌ Ошибок: {{ $json.error_count }}\n\n**Список ошибок:**\n{{ $json.errors.join('\\n') }}\n\n🕐 Время: {{ $json.timestamp }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
       },
-      "id": "f6g7h8i9-0j1k-2l3m-4n5o-6p7q8r9s0t1u",
-      "name": "Alert Errors",
+      "id": "7g8h9i0j-1k2l-3m4n-5o6p-7q8r9s0t1u2v",
+      "name": "Send Telegram Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1250, 200],
+      "position": [
+        1250,
+        300
+      ],
       "credentials": {
         "telegramApi": {
-          "id": "telegram_alert_bot",
-          "name": "Telegram Alert Bot"
+          "id": "telegram_bot_credentials_id",
+          "name": "Telegram Bot (@n8n_alert_geodrive_bot)"
         }
       }
     },
     {
       "parameters": {
-        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
-        "text": "❌ Starline GPS Monitor: критическая ошибка\n\n{{ $json.error }}",
-        "additionalFields": {}
+        "operation": "executeQuery",
+        "query": "INSERT INTO health (ts, branch, ok, reason)\nVALUES (NOW(), 'starline', {{ $json.ok }}, '{{ $json.errors.length > 0 ? \"Errors: \" + $json.errors.length : \"OK\" }}')",
+        "options": {}
       },
-      "id": "g7h8i9j0-1k2l-3m4n-5o6p-7q8r9s0t1u2v",
-      "name": "Alert Critical Error",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [1050, 400],
+      "id": "8h9i0j1k-2l3m-4n5o-6p7q-8r9s0t1u2v3w",
+      "name": "Log to Health Table",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1050,
+        200
+      ],
       "credentials": {
-        "telegramApi": {
-          "id": "telegram_alert_bot",
-          "name": "Telegram Alert Bot"
+        "postgres": {
+          "id": "postgres_neon_credentials_id",
+          "name": "Neon PostgreSQL"
         }
       }
     }
   ],
   "connections": {
-    "Every 1 Minute": {
+    "Every Minute": {
       "main": [
         [
           {
@@ -183,58 +260,76 @@
       "main": [
         [
           {
-            "node": "Success?",
+            "node": "Check Status",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Success?": {
+    "Check Status": {
       "main": [
         [
           {
-            "node": "Log Success",
+            "node": "Success Log",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Log Error",
+            "node": "Error Log",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Log Success": {
+    "Success Log": {
       "main": [
         [
           {
-            "node": "Has Errors?",
+            "node": "Log to Health Table",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Has Errors?": {
+    "Error Log": {
       "main": [
         [
           {
-            "node": "Alert Errors",
+            "node": "Critical Errors?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Log Error": {
+    "Critical Errors?": {
       "main": [
         [
           {
-            "node": "Alert Critical Error",
+            "node": "Send Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log to Health Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram Alert": {
+      "main": [
+        [
+          {
+            "node": "Log to Health Table",
             "type": "main",
             "index": 0
           }
@@ -243,7 +338,26 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
-  }
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "H3UBEp425F5SMyrX",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true,
+    "executionTimeout": 3600
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-11-09T06:00:00.000Z",
+      "updatedAt": "2025-11-09T06:00:00.000Z",
+      "id": "starline",
+      "name": "Starline GPS"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-11-09T06:00:00.000Z",
+  "versionId": "1"
 }
-
