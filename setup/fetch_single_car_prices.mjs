@@ -6,6 +6,38 @@
 
 import postgres from 'postgres';
 import fetch from 'node-fetch';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Загрузка .env файла
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const envPath = join(__dirname, '..', '.env');
+
+try {
+  const envContent = readFileSync(envPath, 'utf-8');
+  const envVars = {};
+  
+  envContent.split('\n').forEach(line => {
+    const match = line.match(/^([^#][^=]+)=(.*)$/);
+    if (match) {
+      const key = match[1].trim();
+      let value = match[2].trim();
+      // Убираем кавычки если есть
+      if ((value.startsWith('"') && value.endsWith('"')) || 
+          (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      envVars[key] = value;
+      process.env[key] = value;
+    }
+  });
+  
+  console.log('✅ .env файл загружен\n');
+} catch (error) {
+  console.log('⚠️  .env файл не найден, используем переменные окружения\n');
+}
 
 const CONNECTION_STRING = process.env.DATABASE_URL || 
   'postgresql://neondb_owner:npg_cHIT9Kxfk1Am@ep-rough-heart-ahnybmq0-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require';
@@ -15,8 +47,15 @@ const sql = postgres(CONNECTION_STRING, {
   ssl: { rejectUnauthorized: false }
 });
 
-// Токены филиалов (из ENV или дефолтные)
-const BRANCH_TOKENS = JSON.parse(process.env.RENTPROG_BRANCH_KEYS || '{}');
+// Токены филиалов (из ENV)
+let BRANCH_TOKENS = {};
+try {
+  BRANCH_TOKENS = JSON.parse(process.env.RENTPROG_BRANCH_KEYS || '{}');
+  console.log(`📦 Загружено токенов: ${Object.keys(BRANCH_TOKENS).length}\n`);
+} catch (error) {
+  console.error('❌ Ошибка парсинга RENTPROG_BRANCH_KEYS:', error.message);
+  process.exit(1);
+}
 
 // Консервативная задержка (оставляем запас для других сервисов)
 const DELAY_MS = 1500; // 1.5 сек между запросами
