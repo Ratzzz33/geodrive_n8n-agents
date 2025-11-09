@@ -262,7 +262,7 @@ class UmnicoPlaywrightService {
       lastLoginAt: this.lastLoginAt,
       uptime: process.uptime(),
       browserConnected: browser?.isConnected() || false,
-      pageUrl: page ? await page.url().catch(() => 'unknown') : 'no-page'
+      pageUrl: page ? page.url() : 'no-page'
     };
   }
 

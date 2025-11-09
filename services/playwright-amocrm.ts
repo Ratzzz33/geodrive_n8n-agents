@@ -212,10 +212,10 @@ class AmoCRMPlaywrightService {
 
       const url = `${this.baseUrl}/api/v4/leads?${queryParams.toString()}`;
 
-      const response = await page!.evaluate(async ({ url, cookieString }) => {
-        const res = await fetch(url, {
+      const response: any = await page.evaluate(async (args: { url: string; cookieString: string }) => {
+        const res = await fetch(args.url, {
           headers: {
-            'Cookie': cookieString,
+            'Cookie': args.cookieString,
             'X-Requested-With': 'XMLHttpRequest'
           }
         });
@@ -269,10 +269,10 @@ class AmoCRMPlaywrightService {
 
       const url = `${this.baseUrl}/api/v4/leads/${dealId}/notes`;
 
-      const response = await page!.evaluate(async ({ url, cookieString }) => {
-        const res = await fetch(url, {
+      const response: any = await page.evaluate(async (args: { url: string; cookieString: string }) => {
+        const res = await fetch(args.url, {
           headers: {
-            'Cookie': cookieString,
+            'Cookie': args.cookieString,
             'X-Requested-With': 'XMLHttpRequest'
           }
         });
@@ -295,10 +295,10 @@ class AmoCRMPlaywrightService {
 
       const url = `${this.baseUrl}/ajax/v4/inbox/list?limit=50&order[sort_by]=last_message_at&order[sort_type]=desc`;
 
-      const response = await page!.evaluate(async ({ url, cookieString }) => {
-        const res = await fetch(url, {
+      const response: any = await page.evaluate(async (args: { url: string; cookieString: string }) => {
+        const res = await fetch(args.url, {
           headers: {
-            'Cookie': cookieString,
+            'Cookie': args.cookieString,
             'X-Requested-With': 'XMLHttpRequest'
           }
         });
@@ -320,7 +320,7 @@ class AmoCRMPlaywrightService {
       lastLoginAt: this.lastLoginAt,
       uptime: process.uptime(),
       browserConnected: browser?.isConnected() || false,
-      pageUrl: page ? await page.url().catch(() => 'unknown') : 'no-page',
+      pageUrl: page ? page.url() : 'no-page',
       baseUrl: this.baseUrl
     };
   }
