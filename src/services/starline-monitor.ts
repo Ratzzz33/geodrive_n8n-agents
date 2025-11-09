@@ -62,8 +62,17 @@ export class StarlineMonitorService {
    * Примеры: "XX950DX" -> "950", "WW080UU" -> "080"
    */
   private extractLast3Digits(licensePlate: string): string | null {
-    const match = licensePlate.match(/\d{3}/);
-    return match ? match[0] : null;
+    // Ищем 3 цифры в номерной части (обычно формат: XX123XX)
+    // Приоритет: 3 цифры окруженные буквами (номерная часть)
+    const plateMatch = licensePlate.match(/[A-Z]{2,3}(\d{3})[A-Z]{2}/i);
+    if (plateMatch) return plateMatch[1];
+    
+    // Fallback: ищем последнюю группу из 3+ цифр и берем первые 3
+    const allDigitGroups = licensePlate.match(/\d+/g);
+    if (!allDigitGroups) return null;
+    
+    const lastGroup = allDigitGroups[allDigitGroups.length - 1];
+    return lastGroup.length >= 3 ? lastGroup.slice(0, 3) : null;
   }
 
   /**

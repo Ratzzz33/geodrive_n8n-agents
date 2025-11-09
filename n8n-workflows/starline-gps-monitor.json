@@ -195,7 +195,7 @@
     {
       "parameters": {
         "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
-        "text": "🚨 **Starline GPS Monitor - Критичные ошибки**\n\n✅ Обновлено: {{ $json.updated }} машин\n❌ Ошибок: {{ $json.error_count }}\n\n**Список ошибок:**\n{{ $json.errors.join('\\n') }}\n\n🕐 {{ $now.toISO() }}",
+        "text": "={{ '🚨 **Starline GPS Monitor - Критичные ошибки**\\n\\n' + '✅ Обновлено: ' + $json.updated + ' машин\\n' + '❌ Ошибок: ' + $json.error_count + '\\n\\n' + '**Список ошибок:**\\n' + $json.errors.join('\\n') + '\\n\\n🕐 ' + $now.toISO() }}",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
