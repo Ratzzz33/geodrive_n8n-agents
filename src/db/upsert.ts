@@ -3,6 +3,7 @@
  * Реализует паттерн: наша модель данных (UUID) + external_refs
  */
 
+import { randomUUID } from 'crypto';
 import { eq, and, sql } from 'drizzle-orm';
 import { getDatabase } from './index';
 import {
@@ -360,7 +361,7 @@ export async function dynamicUpsertEntity(
 
   if (!entityId) {
     // Генерируем новый UUID
-    entityId = crypto.randomUUID();
+    entityId = randomUUID();
     created = true;
 
     // Создаем запись в external_refs
