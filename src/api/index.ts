@@ -569,3 +569,9 @@ export function stopApiServer(): Promise<void> {
   });
 }
 
+// Запуск сервера если файл запущен напрямую
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+  initApiServer(port);
+}
+
