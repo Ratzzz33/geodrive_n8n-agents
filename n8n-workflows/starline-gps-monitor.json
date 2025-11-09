@@ -1,5 +1,5 @@
 {
-  "name": "Starline GPS Monitor",
+  "name": "Starline GPS Monitor (Every Minute)",
   "nodes": [
     {
       "parameters": {
@@ -16,10 +16,7 @@
       "name": "Every Minute",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [
-        250,
-        300
-      ]
+      "position": [250, 300]
     },
     {
       "parameters": {
@@ -33,10 +30,7 @@
       "name": "Update GPS Data",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        450,
-        300
-      ]
+      "position": [450, 300]
     },
     {
       "parameters": {
@@ -74,10 +68,7 @@
       "name": "Check Status",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        650,
-        300
-      ]
+      "position": [650, 300]
     },
     {
       "parameters": {
@@ -97,15 +88,9 @@
             },
             {
               "id": "a3",
-              "name": "timestamp",
-              "value": "={{ $json.timestamp }}",
-              "type": "string"
-            },
-            {
-              "id": "a4",
-              "name": "message",
-              "value": "✅ GPS обновлён: {{ $json.updated }} машин",
-              "type": "string"
+              "name": "error_count",
+              "value": "0",
+              "type": "number"
             }
           ]
         },
@@ -115,10 +100,7 @@
       "name": "Success Log",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [
-        850,
-        200
-      ]
+      "position": [850, 200]
     },
     {
       "parameters": {
@@ -138,21 +120,15 @@
             },
             {
               "id": "a3",
-              "name": "errors",
-              "value": "={{ $json.errors }}",
-              "type": "array"
-            },
-            {
-              "id": "a4",
               "name": "error_count",
               "value": "={{ $json.errors.length }}",
               "type": "number"
             },
             {
-              "id": "a5",
-              "name": "message",
-              "value": "⚠️ GPS обновлён: {{ $json.updated }} машин, {{ $json.errors.length }} ошибок",
-              "type": "string"
+              "id": "a4",
+              "name": "errors",
+              "value": "={{ $json.errors }}",
+              "type": "array"
             }
           ]
         },
@@ -162,10 +138,7 @@
       "name": "Error Log",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [
-        850,
-        400
-      ]
+      "position": [850, 400]
     },
     {
       "parameters": {
@@ -194,15 +167,12 @@
       "name": "Critical Errors?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        1050,
-        400
-      ]
+      "position": [1050, 400]
     },
     {
       "parameters": {
         "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
-        "text": "🚨 **Starline GPS Monitor - Критичные ошибки**\n\n✅ Обновлено: {{ $json.updated }} машин\n❌ Ошибок: {{ $json.error_count }}\n\n**Список ошибок:**\n{{ $json.errors.join('\\n') }}\n\n🕐 Время: {{ $json.timestamp }}",
+        "text": "🚨 **Starline GPS Monitor - Критичные ошибки**\n\n✅ Обновлено: {{ $json.updated }} машин\n❌ Ошибок: {{ $json.error_count }}\n\n**Список ошибок:**\n{{ $json.errors.join('\\n') }}\n\n🕐 {{ $now.toISO() }}",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
@@ -211,130 +181,48 @@
       "name": "Send Telegram Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [
-        1250,
-        300
-      ],
-      "credentials": {
-        "telegramApi": {
-          "id": "telegram_bot_credentials_id",
-          "name": "Telegram Bot (@n8n_alert_geodrive_bot)"
-        }
-      }
+      "position": [1250, 300]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO health (ts, branch, ok, reason)\nVALUES (NOW(), 'starline', {{ $json.ok }}, '{{ $json.errors.length > 0 ? \"Errors: \" + $json.errors.length : \"OK\" }}')",
+        "query": "INSERT INTO health (ts, branch, ok, reason) VALUES (NOW(), 'starline', {{ $json.status === 'success' }}, '{{ $json.error_count > 0 ? \"Errors: \" + $json.error_count : \"OK\" }}')",
         "options": {}
       },
       "id": "8h9i0j1k-2l3m-4n5o-6p7q-8r9s0t1u2v3w",
       "name": "Log to Health Table",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [
-        1050,
-        200
-      ],
-      "credentials": {
-        "postgres": {
-          "id": "postgres_neon_credentials_id",
-          "name": "Neon PostgreSQL"
-        }
-      }
+      "position": [1450, 300]
     }
   ],
   "connections": {
     "Every Minute": {
-      "main": [
-        [
-          {
-            "node": "Update GPS Data",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Update GPS Data", "type": "main", "index": 0}]]
     },
     "Update GPS Data": {
-      "main": [
-        [
-          {
-            "node": "Check Status",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Check Status", "type": "main", "index": 0}]]
     },
     "Check Status": {
       "main": [
-        [
-          {
-            "node": "Success Log",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Error Log",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Success Log", "type": "main", "index": 0}],
+        [{"node": "Error Log", "type": "main", "index": 0}]
       ]
     },
     "Success Log": {
-      "main": [
-        [
-          {
-            "node": "Log to Health Table",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Log to Health Table", "type": "main", "index": 0}]]
     },
     "Error Log": {
-      "main": [
-        [
-          {
-            "node": "Critical Errors?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Critical Errors?", "type": "main", "index": 0}]]
     },
     "Critical Errors?": {
       "main": [
-        [
-          {
-            "node": "Send Telegram Alert",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Log to Health Table",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Send Telegram Alert", "type": "main", "index": 0}],
+        [{"node": "Log to Health Table", "type": "main", "index": 0}]
       ]
     },
     "Send Telegram Alert": {
-      "main": [
-        [
-          {
-            "node": "Log to Health Table",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Log to Health Table", "type": "main", "index": 0}]]
     }
   },
   "settings": {
@@ -342,22 +230,9 @@
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
     "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromSameOwner",
     "errorWorkflow": "H3UBEp425F5SMyrX",
     "timezone": "Asia/Tbilisi",
     "saveExecutionProgress": true,
     "executionTimeout": 3600
-  },
-  "staticData": null,
-  "tags": [
-    {
-      "createdAt": "2025-11-09T06:00:00.000Z",
-      "updatedAt": "2025-11-09T06:00:00.000Z",
-      "id": "starline",
-      "name": "Starline GPS"
-    }
-  ],
-  "triggerCount": 1,
-  "updatedAt": "2025-11-09T06:00:00.000Z",
-  "versionId": "1"
+  }
 }
