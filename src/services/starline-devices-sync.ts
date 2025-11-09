@@ -158,14 +158,14 @@ export class StarlineDevicesSyncService {
     const cars = await sqlConnection`
       SELECT 
         id,
-        license_plate,
-        brand,
+        plate,
+        car_visual_name as brand,
         model
       FROM cars
-      WHERE license_plate IS NOT NULL
+      WHERE plate IS NOT NULL
     ` as Array<{
       id: string;
-      license_plate: string;
+      plate: string;
       brand: string;
       model: string;
     }>;
@@ -178,7 +178,7 @@ export class StarlineDevicesSyncService {
 
       for (const car of cars) {
         // Извлекаем 3 цифры из номера
-        const licensePlateDigits = car.license_plate.match(/\d{3}/)?.[0];
+        const licensePlateDigits = car.plate.match(/\d{3}/)?.[0];
         
         if (!licensePlateDigits || licensePlateDigits !== device.extracted_digits) {
           continue; // Цифры не совпадают
@@ -243,7 +243,7 @@ export class StarlineDevicesSyncService {
             ${device.alias},
             ${device.extracted_digits},
             ${device.extracted_model},
-            ${bestMatch.car.license_plate},
+            ${bestMatch.car.plate},
             ${bestMatch.car.brand},
             ${bestMatch.car.model},
             'Автоматическое сопоставление',
@@ -258,7 +258,7 @@ export class StarlineDevicesSyncService {
           method: bestMatch.method
         });
 
-        console.log(`✅ Сопоставлено: ${device.alias} → ${bestMatch.car.brand} ${bestMatch.car.model} (${bestMatch.car.license_plate}) [${(bestMatch.confidence * 100).toFixed(0)}%]`);
+        console.log(`✅ Сопоставлено: ${device.alias} → ${bestMatch.car.brand} ${bestMatch.car.model} (${bestMatch.car.plate}) [${(bestMatch.confidence * 100).toFixed(0)}%]`);
       } else {
         console.log(`❌ Не найдено совпадение для: ${device.alias} (${device.extracted_digits})`);
       }
