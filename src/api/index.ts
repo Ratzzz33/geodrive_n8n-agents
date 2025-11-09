@@ -326,7 +326,7 @@ export function initApiServer(port: number = 3000): void {
   // Endpoint для обновления GPS данных из Starline
   app.post('/starline/update-gps', async (req, res) => {
     try {
-      const { StarlineMonitorService } = await import('../services/starline-monitor');
+      const { StarlineMonitorService } = await import('../services/starline-monitor.js');
       
       const service = new StarlineMonitorService();
       const result = await service.updateGPSData();
@@ -349,7 +349,7 @@ export function initApiServer(port: number = 3000): void {
   // Endpoint для синхронизации устройств Starline в таблицу starline_devices
   app.post('/starline/sync-devices', async (req, res) => {
     try {
-      const { StarlineDevicesSyncService } = await import('../services/starline-devices-sync');
+      const { StarlineDevicesSyncService } = await import('../services/starline-devices-sync.js');
       
       const service = new StarlineDevicesSyncService();
       const result = await service.syncDevices();
@@ -374,7 +374,7 @@ export function initApiServer(port: number = 3000): void {
   // Endpoint для автоматического сопоставления устройств с cars
   app.post('/starline/match-devices', async (req, res) => {
     try {
-      const { StarlineDevicesSyncService } = await import('../services/starline-devices-sync');
+      const { StarlineDevicesSyncService } = await import('../services/starline-devices-sync.js');
       
       const service = new StarlineDevicesSyncService();
       const matches = await service.matchDevicesWithCars();
@@ -397,7 +397,7 @@ export function initApiServer(port: number = 3000): void {
   // Endpoint для получения статуса синхронизации
   app.get('/starline/sync-status', async (req, res) => {
     try {
-      const { StarlineDevicesSyncService } = await import('../services/starline-devices-sync');
+      const { StarlineDevicesSyncService } = await import('../services/starline-devices-sync.js');
       
       const service = new StarlineDevicesSyncService();
       const status = await service.getSyncStatus();
@@ -419,7 +419,7 @@ export function initApiServer(port: number = 3000): void {
   // Endpoint для сопоставления машин Starline с таблицей cars (legacy - для обратной совместимости)
   app.get('/starline/match-cars', async (req, res) => {
     try {
-      const { StarlineMonitorService } = await import('../services/starline-monitor');
+      const { StarlineMonitorService } = await import('../services/starline-monitor.js');
       
       const service = new StarlineMonitorService();
       const matches = await service.matchCars();
