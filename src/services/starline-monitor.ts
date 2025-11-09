@@ -210,7 +210,7 @@ export class StarlineMonitorService {
         const previousLat = existing?.current_lat ? parseFloat(existing.current_lat) : null;
         const previousLng = existing?.current_lng ? parseFloat(existing.current_lng) : null;
         const previousSatQty = existing?.current_sat_qty || null;
-        const previousTimestamp = existing?.current_timestamp || null;
+        const previousTimestamp = existing?.current_timestamp ? new Date(existing.current_timestamp) : null;
 
         // Определяем движение
         let isMoving = false;
