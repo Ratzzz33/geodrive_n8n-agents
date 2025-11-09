@@ -1,6 +1,6 @@
 {
   "id": "gNXRKIQpNubEazH7",
-  "name": "RentProg Webhooks Monitor",
+  "name": "обработка вебхуков",
   "nodes": [
     {
       "parameters": {
@@ -247,7 +247,10 @@
           "name": "Postgres account"
         }
       },
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
@@ -337,7 +340,10 @@
           "id": "3I9fyXVlGg4Vl4LZ",
           "name": "Postgres account"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "id": "fast-respond-node",
@@ -360,12 +366,18 @@
       "main": [
         [
           {
-            "node": "Parse & Validate Format",
+            "node": "Respond (Fast Ack)",
             "type": "main",
             "index": 0
-          },
+          }
+        ]
+      ]
+    },
+    "Respond (Fast Ack)": {
+      "main": [
+        [
           {
-            "node": "Respond (Fast Ack)",
+            "node": "Parse & Validate Format",
             "type": "main",
             "index": 0
           }

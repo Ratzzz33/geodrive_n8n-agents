@@ -129,6 +129,14 @@
 - Индексы: на `hash`, `event_type`, `processed_at`
 - Автоочистка: старше 30 дней
 
+#### Подсистема Entity Timeline & Event Links
+
+- Назначение: денормализованная лента событий по `car/booking/client` и автоматическое связывание платежей/событий/истории.
+- API: `/entity-timeline/*`, `/event-links/*` (см. документацию).
+- Документация схем и реализации:
+  - `docs/ENTITY_TIMELINE.md`, `ENTITY_TIMELINE_IMPLEMENTATION.md`
+  - `docs/EVENT_LINKS.md`, `EVENT_LINKS_IMPLEMENTATION.md`
+
 #### Внешние ссылки (external_refs)
 
 Универсальная таблица для связи наших UUID с внешними системами:

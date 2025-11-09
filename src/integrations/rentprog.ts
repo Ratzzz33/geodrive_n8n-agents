@@ -11,6 +11,11 @@ import { logger } from '../utils/logger.js';
 // Типы филиалов
 export type BranchName = 'tbilisi' | 'batumi' | 'kutaisi' | 'service-center';
 
+// Консервативные задержки для совместного использования RentProg API с другими сервисами
+// Используем ~33% от лимитов RentProg, оставляя 66% для других сервисов компании
+const DELAY_BETWEEN_GET_REQUESTS = 1500;  // 1.5 сек = 40 запросов/мин (лимит RentProg: 120/мин)
+const DELAY_BETWEEN_POST_REQUESTS = 3000; // 3 сек = 20 запросов/мин (лимит RentProg: 60/мин)
+
 // Кэш токенов по филиалам
 interface TokenCache {
   token: string;
@@ -270,6 +275,13 @@ export async function paginate<T>(
         if (page > 1000) {
           logger.warn(`Достигнут максимум страниц для ${path}`);
           hasMore = false;
+        }
+        
+        // Задержка между страницами для соблюдения консервативных лимитов
+        // Используем ~33% capacity RentProg, оставляя 66% для других сервисов компании
+        if (hasMore) {
+          logger.debug(`Задержка ${DELAY_BETWEEN_GET_REQUESTS}ms перед следующей страницей`);
+          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_GET_REQUESTS));
         }
       }
     } catch (error) {
