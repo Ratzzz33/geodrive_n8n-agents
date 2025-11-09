@@ -7,13 +7,8 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install --production
 
-# Скопировать исходники
-COPY playwright-umnico.ts ./
-COPY tsconfig.json ./
-
-# Собрать TypeScript
-RUN npm install -g typescript
-RUN npx tsc
+# Скопировать собранные JS файлы (TypeScript уже собран локально)
+COPY dist/playwright-umnico.js ./playwright-umnico.js
 
 # Создать директорию для данных
 RUN mkdir -p /data
@@ -22,5 +17,5 @@ RUN mkdir -p /data
 EXPOSE 3001
 
 # Запуск
-CMD ["node", "dist/playwright-umnico.js"]
+CMD ["node", "playwright-umnico.js"]
 
