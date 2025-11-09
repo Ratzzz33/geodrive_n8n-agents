@@ -212,7 +212,7 @@ class AmoCRMPlaywrightService {
 
       const url = `${this.baseUrl}/api/v4/leads?${queryParams.toString()}`;
 
-      const response: any = await page.evaluate(async (args: { url: string; cookieString: string }) => {
+      const response: any = await page!.evaluate(async (args: { url: string; cookieString: string }) => {
         const res = await fetch(args.url, {
           headers: {
             'Cookie': args.cookieString,
@@ -269,7 +269,7 @@ class AmoCRMPlaywrightService {
 
       const url = `${this.baseUrl}/api/v4/leads/${dealId}/notes`;
 
-      const response: any = await page.evaluate(async (args: { url: string; cookieString: string }) => {
+      const response: any = await page!.evaluate(async (args: { url: string; cookieString: string }) => {
         const res = await fetch(args.url, {
           headers: {
             'Cookie': args.cookieString,
@@ -295,7 +295,7 @@ class AmoCRMPlaywrightService {
 
       const url = `${this.baseUrl}/ajax/v4/inbox/list?limit=50&order[sort_by]=last_message_at&order[sort_type]=desc`;
 
-      const response: any = await page.evaluate(async (args: { url: string; cookieString: string }) => {
+      const response: any = await page!.evaluate(async (args: { url: string; cookieString: string }) => {
         const res = await fetch(args.url, {
           headers: {
             'Cookie': args.cookieString,
