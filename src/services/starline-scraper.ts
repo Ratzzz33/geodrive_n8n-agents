@@ -1,5 +1,5 @@
 import { chromium, Browser, Page } from 'playwright';
-import { logger } from '../utils/logger';
+import { logger } from '../utils/logger.js';
 
 interface StarlineDeviceOverview {
   alias: string;

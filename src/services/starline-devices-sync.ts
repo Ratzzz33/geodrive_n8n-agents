@@ -4,10 +4,10 @@
  * и выполняет автоматическое сопоставление с cars
  */
 
-import { getStarlineScraper } from './starline-scraper';
-import { getDatabase, getSqlConnection } from '../db/index';
+import { getStarlineScraper } from './starline-scraper.js';
+import { getDatabase, getSqlConnection } from '../db/index.js';
 import { sql } from 'drizzle-orm';
-import { logger } from '../utils/logger';
+import { logger } from '../utils/logger.js';
 
 interface DeviceSyncResult {
   total: number;

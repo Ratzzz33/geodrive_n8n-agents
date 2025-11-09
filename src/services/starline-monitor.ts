@@ -4,11 +4,11 @@
  * и обновляет GPS данные
  */
 
-import { getStarlineScraper } from './starline-scraper';
-import { getDatabase, getSqlConnection } from '../db/index';
+import { getStarlineScraper } from './starline-scraper.js';
+import { getDatabase, getSqlConnection } from '../db/index.js';
 import { sql } from 'drizzle-orm';
-import { logger } from '../utils/logger';
-import { getCarStatus, calculateDistance } from '../utils/starline-helpers';
+import { logger } from '../utils/logger.js';
+import { getCarStatus, calculateDistance } from '../utils/starline-helpers.js';
 
 interface CarMatch {
   carId: string;
