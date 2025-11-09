@@ -134,7 +134,10 @@ export class StarlineMonitorService {
         if (!carDigits || carDigits !== starlineDigits) return false;
 
         // Проверяем совпадение модели (частичное)
-        const carModel = `${car.brand} ${car.model}`.toLowerCase();
+        // Обрабатываем null для brand (car_visual_name может быть null)
+        const carModel = car.brand 
+          ? `${car.brand} ${car.model}`.toLowerCase() 
+          : car.model.toLowerCase();
         const starlineModelLower = starlineModel.toLowerCase();
 
         return carModel.includes(starlineModelLower) || starlineModelLower.includes(carModel);
