@@ -423,6 +423,7 @@ export function initApiServer(port: number = 3000): void {
   // Endpoint для upsert клиента (вызывается из n8n workflow)
   app.post('/upsert-client', async (req, res) => {
     try {
+      logger.debug('upsert-client: Received request', { body: req.body, headers: req.headers });
       const { dynamicUpsertEntity } = await import('../db/upsert');
       
       // Обработка странной структуры от n8n, где данные могут приходить под пустым ключом
