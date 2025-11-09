@@ -290,7 +290,7 @@ async function main() {
     console.log('╚══════════════════════════════════════════════════════════╝\n');
     
     // Получаем список авто без цен
-    const BATCH_SIZE = 50; // Обрабатываем по 50 авто за раз
+    const BATCH_SIZE = 10; // Обрабатываем по 10 авто за раз для теста
     
     console.log(`🔍 Поиск автомобилей без цен (лимит: ${BATCH_SIZE})...\n`);
     const cars = await getCarsWithoutPrices(BATCH_SIZE);
