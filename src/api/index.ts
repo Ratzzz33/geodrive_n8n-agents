@@ -121,58 +121,69 @@ export function initApiServer(port: number = 3000): void {
     }
   });
 
-  // Endpoint для проверки автомобилей без цен на сезоны
-  app.get('/check-cars-without-prices/:branch(*)', async (req, res) => {
+  // Endpoint для проверки автомобилей без цен на сезоны - все филиалы
+  app.get('/check-cars-without-prices', async (req, res) => {
     try {
-      const { branch } = req.params;
+      logger.info(`[Price Check] Starting check for all branches...`);
       
-      logger.info(`[Price Check] Starting check${branch ? ` for ${branch}` : ' for all branches'}...`);
+      // @ts-expect-error - .mjs module без типов
+      const { checkAllBranches } = await import('../../setup/check_cars_without_prices.mjs');
+      const results = await checkAllBranches();
       
-      if (branch) {
-        // Проверка конкретного филиала
-        const validBranches: BranchName[] = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];
-        if (!validBranches.includes(branch as BranchName)) {
-          res.status(400).json({ 
-            ok: false, 
-            error: `Invalid branch. Must be one of: ${validBranches.join(', ')}` 
-          });
-          return;
+      const totals = results.reduce((acc: { total: number; withoutPrices: number }, r: any) => ({
+        total: acc.total + r.total,
+        withoutPrices: acc.withoutPrices + r.withoutPrices
+      }), { total: 0, withoutPrices: 0 });
+      
+      logger.info(`[Price Check] Completed for all branches: ${totals.withoutPrices}/${totals.total} без цен`);
+      
+      res.json({
+        ok: true,
+        branches: results,
+        summary: {
+          total: totals.total,
+          withoutPrices: totals.withoutPrices,
+          withPrices: totals.total - totals.withoutPrices
         }
-        
-        // @ts-expect-error - .mjs module без типов
-        const { checkBranchCarsWithoutPrices } = await import('../../setup/check_cars_without_prices.mjs');
-        const result = await checkBranchCarsWithoutPrices(branch);
-        
-        logger.info(`[Price Check] Completed for ${branch}: ${result.withoutPrices}/${result.total} без цен`);
-        res.json(result);
-      } else {
-        // Проверка всех филиалов
-        // @ts-expect-error - .mjs module без типов
-        const { checkAllBranches } = await import('../../setup/check_cars_without_prices.mjs');
-        const results = await checkAllBranches();
-        
-        const totals = results.reduce((acc: { total: number; withoutPrices: number }, r: any) => ({
-          total: acc.total + r.total,
-          withoutPrices: acc.withoutPrices + r.withoutPrices
-        }), { total: 0, withoutPrices: 0 });
-        
-        logger.info(`[Price Check] Completed for all branches: ${totals.withoutPrices}/${totals.total} без цен`);
-        
-        res.json({
-          ok: true,
-          branches: results,
-          summary: {
-            total: totals.total,
-            withoutPrices: totals.withoutPrices,
-            withPrices: totals.total - totals.withoutPrices
-          }
-        });
-      }
+      });
     } catch (error) {
       logger.error(`[Price Check] Error:`, error);
       res.status(500).json({
         ok: false,
-        branch: req.params.branch || 'all',
+        branch: 'all',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Endpoint для проверки автомобилей без цен на сезоны - конкретный филиал
+  app.get('/check-cars-without-prices/:branch', async (req, res) => {
+    try {
+      const { branch } = req.params;
+      
+      logger.info(`[Price Check] Starting check for ${branch}...`);
+      
+      // Валидация филиала
+      const validBranches: BranchName[] = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];
+      if (!validBranches.includes(branch as BranchName)) {
+        res.status(400).json({ 
+          ok: false, 
+          error: `Invalid branch. Must be one of: ${validBranches.join(', ')}` 
+        });
+        return;
+      }
+      
+      // @ts-expect-error - .mjs module без типов
+      const { checkBranchCarsWithoutPrices } = await import('../../setup/check_cars_without_prices.mjs');
+      const result = await checkBranchCarsWithoutPrices(branch);
+      
+      logger.info(`[Price Check] Completed for ${branch}: ${result.withoutPrices}/${result.total} без цен`);
+      res.json(result);
+    } catch (error) {
+      logger.error(`[Price Check] Error:`, error);
+      res.status(500).json({
+        ok: false,
+        branch: req.params.branch,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
