@@ -12,13 +12,13 @@ CREATE TABLE IF NOT EXISTS gps_tracking (
   current_lat NUMERIC(10, 8),
   current_lng NUMERIC(11, 8),
   current_sat_qty INT,
-  current_timestamp TIMESTAMPTZ,
+  "current_timestamp" TIMESTAMPTZ,
   
   -- Предыдущие координаты (для вычисления движения)
   previous_lat NUMERIC(10, 8),
   previous_lng NUMERIC(11, 8),
   previous_sat_qty INT,
-  previous_timestamp TIMESTAMPTZ,
+  "previous_timestamp" TIMESTAMPTZ,
   
   -- Статус и движение
   status TEXT, -- 'offline', 'gps_offline', 'moving', 'parked_on', 'parked_off'
