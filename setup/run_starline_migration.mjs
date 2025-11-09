@@ -21,7 +21,7 @@ async function runMigration() {
 
   try {
     // Читаем SQL файл миграции
-    const migrationPath = path.join(__dirname, '..', 'drizzle', 'migrations', '0013_starline_devices.sql');
+    const migrationPath = path.join(__dirname, 'migrations', '0013_starline_devices.sql');
     const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
 
     console.log('📄 Файл миграции найден:', migrationPath);
