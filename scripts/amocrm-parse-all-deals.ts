@@ -81,6 +81,10 @@ interface DealExtended {
 /**
  * Извлечь данные из сделки и контактов
  * Парсит ВСЕ поля сделки для последующего склеивания в БД
+ * 
+ * ВАЖНО: Для броней источник правды - RentProg, не AmoCRM!
+ * Данные о бронях из AmoCRM (кроме ID RentProg) не используются для склеивания.
+ * Все детали брони (авто, цены, даты) берутся только из RentProg.
  */
 function extractDealData(extended: DealExtended) {
   const { deal, contacts, notes, scopeId } = extended;
