@@ -277,6 +277,7 @@ class UmnicoPlaywrightService {
             ];
             
             let container: HTMLElement | null = null;
+            let foundSelector = '';
             for (const selector of selectors) {
               const el = document.querySelector(selector);
               if (el) {
@@ -285,6 +286,7 @@ class UmnicoPlaywrightService {
                 if (style.overflowY === 'auto' || style.overflowY === 'scroll' || 
                     el.scrollHeight > el.clientHeight) {
                   container = el as HTMLElement;
+                  foundSelector = selector;
                   break;
                 }
               }
@@ -293,42 +295,76 @@ class UmnicoPlaywrightService {
             if (!container) {
               // Если не нашли контейнер, используем window
               window.scrollBy(0, 500);
-              return { container: 'window', scrollHeight: document.body.scrollHeight, currentScroll: window.scrollY, scrolled: true };
+              return { 
+                container: 'window', 
+                scrollHeight: document.body.scrollHeight, 
+                currentScroll: window.scrollY, 
+                scrolled: true,
+                canScrollMore: window.scrollY < document.body.scrollHeight - window.innerHeight - 10,
+                actuallyScrolled: true,
+                scrollDelta: 500
+              };
             }
             
             const currentScroll = container.scrollTop;
             const scrollHeight = container.scrollHeight;
             const clientHeight = container.clientHeight;
             
-            // Скроллим постепенно вниз (на 500px за раз для более быстрой прокрутки)
-            const scrollStep = 500;
+            // Скроллим до самого конца для максимальной загрузки
+            // Сначала пробуем скроллить на большую дистанцию
+            const scrollStep = Math.max(1000, clientHeight * 0.8); // 80% высоты экрана или минимум 1000px
             const newScroll = Math.min(scrollHeight, currentScroll + scrollStep);
             container.scrollTop = newScroll;
             
+            // Если не удалось скроллить достаточно, пробуем скроллить до самого конца
+            if (container.scrollTop < scrollHeight - clientHeight - 50) {
+              container.scrollTop = scrollHeight - clientHeight;
+            }
+            
             // Проверяем, что скролл действительно произошел
             const actuallyScrolled = container.scrollTop > currentScroll;
+            const scrollDelta = container.scrollTop - currentScroll;
             
             return {
-              container: selector || 'found',
+              container: foundSelector || 'found',
               scrollHeight,
               currentScroll: container.scrollTop,
               clientHeight,
               canScrollMore: container.scrollTop < scrollHeight - clientHeight - 10,
               actuallyScrolled: actuallyScrolled,
-              scrollDelta: container.scrollTop - currentScroll
+              scrollDelta: scrollDelta
             };
           });
           
           // Логируем результат скролла
-          if (scrollResult.actuallyScrolled === false && scrollResult.container !== 'window') {
-            console.log(`   ⚠️  Scroll did not work, container: ${scrollResult.container}, trying alternative method...`);
-            // Пробуем альтернативный метод - скролл через клавиатуру
-            await page!.keyboard.press('End');
-            await page!.waitForTimeout(1000);
+          if (scrollAttempts === 0 || scrollAttempts % 10 === 0) {
+            console.log(`   📊 Scroll attempt ${scrollAttempts + 1}: container="${scrollResult.container}", scrolled=${scrollResult.actuallyScrolled}, delta=${scrollResult.scrollDelta}, canScrollMore=${scrollResult.canScrollMore}`);
           }
           
-          // Ждем подгрузки новых диалогов (увеличиваем время ожидания)
-          await page!.waitForTimeout(3000);
+          if (scrollResult.actuallyScrolled === false && scrollResult.container !== 'window') {
+            console.log(`   ⚠️  Scroll did not work, trying alternative methods...`);
+            // Пробуем альтернативные методы
+            try {
+              // Метод 1: Клавиша End
+              await page!.keyboard.press('End');
+              await page!.waitForTimeout(1000);
+              
+              // Метод 2: Скролл через JavaScript напрямую
+              await page!.evaluate(() => {
+                const items = document.querySelectorAll('.card-message-preview__item');
+                if (items.length > 0) {
+                  const lastItem = items[items.length - 1] as HTMLElement;
+                  lastItem.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
+              });
+              await page!.waitForTimeout(1000);
+            } catch (e) {
+              // Игнорируем ошибки альтернативных методов
+            }
+          }
+          
+          // Ждем подгрузки новых диалогов (увеличиваем время ожидания для медленных соединений)
+          await page!.waitForTimeout(4000);
           
           // Дополнительная проверка: ждем появления новых элементов (с увеличенным таймаутом)
           try {
