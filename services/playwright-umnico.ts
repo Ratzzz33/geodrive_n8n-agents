@@ -189,22 +189,30 @@ class UmnicoPlaywrightService {
           let conversationId = null;
           let current = item;
           let maxDepth = 10;
+          let debugInfo = [];
           
           while (current && maxDepth > 0 && !conversationId) {
+            const tagName = current.tagName ? current.tagName.toUpperCase() : 'UNKNOWN';
+            const href = current.getAttribute('href') || '';
+            
+            debugInfo.push(`${tagName}:${href.substring(0, 50)}`);
+            
             // Проверяем сам элемент
-            if (current.tagName && current.tagName.toUpperCase() === 'A') {
-              const href = current.getAttribute('href') || '';
-              if (href && href.includes('/details/')) {
-                const idMatch = href.match(/\/details\/(\d+)/);
-                if (idMatch && idMatch[1]) {
-                  conversationId = idMatch[1];
-                  break;
-                }
+            if (tagName === 'A' && href && href.includes('/details/')) {
+              const idMatch = href.match(/\/details\/(\d+)/);
+              if (idMatch && idMatch[1]) {
+                conversationId = idMatch[1];
+                break;
               }
             }
             // Переходим к родителю
             current = current.parentElement;
             maxDepth--;
+          }
+          
+          // Отладочный вывод для первых 3 элементов
+          if (items.indexOf(item) < 3 && !conversationId) {
+            console.log(`DEBUG item ${items.indexOf(item)}:`, debugInfo.join(' -> '));
           }
           
           // 2. Из onclick атрибута самого элемента
