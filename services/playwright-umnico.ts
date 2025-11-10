@@ -249,11 +249,12 @@ class UmnicoPlaywrightService {
       // Если нужны все диалоги - скроллим список вниз для подгрузки
       if (getAll || limit > 50) {
         console.log(`📜 Loading all conversations (scrolling list)...`);
+        console.log(`   Initial count: ${allConversations.length}`);
         
         let scrollAttempts = 0;
-        const maxScrollAttempts = 100; // Увеличиваем лимит
+        const maxScrollAttempts = 200; // Увеличиваем лимит для больших списков
         let noChangeCount = 0; // Счетчик попыток без изменений
-        const maxNoChange = 3; // Максимум попыток без изменений подряд
+        const maxNoChange = 5; // Увеличиваем до 5 попыток без изменений
         
         while (scrollAttempts < maxScrollAttempts) {
           const beforeScroll = allConversations.length;
@@ -341,12 +342,13 @@ class UmnicoPlaywrightService {
           
           scrollAttempts++;
           
-          if (scrollAttempts % 10 === 0) {
+          if (scrollAttempts % 5 === 0) {
             console.log(`   📜 Scrolled ${scrollAttempts} times, found ${allConversations.length} conversations so far...`);
           }
           
-          if (allConversations.length > 1000) {
-            console.log(`   ⚠️  Reached 1000 conversations limit, stopping`);
+          // Увеличиваем лимит до 5000 диалогов
+          if (allConversations.length > 5000) {
+            console.log(`   ⚠️  Reached 5000 conversations limit, stopping`);
             break;
           }
         }
