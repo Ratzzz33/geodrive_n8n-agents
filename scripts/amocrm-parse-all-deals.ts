@@ -513,7 +513,8 @@ async function main() {
     // 1. Получить все сделки
     console.log('📋 Получаю список всех сделок...');
     const dealsResponse = await fetch(
-      `${PLAYWRIGHT_SERVICE_URL}/api/deals/all?pipeline_id=${PIPELINE_ID}`
+      `${PLAYWRIGHT_SERVICE_URL}/api/deals/all?pipeline_id=${PIPELINE_ID}`,
+      {}
     );
     
     if (!dealsResponse.ok) {
@@ -567,9 +568,15 @@ async function main() {
               { timeout: 30000 }
             );
 
+            if (!detailsResponse) {
+              throw new Error('No response from server');
+            }
+
             if (detailsResponse.ok) {
-              detailsData = await detailsResponse.json() as { ok: boolean; data: DealExtended };
-              break;
+              detailsData = await detailsResponse.json() as { ok: boolean; data?: DealExtended; error?: string };
+              if (detailsData?.ok && detailsData?.data) {
+                break; // Успешно получили данные
+              }
             } else if (detailsResponse.status === 500 && retries > 1) {
               // При 500 ошибке пробуем еще раз после задержки
               await new Promise(resolve => setTimeout(resolve, 1000));
