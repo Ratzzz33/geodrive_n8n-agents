@@ -22,6 +22,7 @@ import {
 } from './schema';
 import { logger } from '../utils/logger';
 import type { BranchName } from '../integrations/rentprog';
+import { apiFetch } from '../integrations/rentprog';
 // import { extractCarFields, extractClientFields } from './carsAndClients'; // Временно закомментировано
 
 // Временные заглушки
@@ -263,8 +264,15 @@ export async function upsertBookingFromRentProg(
   }
 
   let clientId: string | null = null;
+  let clientIdOriginal: string | null = null; // Сохраняем оригинальный ID для возможной загрузки
   if (payload.client_id) {
-    clientId = await resolveByExternalRef('rentprog', String(payload.client_id));
+    clientIdOriginal = String(payload.client_id);
+    clientId = await resolveByExternalRef('rentprog', clientIdOriginal);
+    
+    // Если клиент не найден, логируем предупреждение (попытка загрузки будет при ошибке FK)
+    if (!clientId) {
+      logger.debug(`[Booking ${rentprogId}] Client ${clientIdOriginal} not found in DB, will attempt to load from RentProg if needed`);
+    }
   }
 
   const branchId = await getOrCreateBranch(branchCode, branchCode);
@@ -282,43 +290,213 @@ export async function upsertBookingFromRentProg(
   }
   status = status ? String(status) : null;
 
+  // Функция для попытки загрузки клиента из RentProg при ошибке FK
+  const tryLoadClientFromRentProg = async (): Promise<boolean> => {
+    if (!clientIdOriginal) {
+      return false;
+    }
+    
+    try {
+      logger.info(`[Booking ${rentprogId}] Attempting to load client ${clientIdOriginal} from RentProg API...`);
+      
+      // Пробуем загрузить клиента из всех филиалов (клиенты могут быть глобальными)
+      const branches: BranchName[] = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];
+      
+      for (const branch of branches) {
+        try {
+          // Пробуем разные варианты endpoints
+          const endpoints = [
+            `/clients/${clientIdOriginal}`,
+            `/client/${clientIdOriginal}`,
+            `/clients?id=${clientIdOriginal}`,
+          ];
+          
+          for (const endpoint of endpoints) {
+            try {
+              const clientData = await apiFetch<any>(branch, endpoint);
+              
+              if (clientData && (clientData.id || clientData.client_id)) {
+                // Клиент найден, создаем его в БД
+                logger.info(`[Booking ${rentprogId}] Client ${clientIdOriginal} found in RentProg (branch: ${branch}), creating in DB...`);
+                const result = await upsertClientFromRentProg(clientData, branchCode);
+                clientId = result.entityId;
+                logger.info(`[Booking ${rentprogId}] Client ${clientIdOriginal} created in DB with ID: ${clientId}`);
+                return true;
+              }
+            } catch (error: any) {
+              // Продолжаем пробовать другие endpoints
+              if (error.response?.status !== 404) {
+                logger.debug(`[Booking ${rentprogId}] Error loading client from ${endpoint}: ${error.message}`);
+              }
+            }
+          }
+        } catch (error: any) {
+          // Продолжаем пробовать другие филиалы
+          if (error.response?.status !== 404) {
+            logger.debug(`[Booking ${rentprogId}] Error loading client from branch ${branch}: ${error.message}`);
+          }
+        }
+      }
+      
+      logger.warn(`[Booking ${rentprogId}] Client ${clientIdOriginal} not found in RentProg API across all branches`);
+      return false;
+    } catch (error) {
+      logger.error(`[Booking ${rentprogId}] Error attempting to load client ${clientIdOriginal} from RentProg:`, error);
+      return false;
+    }
+  };
+
   if (bookingId) {
     // Обновляем существующее бронирование
-    await db
-      .update(bookings)
-      .set({
-        branch_id: branchId,
-        car_id: carId,
-        client_id: clientId,
-        start_at: startAt,
-        end_at: endAt,
-        status: status,
-        updated_at: new Date(),
-      })
-      .where(eq(bookings.id, bookingId));
+    try {
+      await db
+        .update(bookings)
+        .set({
+          branch_id: branchId,
+          car_id: carId,
+          client_id: clientId,
+          start_at: startAt,
+          end_at: endAt,
+          status: status,
+          updated_at: new Date(),
+        })
+        .where(eq(bookings.id, bookingId));
 
-    logger.debug(`Updated booking ${bookingId} from RentProg ${rentprogId}`);
-    return { entityId: bookingId, created: false };
+      logger.debug(`Updated booking ${bookingId} from RentProg ${rentprogId}`);
+      return { entityId: bookingId, created: false };
+    } catch (error: any) {
+      // Проверяем, это ли ошибка FK constraint для client_id
+      if (error?.code === '23503' && error?.constraint === 'bookings_client_id_fkey' && clientIdOriginal) {
+        logger.warn(`[Booking ${rentprogId}] FK constraint error for client_id, attempting to load client from RentProg...`);
+        
+        const loaded = await tryLoadClientFromRentProg();
+        
+        if (loaded && clientId) {
+          // Повторяем обновление с загруженным клиентом
+          try {
+            await db
+              .update(bookings)
+              .set({
+                branch_id: branchId,
+                car_id: carId,
+                client_id: clientId,
+                start_at: startAt,
+                end_at: endAt,
+                status: status,
+                updated_at: new Date(),
+              })
+              .where(eq(bookings.id, bookingId));
+            
+            logger.info(`[Booking ${rentprogId}] Successfully updated after loading client from RentProg`);
+            return { entityId: bookingId, created: false };
+          } catch (retryError: any) {
+            logger.error(`[Booking ${rentprogId}] Error updating booking after loading client:`, retryError);
+            throw retryError;
+          }
+        } else {
+          // Клиент не найден, обновляем с client_id = NULL
+          logger.warn(`[Booking ${rentprogId}] Client ${clientIdOriginal} not found, updating booking with client_id = NULL`);
+          await db
+            .update(bookings)
+            .set({
+              branch_id: branchId,
+              car_id: carId,
+              client_id: null, // Устанавливаем NULL вместо несуществующего клиента
+              start_at: startAt,
+              end_at: endAt,
+              status: status,
+              updated_at: new Date(),
+            })
+            .where(eq(bookings.id, bookingId));
+          
+          logger.warn(`[Booking ${rentprogId}] Updated with client_id = NULL (client ${clientIdOriginal} not found)`);
+          return { entityId: bookingId, created: false };
+        }
+      } else {
+        // Другая ошибка, пробрасываем дальше
+        throw error;
+      }
+    }
   } else {
     // Создаем новое бронирование
-    const [newBooking] = await db
-      .insert(bookings)
-      .values({
-        branch_id: branchId,
-        car_id: carId,
-        client_id: clientId,
-        start_at: startAt,
-        end_at: endAt,
-        status: status,
-      })
-      .returning({ id: bookings.id });
+    try {
+      const [newBooking] = await db
+        .insert(bookings)
+        .values({
+          branch_id: branchId,
+          car_id: carId,
+          client_id: clientId,
+          start_at: startAt,
+          end_at: endAt,
+          status: status,
+        })
+        .returning({ id: bookings.id });
 
-    bookingId = newBooking.id;
+      bookingId = newBooking.id;
 
-    // Создаем внешнюю ссылку
-    await linkExternalRef('booking', bookingId, 'rentprog', rentprogId, branchCode, payload);
-    logger.debug(`Created booking ${bookingId} from RentProg ${rentprogId}`);
-    return { entityId: bookingId, created: true };
+      // Создаем внешнюю ссылку
+      await linkExternalRef('booking', bookingId, 'rentprog', rentprogId, branchCode, payload);
+      logger.debug(`Created booking ${bookingId} from RentProg ${rentprogId}`);
+      return { entityId: bookingId, created: true };
+    } catch (error: any) {
+      // Проверяем, это ли ошибка FK constraint для client_id
+      if (error?.code === '23503' && error?.constraint === 'bookings_client_id_fkey' && clientIdOriginal) {
+        logger.warn(`[Booking ${rentprogId}] FK constraint error for client_id, attempting to load client from RentProg...`);
+        
+        const loaded = await tryLoadClientFromRentProg();
+        
+        if (loaded && clientId) {
+          // Повторяем создание с загруженным клиентом
+          try {
+            const [newBooking] = await db
+              .insert(bookings)
+              .values({
+                branch_id: branchId,
+                car_id: carId,
+                client_id: clientId,
+                start_at: startAt,
+                end_at: endAt,
+                status: status,
+              })
+              .returning({ id: bookings.id });
+
+            bookingId = newBooking.id;
+
+            // Создаем внешнюю ссылку
+            await linkExternalRef('booking', bookingId, 'rentprog', rentprogId, branchCode, payload);
+            logger.info(`[Booking ${rentprogId}] Successfully created after loading client from RentProg`);
+            return { entityId: bookingId, created: true };
+          } catch (retryError: any) {
+            logger.error(`[Booking ${rentprogId}] Error creating booking after loading client:`, retryError);
+            throw retryError;
+          }
+        } else {
+          // Клиент не найден, создаем с client_id = NULL
+          logger.warn(`[Booking ${rentprogId}] Client ${clientIdOriginal} not found, creating booking with client_id = NULL`);
+          const [newBooking] = await db
+            .insert(bookings)
+            .values({
+              branch_id: branchId,
+              car_id: carId,
+              client_id: null, // Устанавливаем NULL вместо несуществующего клиента
+              start_at: startAt,
+              end_at: endAt,
+              status: status,
+            })
+            .returning({ id: bookings.id });
+
+          bookingId = newBooking.id;
+
+          // Создаем внешнюю ссылку
+          await linkExternalRef('booking', bookingId, 'rentprog', rentprogId, branchCode, payload);
+          logger.warn(`[Booking ${rentprogId}] Created with client_id = NULL (client ${clientIdOriginal} not found)`);
+          return { entityId: bookingId, created: true };
+        }
+      } else {
+        // Другая ошибка, пробрасываем дальше
+        throw error;
+      }
+    }
   }
 }
 
