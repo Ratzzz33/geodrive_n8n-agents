@@ -175,34 +175,45 @@ class UmnicoPlaywrightService {
       }
 
       // Извлекаем список диалогов
-      // Используем комбинированный подход: сначала получаем все ссылки, затем сопоставляем с элементами
+      // Используем комбинированный подход: сначала получаем все ссылки, затем сопоставляем с элементами по индексу
       const result = await page!.evaluate(() => {
-        // 1. Получаем все ссылки deals-row с их ID
+        // 1. Получаем все ссылки deals-row с их ID и индексом элемента внутри
         const links = Array.from(document.querySelectorAll('a.deals-row[href*="/details/"]'));
-        const linkMap = new Map();
-        links.forEach(link => {
+        const linkIds = links.map(link => {
           const href = link.getAttribute('href') || '';
           const idMatch = href.match(/\/details\/(\d+)/);
           if (idMatch && idMatch[1]) {
             // Находим элемент внутри ссылки
             const item = link.querySelector('.card-message-preview__item');
             if (item) {
-              linkMap.set(item, idMatch[1]);
+              // Находим индекс этого элемента среди всех элементов
+              const allItems = Array.from(document.querySelectorAll('.card-message-preview__item'));
+              const itemIndex = allItems.indexOf(item);
+              return { id: idMatch[1], index: itemIndex };
             }
+          }
+          return null;
+        }).filter(x => x !== null);
+        
+        // 2. Создаем map индексов к ID
+        const indexToId = new Map();
+        linkIds.forEach(({ id, index }) => {
+          if (index !== -1) {
+            indexToId.set(index, id);
           }
         });
         
-        // 2. Получаем все элементы и сопоставляем с ссылками
+        // 3. Получаем все элементы и сопоставляем с ссылками по индексу
         const items = Array.from(document.querySelectorAll('.card-message-preview__item'));
-        return items.map(item => {
+        return items.map((item, index) => {
           const phoneEl = item.querySelector('.message-preview__user-name');
           const lastMsgEl = item.querySelector('.message-preview__text');
           const integrationEl = item.querySelector('.deals-integration');
           const assignedEl = item.querySelector('.deals-cell');
           const timestampEl = item.querySelector('.timestamp');
 
-          // Получаем ID из map (если элемент был найден в ссылке)
-          let conversationId = linkMap.get(item) || null;
+          // Получаем ID из map по индексу
+          let conversationId = indexToId.get(index) || null;
           
           // Если не нашли в map, ищем родительскую ссылку
           if (!conversationId) {
