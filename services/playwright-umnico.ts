@@ -171,12 +171,46 @@ class UmnicoPlaywrightService {
           const assignedEl = item.querySelector('.deals-cell');
           const timestampEl = item.querySelector('.timestamp');  // ДЛЯ СРАВНЕНИЯ!
 
-          // Извлекаем ID из onclick или data-атрибута
+          // Извлекаем ID из разных источников
+          let conversationId = null;
+          
+          // 1. Из onclick атрибута
           const onclickAttr = item.getAttribute('onclick') || '';
-          const idMatch = onclickAttr.match(/\/details\/(\d+)/);
+          let idMatch = onclickAttr.match(/\/details\/(\d+)/);
+          if (idMatch) {
+            conversationId = idMatch[1];
+          }
+          
+          // 2. Из data-атрибутов
+          if (!conversationId) {
+            conversationId = item.getAttribute('data-conversation-id') || 
+                           item.getAttribute('data-id') || 
+                           item.getAttribute('data-deal-id') || null;
+          }
+          
+          // 3. Из href в ссылке внутри
+          if (!conversationId) {
+            const linkEl = item.querySelector('a[href*="/details/"]');
+            if (linkEl) {
+              const href = linkEl.getAttribute('href') || '';
+              idMatch = href.match(/\/details\/(\d+)/);
+              if (idMatch) {
+                conversationId = idMatch[1];
+              }
+            }
+          }
+          
+          // 4. Из класса или id элемента
+          if (!conversationId) {
+            const classList = item.className || '';
+            const classMatch = classList.match(/deal-(\d+)|conversation-(\d+)/);
+            if (classMatch) {
+              conversationId = classMatch[1] || classMatch[2];
+            }
+          }
 
           return {
-            conversationId: idMatch ? idMatch[1] : null,
+            conversationId: conversationId,
             phone: phoneEl?.textContent?.trim() || '',
             lastMessage: lastMsgEl?.textContent?.trim() || '',
             lastMessageTime: timestampEl?.textContent?.trim() || '',  // НОВОЕ!
@@ -262,7 +296,7 @@ class UmnicoPlaywrightService {
       lastLoginAt: this.lastLoginAt,
       uptime: process.uptime(),
       browserConnected: browser?.isConnected() || false,
-      pageUrl: page ? await page.url().catch(() => 'unknown') : 'no-page'
+      pageUrl: page ? (() => { try { return page!.url(); } catch { return 'unknown'; } })() : 'no-page'
     };
   }
 
