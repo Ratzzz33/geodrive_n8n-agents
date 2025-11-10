@@ -245,10 +245,13 @@ class UmnicoPlaywrightService {
 
       // Первая загрузка
       let allConversations = await extractConversations();
+      console.log(`📋 Initial conversations loaded: ${allConversations.length}`);
+      console.log(`   getAll=${getAll}, limit=${limit}`);
       
       // Если нужны все диалоги - скроллим список вниз для подгрузки
-      if (getAll || limit > 50) {
-        console.log(`📜 Loading all conversations (scrolling list)...`);
+      // ВСЕГДА скроллим если getAll=true, независимо от limit
+      if (getAll) {
+        console.log(`📜 Loading ALL conversations (scrolling list)...`);
         console.log(`   Initial count: ${allConversations.length}`);
         
         let scrollAttempts = 0;
@@ -289,37 +292,52 @@ class UmnicoPlaywrightService {
             
             if (!container) {
               // Если не нашли контейнер, используем window
-              return { container: 'window', scrollHeight: document.body.scrollHeight, currentScroll: window.scrollY };
+              window.scrollBy(0, 500);
+              return { container: 'window', scrollHeight: document.body.scrollHeight, currentScroll: window.scrollY, scrolled: true };
             }
             
             const currentScroll = container.scrollTop;
             const scrollHeight = container.scrollHeight;
             const clientHeight = container.clientHeight;
             
-            // Скроллим постепенно вниз (на 300px за раз)
-            const scrollStep = 300;
-            container.scrollTop = Math.min(scrollHeight, currentScroll + scrollStep);
+            // Скроллим постепенно вниз (на 500px за раз для более быстрой прокрутки)
+            const scrollStep = 500;
+            const newScroll = Math.min(scrollHeight, currentScroll + scrollStep);
+            container.scrollTop = newScroll;
+            
+            // Проверяем, что скролл действительно произошел
+            const actuallyScrolled = container.scrollTop > currentScroll;
             
             return {
-              container: selector,
+              container: selector || 'found',
               scrollHeight,
               currentScroll: container.scrollTop,
               clientHeight,
-              canScrollMore: container.scrollTop < scrollHeight - clientHeight - 10
+              canScrollMore: container.scrollTop < scrollHeight - clientHeight - 10,
+              actuallyScrolled: actuallyScrolled,
+              scrollDelta: container.scrollTop - currentScroll
             };
           });
           
-          // Ждем подгрузки новых диалогов
-          await page!.waitForTimeout(2000);
+          // Логируем результат скролла
+          if (scrollResult.actuallyScrolled === false && scrollResult.container !== 'window') {
+            console.log(`   ⚠️  Scroll did not work, container: ${scrollResult.container}, trying alternative method...`);
+            // Пробуем альтернативный метод - скролл через клавиатуру
+            await page!.keyboard.press('End');
+            await page!.waitForTimeout(1000);
+          }
           
-          // Дополнительная проверка: ждем появления новых элементов (с коротким таймаутом)
+          // Ждем подгрузки новых диалогов (увеличиваем время ожидания)
+          await page!.waitForTimeout(3000);
+          
+          // Дополнительная проверка: ждем появления новых элементов (с увеличенным таймаутом)
           try {
             await page!.waitForFunction(
               (prevCount) => {
                 const currentCount = document.querySelectorAll('.card-message-preview__item').length;
                 return currentCount > prevCount;
               },
-              { timeout: 2000 },
+              { timeout: 4000 },
               beforeScroll
             ).catch(() => {
               // Если не появились новые - это нормально, возможно достигли конца
@@ -342,8 +360,9 @@ class UmnicoPlaywrightService {
           
           scrollAttempts++;
           
-          if (scrollAttempts % 5 === 0) {
-            console.log(`   📜 Scrolled ${scrollAttempts} times, found ${allConversations.length} conversations so far...`);
+          // Логируем каждые 5 попыток или при изменении количества
+          if (scrollAttempts % 5 === 0 || allConversations.length !== beforeScroll) {
+            console.log(`   📜 Scrolled ${scrollAttempts} times, found ${allConversations.length} conversations (was ${beforeScroll})...`);
           }
           
           // Увеличиваем лимит до 5000 диалогов
