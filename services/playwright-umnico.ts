@@ -274,6 +274,12 @@ class UmnicoPlaywrightService {
 
       const conversations = result; // Переименовываем для совместимости
       console.log(`📋 Found ${conversations.length} conversations`);
+      
+      // Отладочный вывод для первых 3 элементов
+      if (conversations.length > 0) {
+        console.log('🔍 First 3 conversations:', JSON.stringify(conversations.slice(0, 3), null, 2));
+      }
+      
       return conversations.slice(0, limit);
     } catch (error) {
       console.error('❌ Failed to get conversations:', error);
