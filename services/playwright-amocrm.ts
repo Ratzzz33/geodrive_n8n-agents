@@ -77,19 +77,27 @@ class AmoCRMPlaywrightService {
     }
 
     // Парсим прокси из строки socks5://user:pass@host:port
+    // ВАЖНО: Playwright Chromium не поддерживает socks5 с аутентификацией напрямую
+    // Для socks5 с auth нужно использовать HTTP прокси или переменные окружения
     let proxyConfig: { server: string; username?: string; password?: string } | undefined;
     
     if (USE_PROXY && PROXY_SERVER) {
       try {
         const proxyUrl = new URL(PROXY_SERVER);
-        // Playwright требует формат: socks5://host:port или http://host:port
-        const serverProtocol = proxyUrl.protocol === 'socks5:' ? 'socks5' : proxyUrl.protocol.slice(0, -1);
-        proxyConfig = {
-          server: `${serverProtocol}://${proxyUrl.hostname}:${proxyUrl.port}`,
-          username: proxyUrl.username || undefined,
-          password: proxyUrl.password || undefined
-        };
-        console.log(`🌐 Использую прокси: ${serverProtocol}://${proxyUrl.hostname}:${proxyUrl.port} (user: ${proxyUrl.username || 'none'})`);
+        // Если socks5, пропускаем (Playwright не поддерживает socks5 с auth)
+        if (proxyUrl.protocol === 'socks5:') {
+          console.log('⚠️  Playwright не поддерживает socks5 с аутентификацией, запускаю без прокси');
+          console.log('💡 Для socks5 используйте переменные окружения HTTP_PROXY/HTTPS_PROXY или HTTP прокси');
+        } else {
+          // Для HTTP прокси поддерживается
+          const serverProtocol = proxyUrl.protocol.slice(0, -1); // убираем ':'
+          proxyConfig = {
+            server: `${serverProtocol}://${proxyUrl.hostname}:${proxyUrl.port}`,
+            username: proxyUrl.username || undefined,
+            password: proxyUrl.password || undefined
+          };
+          console.log(`🌐 Использую прокси: ${serverProtocol}://${proxyUrl.hostname}:${proxyUrl.port} (user: ${proxyUrl.username || 'none'})`);
+        }
       } catch (error) {
         console.error('❌ Ошибка парсинга прокси, запускаю без прокси:', error);
       }
