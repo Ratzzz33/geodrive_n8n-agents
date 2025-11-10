@@ -150,33 +150,26 @@ class UmnicoPlaywrightService {
 
   // API Methods для n8n
 
-  async getConversations(limit = 50): Promise<any[]> {
+  async getConversations(limit = 50, getAll = false): Promise<any[]> {
     try {
       await page!.goto('https://umnico.com/app/inbox/deals/inbox', {
-        waitUntil: 'domcontentloaded',  // Оптимизация!
+        waitUntil: 'domcontentloaded',
         timeout: 10000
       });
 
-      // Ждем появления списка чатов (используем более мягкий вариант)
+      // Ждем появления списка чатов
       try {
         await page!.waitForSelector('.card-message-preview__item', { 
           timeout: 10000,
-          state: 'attached'  // Ждем только прикрепления к DOM, не обязательно видимости
+          state: 'attached'
         });
       } catch (e) {
-        // Если не дождались, продолжаем - возможно элементы уже есть
         console.log('⚠️ Timeout waiting for items, continuing...');
       }
 
-      // Дополнительная проверка: получаем HTML первого элемента для отладки
-      const firstItemHtml = await page!.$eval('.card-message-preview__item:first-child', el => el.outerHTML).catch(() => null);
-      if (firstItemHtml) {
-        console.log('🔍 First item HTML (first 500 chars):', firstItemHtml.substring(0, 500));
-      }
-
-      // Извлекаем список диалогов
-      // Используем evaluate для более гибкой работы с DOM
-      const conversations = await page!.evaluate(() => {
+      // Функция извлечения диалогов
+      const extractConversations = async (): Promise<any[]> => {
+        return await page!.evaluate(() => {
         const items = Array.from(document.querySelectorAll('.card-message-preview__item'));
         const allLinks = Array.from(document.querySelectorAll('a[href*="/details/"]'));
         
@@ -248,16 +241,131 @@ class UmnicoPlaywrightService {
             assignedTo: assignedEl?.textContent?.trim() || ''
           };
         });
-      });
+      };
 
-      console.log(`📋 Found ${conversations.length} conversations`);
+      // Первая загрузка
+      let allConversations = await extractConversations();
       
-      // Отладочный вывод для первых 3 элементов
-      if (conversations.length > 0) {
-        console.log('🔍 First 3 conversations:', JSON.stringify(conversations.slice(0, 3), null, 2));
+      // Если нужны все диалоги - скроллим список вниз для подгрузки
+      if (getAll || limit > 50) {
+        console.log(`📜 Loading all conversations (scrolling list)...`);
+        
+        let scrollAttempts = 0;
+        const maxScrollAttempts = 100; // Увеличиваем лимит
+        let noChangeCount = 0; // Счетчик попыток без изменений
+        const maxNoChange = 3; // Максимум попыток без изменений подряд
+        
+        while (scrollAttempts < maxScrollAttempts) {
+          const beforeScroll = allConversations.length;
+          
+          // ИСПРАВЛЕНИЕ: Улучшенный поиск контейнера и постепенный скроллинг
+          const scrollResult = await page!.evaluate(() => {
+            // Пробуем разные селекторы для списка диалогов
+            const selectors = [
+              '.deals-list',
+              '.inbox-list',
+              '[class*="deals-list"]',
+              '[class*="inbox-list"]',
+              '.card-message-preview', // Родительский контейнер
+              '[class*="message-preview"]',
+              'main', // Основной контейнер страницы
+              'body'
+            ];
+            
+            let container: HTMLElement | null = null;
+            for (const selector of selectors) {
+              const el = document.querySelector(selector);
+              if (el) {
+                // Проверяем, что это действительно скроллируемый контейнер
+                const style = window.getComputedStyle(el);
+                if (style.overflowY === 'auto' || style.overflowY === 'scroll' || 
+                    el.scrollHeight > el.clientHeight) {
+                  container = el as HTMLElement;
+                  break;
+                }
+              }
+            }
+            
+            if (!container) {
+              // Если не нашли контейнер, используем window
+              return { container: 'window', scrollHeight: document.body.scrollHeight, currentScroll: window.scrollY };
+            }
+            
+            const currentScroll = container.scrollTop;
+            const scrollHeight = container.scrollHeight;
+            const clientHeight = container.clientHeight;
+            
+            // Скроллим постепенно вниз (на 300px за раз)
+            const scrollStep = 300;
+            container.scrollTop = Math.min(scrollHeight, currentScroll + scrollStep);
+            
+            return {
+              container: selector,
+              scrollHeight,
+              currentScroll: container.scrollTop,
+              clientHeight,
+              canScrollMore: container.scrollTop < scrollHeight - clientHeight - 10
+            };
+          });
+          
+          // Ждем подгрузки новых диалогов
+          await page!.waitForTimeout(2000);
+          
+          // Дополнительная проверка: ждем появления новых элементов (с коротким таймаутом)
+          try {
+            await page!.waitForFunction(
+              (prevCount) => {
+                const currentCount = document.querySelectorAll('.card-message-preview__item').length;
+                return currentCount > prevCount;
+              },
+              { timeout: 2000 },
+              beforeScroll
+            ).catch(() => {
+              // Если не появились новые - это нормально, возможно достигли конца
+            });
+          } catch (e) {
+            // Продолжаем
+          }
+          
+          allConversations = await extractConversations();
+          
+          if (allConversations.length === beforeScroll) {
+            noChangeCount++;
+            if (noChangeCount >= maxNoChange) {
+              console.log(`   ✅ Reached the end of conversations list (${allConversations.length} total)`);
+              break;
+            }
+          } else {
+            noChangeCount = 0; // Сбрасываем счетчик при изменении
+          }
+          
+          scrollAttempts++;
+          
+          if (scrollAttempts % 10 === 0) {
+            console.log(`   📜 Scrolled ${scrollAttempts} times, found ${allConversations.length} conversations so far...`);
+          }
+          
+          if (allConversations.length > 1000) {
+            console.log(`   ⚠️  Reached 1000 conversations limit, stopping`);
+            break;
+          }
+        }
+      }
+
+      console.log(`📋 Found ${allConversations.length} conversations total`);
+      
+      // Если getAll=true, возвращаем ВСЕ диалоги, иначе ограничиваем лимитом
+      if (getAll) {
+        console.log(`✅ Returning ALL ${allConversations.length} conversations (getAll=true)`);
+        return allConversations; // Возвращаем ВСЕ, без ограничения
       }
       
-      return conversations.slice(0, limit);
+      // Отладочный вывод для первых 3 элементов
+      if (allConversations.length > 0) {
+        console.log('🔍 First 3 conversations:', JSON.stringify(allConversations.slice(0, 3), null, 2));
+      }
+      
+      return allConversations.slice(0, limit);
     } catch (error) {
       console.error('❌ Failed to get conversations:', error);
       throw error;
@@ -268,30 +376,26 @@ class UmnicoPlaywrightService {
     try {
       const url = `https://umnico.com/app/inbox/deals/inbox/details/${conversationId}`;
       
-      // ОПТИМИЗАЦИЯ 1: domcontentloaded вместо networkidle (в 2 раза быстрее!)
       await page!.goto(url, { 
         waitUntil: 'domcontentloaded',
         timeout: 10000
       });
 
-      // ОПТИМИЗАЦИЯ 2: Ждем только появления сообщений, не всей страницы
       await page!.waitForSelector('.im-stack__messages-item-wrap', { 
         timeout: 5000 
       }).catch(() => {
         console.log(`⚠️ No messages container for ${conversationId}`);
       });
 
-      // Извлекаем информацию о канале (один раз)
       const sourceText = await page!.$eval('.im-source-item', el => el.textContent?.trim() || '').catch(() => '');
       const channelMatch = sourceText.match(/WhatsApp.*?(\d+)/);
 
       let allMessages: any[] = [];
       let previousCount = 0;
       let scrollAttempts = 0;
-      const maxScrollAttempts = options?.all ? 200 : 1; // Для всех сообщений - много попыток, для последних - 1
+      const maxScrollAttempts = options?.all ? 200 : 1;
       const targetDate = options?.since || (options?.all ? new Date('2024-09-01') : undefined);
 
-      // Функция извлечения сообщений
       const extractMessages = async (): Promise<any[]> => {
         return await page!.$$eval('.im-stack__messages-item-wrap', wraps =>
           wraps.map((wrap, index) => {
@@ -317,46 +421,105 @@ class UmnicoPlaywrightService {
         );
       };
 
-      // Первая загрузка
       allMessages = await extractMessages();
       previousCount = allMessages.length;
 
-      // Если нужны все сообщения или сообщения с определенной даты - скроллим вверх
       if (options?.all || targetDate) {
         console.log(`📜 Loading all messages for conversation ${conversationId}...`);
         
+        let noChangeCount = 0; // Счетчик попыток без изменений
+        const maxNoChange = 3; // Максимум попыток без изменений подряд
+        
         while (scrollAttempts < maxScrollAttempts) {
-          // Находим контейнер сообщений и скроллим вверх
           const messagesContainer = await page!.$('.im-stack__messages').catch(() => null);
           if (!messagesContainer) {
             console.log(`⚠️ Messages container not found`);
             break;
           }
 
-          // Сохраняем текущее количество сообщений перед скроллом
           const beforeScroll = allMessages.length;
-
-          // Скроллим вверх (к началу истории)
-          await page!.evaluate(() => {
-            const container = (document as any).querySelector('.im-stack__messages');
-            if (container) {
-              container.scrollTop = 0; // Скроллим к самому верху
-            }
+          
+          // Проверяем текущую позицию скролла
+          const scrollInfo = await page!.evaluate(() => {
+            const container = document.querySelector('.im-stack__messages') as HTMLElement;
+            if (!container) return { scrollTop: 0, scrollHeight: 0, clientHeight: 0, atTop: true };
+            
+            const scrollTop = container.scrollTop;
+            const scrollHeight = container.scrollHeight;
+            const clientHeight = container.clientHeight;
+            const atTop = scrollTop <= 10; // Уже в начале (с небольшим допуском)
+            
+            return { scrollTop, scrollHeight, clientHeight, atTop };
           });
 
-          // Ждем загрузки новых сообщений (обычно 1-2 секунды)
-          await page!.waitForTimeout(2000);
-
-          // Проверяем, загрузились ли новые сообщения
-          allMessages = await extractMessages();
-          
-          // Если количество не изменилось - значит больше нет сообщений
-          if (allMessages.length === beforeScroll) {
-            console.log(`   ✅ Reached the beginning of conversation (${allMessages.length} messages total)`);
+          // Если уже в начале и количество не изменилось после предыдущей попытки - конец
+          if (scrollInfo.atTop && noChangeCount > 0) {
+            console.log(`   ✅ Already at top with no new messages (${allMessages.length} messages total)`);
             break;
           }
 
-          // Проверяем, достигли ли целевой даты
+          // Скроллим к самому верху (scrollTop = 0) для загрузки старых сообщений
+          await page!.evaluate(() => {
+            const container = document.querySelector('.im-stack__messages') as HTMLElement;
+            if (container) {
+              container.scrollTop = 0; // Скроллим в самый верх
+            }
+          });
+
+          // Ждем загрузки новых сообщений
+          await page!.waitForTimeout(2000);
+          
+          // Дополнительная проверка: ждем появления новых элементов (с коротким таймаутом)
+          try {
+            await page!.waitForFunction(
+              (prevCount) => {
+                const currentCount = document.querySelectorAll('.im-stack__messages-item-wrap').length;
+                return currentCount > prevCount;
+              },
+              { timeout: 2000 },
+              beforeScroll
+            ).catch(() => {
+              // Если не появились новые - это нормально, возможно достигли начала
+            });
+          } catch (e) {
+            // Продолжаем
+          }
+
+          // Извлекаем сообщения после скролла
+          allMessages = await extractMessages();
+          
+          // Проверяем, изменилось ли количество
+          if (allMessages.length === beforeScroll) {
+            noChangeCount++;
+            
+            // Проверяем, действительно ли мы в начале
+            const isAtTop = await page!.evaluate(() => {
+              const container = document.querySelector('.im-stack__messages') as HTMLElement;
+              return container ? container.scrollTop <= 10 : true;
+            });
+            
+            if (isAtTop && noChangeCount >= maxNoChange) {
+              console.log(`   ✅ Reached the beginning of conversation (${allMessages.length} messages total)`);
+              break;
+            } else if (!isAtTop) {
+              // Если не в начале, но количество не изменилось - возможно загрузка еще идет
+              // Даем еще одну попытку
+              if (noChangeCount < maxNoChange) {
+                console.log(`   ⏳ Waiting for more messages to load (attempt ${noChangeCount + 1}/${maxNoChange})...`);
+                await page!.waitForTimeout(2000);
+                allMessages = await extractMessages();
+                if (allMessages.length === beforeScroll) {
+                  noChangeCount++;
+                } else {
+                  noChangeCount = 0; // Сбрасываем счетчик при изменении
+                }
+              }
+            }
+          } else {
+            // Количество изменилось - сбрасываем счетчик
+            noChangeCount = 0;
+          }
+
           if (targetDate) {
             const oldestMessage = allMessages
               .filter(m => m.datetime)
@@ -375,7 +538,6 @@ class UmnicoPlaywrightService {
                 const oldestDate = new Date(oldestMessage.datetime.replace(/(\d{2})\.(\d{2})\.(\d{4})/, '$3-$2-$1'));
                 if (oldestDate < targetDate) {
                   console.log(`   ✅ Reached target date ${targetDate.toISOString().split('T')[0]} (oldest: ${oldestMessage.datetime})`);
-                  // Фильтруем только сообщения после целевой даты
                   allMessages = allMessages.filter(m => {
                     if (!m.datetime) return false;
                     try {
@@ -388,7 +550,7 @@ class UmnicoPlaywrightService {
                   break;
                 }
               } catch (e) {
-                // Продолжаем если не удалось распарсить дату
+                // Продолжаем
               }
             }
           }
@@ -399,14 +561,12 @@ class UmnicoPlaywrightService {
             console.log(`   📜 Scrolled ${scrollAttempts} times, found ${allMessages.length} messages so far...`);
           }
 
-          // Защита от бесконечного цикла
           if (allMessages.length > 10000) {
             console.log(`   ⚠️  Reached 10000 messages limit, stopping`);
             break;
           }
         }
       } else {
-        // Для быстрой синхронизации - только последние 50 сообщений
         allMessages = allMessages.slice(-50);
       }
 
@@ -428,7 +588,7 @@ class UmnicoPlaywrightService {
     try {
       const url = `https://umnico.com/app/inbox/deals/inbox/details/${conversationId}`;
       
-      console.log(`📤 Sending message to conversation ${conversationId}...`);
+      console.log(`�� Sending message to conversation ${conversationId}...`);
       
       // Открываем диалог
       await page!.goto(url, { 
@@ -614,8 +774,15 @@ app.get('/health', async (req, res) => {
 app.get('/api/conversations', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 50;
-    const conversations = await service.getConversations(limit);
-    res.json({ ok: true, count: conversations.length, data: conversations });
+    const all = req.query.all === 'true' || req.query.all === '1';
+    const conversations = await service.getConversations(all ? 10000 : limit, all);
+    // Возвращаем общее количество найденных диалогов
+    res.json({ 
+      ok: true, 
+      count: conversations.length,  // Общее количество найденных диалогов
+      total: conversations.length,  // Дублируем для ясности
+      data: conversations 
+    });
   } catch (error: any) {
     res.status(500).json({ ok: false, error: error.message });
   }

@@ -59,10 +59,11 @@ function formatProgress(current, total) {
 
 // Получение всех диалогов из Umnico
 async function getAllConversations() {
-  console.log('\n📋 Получение списка диалогов из Umnico...\n');
+  console.log('\n📋 Получение списка диалогов из Umnico (со скроллингом списка)...\n');
   
   try {
-    const response = await fetch(`${PLAYWRIGHT_URL}/api/conversations?limit=1000`);
+    // Используем ?all=true для получения всех диалогов со скроллингом
+    const response = await fetch(`${PLAYWRIGHT_URL}/api/conversations?all=true`);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${await response.text()}`);
     }
@@ -74,7 +75,17 @@ async function getAllConversations() {
     
     // API возвращает {ok: true, count: N, data: [...]}
     const conversations = data.data || data.conversations || [];
-    console.log(`✅ Получено ${conversations.length} диалогов\n`);
+    const totalCount = data.count || conversations.length;
+    
+    console.log(`✅ Получено ${conversations.length} диалогов (со скроллингом списка)`);
+    console.log(`📊 Всего найдено диалогов: ${totalCount}`);
+    
+    if (conversations.length < totalCount) {
+      console.warn(`⚠️  ВНИМАНИЕ: Получено ${conversations.length} из ${totalCount} диалогов!`);
+      console.warn(`   Возможно, скроллинг списка не сработал полностью.`);
+    }
+    
+    console.log('');
     
     return conversations;
   } catch (error) {
@@ -324,10 +335,13 @@ async function parseAllMessages() {
   try {
     // 1. Получаем все диалоги
     let conversations = await getAllConversations();
+    const totalFound = conversations.length;
     
     if (limit && limit > 0) {
       conversations = conversations.slice(0, limit);
-      console.log(`⚠️  Ограничение: обрабатываем только первые ${limit} диалогов\n`);
+      console.log(`⚠️  Ограничение: обрабатываем только первые ${limit} из ${totalFound} диалогов\n`);
+    } else {
+      console.log(`📋 Будет обработано ВСЕ ${totalFound} диалогов\n`);
     }
 
     stats.totalConversations = conversations.length;
