@@ -169,17 +169,10 @@ class UmnicoPlaywrightService {
       }
 
       // Извлекаем список диалогов
-      // Сначала получаем все ссылки deals-row с их href и ID
-      const dealsRows = await page!.$$eval('a.deals-row[href*="/details/"]', links =>
-        links.map(link => ({
-          href: link.getAttribute('href') || '',
-          id: (link.getAttribute('href') || '').match(/\/details\/(\d+)/)?.[1] || null,
-          containsItem: link.querySelector('.card-message-preview__item') !== null
-        }))
-      );
-
-      // Теперь извлекаем данные из элементов
-      const conversations = await page!.$$eval('.card-message-preview__item', items =>
+      // Используем комбинированный подход: получаем все ссылки и элементы вместе
+      const conversations = await page!.evaluate(() => {
+        const items = Array.from(document.querySelectorAll('.card-message-preview__item'));
+        return items.map(item => {
         items.map(item => {
           const phoneEl = item.querySelector('.message-preview__user-name');
           const lastMsgEl = item.querySelector('.message-preview__text');
@@ -268,8 +261,8 @@ class UmnicoPlaywrightService {
             channelAccount: integrationEl?.textContent?.trim() || '',
             assignedTo: assignedEl?.textContent?.trim() || ''
           };
-        })
-      );
+        });
+      });
 
       console.log(`📋 Found ${conversations.length} conversations`);
       return conversations.slice(0, limit);
