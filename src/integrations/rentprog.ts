@@ -301,17 +301,22 @@ export async function paginate<T>(
         logger.info(`[Paginate ${path}] ${branch}: Страница ${page} - получено ${items.length} записей, всего ${results.length}`);
       }
       
-      // Если получили меньше запрошенного, значит это последняя страница
-      // ВАЖНО: продолжаем только если получили РОВНО pageSize записей
-      if (items.length < pageSize) {
+      // Определяем, есть ли еще страницы
+      // ВАЖНО: API /all_bookings может игнорировать per_page и всегда возвращать 10
+      // Поэтому продолжаем, пока получаем 10 записей, останавливаемся при < 10
+      const isLastPage = items.length < 10; // Если получили меньше 10, значит страниц больше нет
+      
+      if (isLastPage) {
         hasMore = false;
-        logger.info(`[Paginate ${path}] ${branch}: Последняя страница (получено ${items.length} из ${pageSize})`);
+        logger.info(`[Paginate ${path}] ${branch}: Последняя страница (получено ${items.length}, меньше 10)`);
       } else {
         // Получили полную страницу - продолжаем
         page++;
         // Защита от бесконечного цикла
-        if (page > 1000) {
-          logger.warn(`[Paginate ${path}] ${branch}: Достигнут максимум страниц (1000), остановка`);
+        // Для /all_bookings увеличиваем лимит, так как может быть 3000+ бронирований (300+ страниц)
+        const maxPages = path.includes('/all_bookings') ? 500 : 1000;
+        if (page > maxPages) {
+          logger.warn(`[Paginate ${path}] ${branch}: Достигнут максимум страниц (${maxPages}), остановка`);
           hasMore = false;
         } else {
           // Задержка между страницами для соблюдения консервативных лимитов
