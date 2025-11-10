@@ -157,10 +157,16 @@ class UmnicoPlaywrightService {
         timeout: 10000
       });
 
-      // Ждем появления списка чатов
-      await page!.waitForSelector('.card-message-preview__item', { 
-        timeout: 10000  // Увеличиваем таймаут
-      });
+      // Ждем появления списка чатов (используем более мягкий вариант)
+      try {
+        await page!.waitForSelector('.card-message-preview__item', { 
+          timeout: 10000,
+          state: 'attached'  // Ждем только прикрепления к DOM, не обязательно видимости
+        });
+      } catch (e) {
+        // Если не дождались, продолжаем - возможно элементы уже есть
+        console.log('⚠️ Timeout waiting for items, continuing...');
+      }
 
       // Дополнительная проверка: получаем HTML первого элемента для отладки
       const firstItemHtml = await page!.$eval('.card-message-preview__item:first-child', el => el.outerHTML).catch(() => null);
@@ -183,31 +189,37 @@ class UmnicoPlaywrightService {
           let conversationId = null;
           
           // 1. ИЗ РОДИТЕЛЬСКОЙ ССЫЛКИ (ОСНОВНОЙ МЕТОД) - элемент находится внутри <a class="deals-row" href="/app/inbox/deals/inbox/details/62016374">
-          // Используем closest для поиска родительской ссылки
-          const parentLink = item.closest('a[href*="/details/"]');
-          if (parentLink) {
-            const href = parentLink.getAttribute('href') || '';
-            const idMatch = href.match(/\/details\/(\d+)/);
-            if (idMatch) {
-              conversationId = idMatch[1];
-            }
-          }
-          
-          // Альтернативный метод через parentElement (если closest не сработал)
-          if (!conversationId) {
-            let current = item.parentElement;
-            let maxDepth = 5; // Защита от бесконечного цикла
-            while (current && maxDepth > 0) {
-              if (current.tagName === 'A' && current.getAttribute('href')?.includes('/details/')) {
-                const href = current.getAttribute('href') || '';
+          // Ищем родительский элемент <a> через parentElement (closest может не работать в некоторых контекстах)
+          let current = item;
+          let maxDepth = 10; // Защита от бесконечного цикла
+          while (current && maxDepth > 0 && !conversationId) {
+            if (current.tagName && current.tagName === 'A') {
+              const href = current.getAttribute('href') || '';
+              if (href.includes('/details/')) {
                 const idMatch = href.match(/\/details\/(\d+)/);
-                if (idMatch) {
+                if (idMatch && idMatch[1]) {
                   conversationId = idMatch[1];
                   break;
                 }
               }
-              current = current.parentElement;
-              maxDepth--;
+            }
+            current = current.parentElement;
+            maxDepth--;
+          }
+          
+          // Альтернативный метод через closest (если доступен)
+          if (!conversationId && item.closest) {
+            try {
+              const parentLink = item.closest('a[href*="/details/"]');
+              if (parentLink) {
+                const href = parentLink.getAttribute('href') || '';
+                const idMatch = href.match(/\/details\/(\d+)/);
+                if (idMatch && idMatch[1]) {
+                  conversationId = idMatch[1];
+                }
+              }
+            } catch (e) {
+              // closest может не работать в некоторых контекстах
             }
           }
           
