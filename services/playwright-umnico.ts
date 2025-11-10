@@ -169,6 +169,16 @@ class UmnicoPlaywrightService {
       }
 
       // Извлекаем список диалогов
+      // Сначала получаем все ссылки deals-row с их href и ID
+      const dealsRows = await page!.$$eval('a.deals-row[href*="/details/"]', links =>
+        links.map(link => ({
+          href: link.getAttribute('href') || '',
+          id: (link.getAttribute('href') || '').match(/\/details\/(\d+)/)?.[1] || null,
+          containsItem: link.querySelector('.card-message-preview__item') !== null
+        }))
+      );
+
+      // Теперь извлекаем данные из элементов
       const conversations = await page!.$$eval('.card-message-preview__item', items =>
         items.map(item => {
           const phoneEl = item.querySelector('.message-preview__user-name');
@@ -181,28 +191,35 @@ class UmnicoPlaywrightService {
           let conversationId = null;
           
           // 1. ИЗ РОДИТЕЛЬСКОЙ ССЫЛКИ (ОСНОВНОЙ МЕТОД) - элемент находится внутри <a class="deals-row" href="/app/inbox/deals/inbox/details/62016374">
-          // В контексте $$eval нужно искать родителя явно
-          let parent = item.parentElement;
-          while (parent && parent.tagName !== 'A' && !parent.getAttribute('href')?.includes('/details/')) {
-            parent = parent.parentElement;
-          }
-          if (parent && parent.tagName === 'A') {
-            const href = parent.getAttribute('href') || '';
-            const idMatch = href.match(/\/details\/(\d+)/);
-            if (idMatch) {
-              conversationId = idMatch[1];
-            }
-          }
-          
-          // Альтернативный метод через closest (если доступен)
-          if (!conversationId && item.closest) {
-            const parentLink = item.closest('a[href*="/details/"]');
-            if (parentLink) {
-              const href = parentLink.getAttribute('href') || '';
+          // Ищем родительский элемент <a> через parentElement
+          let current = item;
+          let maxDepth = 10; // Защита от бесконечного цикла
+          while (current && maxDepth > 0 && !conversationId) {
+            if (current.tagName === 'A' && current.getAttribute('href')?.includes('/details/')) {
+              const href = current.getAttribute('href') || '';
               const idMatch = href.match(/\/details\/(\d+)/);
               if (idMatch) {
                 conversationId = idMatch[1];
+                break;
               }
+            }
+            current = current.parentElement;
+            maxDepth--;
+          }
+          
+          // Альтернативный метод через closest (если доступен)
+          if (!conversationId && typeof item.closest === 'function') {
+            try {
+              const parentLink = item.closest('a[href*="/details/"]');
+              if (parentLink) {
+                const href = parentLink.getAttribute('href') || '';
+                const idMatch = href.match(/\/details\/(\d+)/);
+                if (idMatch) {
+                  conversationId = idMatch[1];
+                }
+              }
+            } catch (e) {
+              // closest может не работать в некоторых контекстах
             }
           }
           
