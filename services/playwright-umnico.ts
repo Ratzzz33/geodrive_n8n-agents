@@ -181,12 +181,28 @@ class UmnicoPlaywrightService {
           let conversationId = null;
           
           // 1. ИЗ РОДИТЕЛЬСКОЙ ССЫЛКИ (ОСНОВНОЙ МЕТОД) - элемент находится внутри <a class="deals-row" href="/app/inbox/deals/inbox/details/62016374">
-          const parentLink = item.closest('a[href*="/details/"]');
-          if (parentLink) {
-            const href = parentLink.getAttribute('href') || '';
+          // В контексте $$eval нужно искать родителя явно
+          let parent = item.parentElement;
+          while (parent && parent.tagName !== 'A' && !parent.getAttribute('href')?.includes('/details/')) {
+            parent = parent.parentElement;
+          }
+          if (parent && parent.tagName === 'A') {
+            const href = parent.getAttribute('href') || '';
             const idMatch = href.match(/\/details\/(\d+)/);
             if (idMatch) {
               conversationId = idMatch[1];
+            }
+          }
+          
+          // Альтернативный метод через closest (если доступен)
+          if (!conversationId && item.closest) {
+            const parentLink = item.closest('a[href*="/details/"]');
+            if (parentLink) {
+              const href = parentLink.getAttribute('href') || '';
+              const idMatch = href.match(/\/details\/(\d+)/);
+              if (idMatch) {
+                conversationId = idMatch[1];
+              }
             }
           }
           
