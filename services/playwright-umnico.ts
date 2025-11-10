@@ -414,7 +414,7 @@ app.post('/api/relogin', async (req, res) => {
 // Debug endpoint - возвращает HTML первого элемента и все ссылки
 app.get('/api/debug', async (req, res) => {
   try {
-    const page = (service as any).page;
+    // page - глобальная переменная модуля
     if (!page) {
       return res.status(500).json({ ok: false, error: 'Page not initialized' });
     }
