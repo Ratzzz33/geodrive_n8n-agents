@@ -69,10 +69,12 @@ router.post('/sync-bookings', async (req, res) => {
         // Получаем все бронирования из RentProg (активные и неактивные, без архивных)
         // Используем пагинацию через функцию paginate
         // API /all_bookings использует параметр per_page (не limit), по умолчанию 10
-        // Увеличиваем до 20 для более эффективной загрузки
+        // Увеличиваем до 50 для более эффективной загрузки (максимум обычно 100)
+        logger.info(`[Sync Bookings] ${branch}: Начинаю загрузку всех бронирований с пагинацией...`);
         const bookings = await paginate<any>(branch, '/all_bookings', {
-          per_page: 20, // Явно указываем per_page для /all_bookings endpoint
+          per_page: 50, // Увеличиваем размер страницы для уменьшения количества запросов
         });
+        logger.info(`[Sync Bookings] ${branch}: Загружено всего ${bookings.length} бронирований из RentProg`);
         
         branchResult.total = bookings.length;
         totalBookings += bookings.length;

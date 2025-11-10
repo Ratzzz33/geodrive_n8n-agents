@@ -268,36 +268,54 @@ export async function paginate<T>(
         ...paginationParam,
       });
       
-      if (!pageData || pageData.length === 0) {
+      // Проверяем, что получили массив
+      if (!pageData) {
+        logger.warn(`[Paginate ${path}] ${branch}: Пустой ответ на странице ${page}`);
         hasMore = false;
         break;
       }
       
-      results.push(...pageData);
+      // Обрабатываем разные форматы ответа
+      let items: T[] = [];
+      if (Array.isArray(pageData)) {
+        items = pageData;
+      } else if (pageData && typeof pageData === 'object' && 'data' in pageData && Array.isArray((pageData as any).data)) {
+        items = (pageData as any).data;
+      } else {
+        logger.warn(`[Paginate ${path}] ${branch}: Неожиданный формат ответа на странице ${page}`);
+        hasMore = false;
+        break;
+      }
       
-      // Определяем ожидаемое количество записей на странице (используем тот же pageSize, что и для запроса)
-      const expectedPageSize = pageSize;
+      // Если получили 0 записей, значит страниц больше нет
+      if (items.length === 0) {
+        logger.info(`[Paginate ${path}] ${branch}: Страница ${page} пуста, завершение пагинации`);
+        hasMore = false;
+        break;
+      }
       
-      // Логируем прогресс каждые 5 страниц или на первой странице
-      if (page === 1 || page % 5 === 0) {
-        logger.info(`[Paginate ${path}] ${branch}: Загружено ${results.length} записей (страница ${page})`);
+      results.push(...items);
+      
+      // Логируем прогресс на каждой странице для /all_bookings, иначе каждые 5 страниц
+      if (path.includes('/all_bookings') || page === 1 || page % 5 === 0) {
+        logger.info(`[Paginate ${path}] ${branch}: Страница ${page} - получено ${items.length} записей, всего ${results.length}`);
       }
       
       // Если получили меньше запрошенного, значит это последняя страница
-      if (pageData.length < expectedPageSize) {
+      // ВАЖНО: продолжаем только если получили РОВНО pageSize записей
+      if (items.length < pageSize) {
         hasMore = false;
-        logger.debug(`[Paginate ${path}] ${branch}: Последняя страница (получено ${pageData.length} из ${expectedPageSize})`);
+        logger.info(`[Paginate ${path}] ${branch}: Последняя страница (получено ${items.length} из ${pageSize})`);
       } else {
+        // Получили полную страницу - продолжаем
         page++;
         // Защита от бесконечного цикла
         if (page > 1000) {
-          logger.warn(`[Paginate ${path}] ${branch}: Достигнут максимум страниц (1000)`);
+          logger.warn(`[Paginate ${path}] ${branch}: Достигнут максимум страниц (1000), остановка`);
           hasMore = false;
-        }
-        
-        // Задержка между страницами для соблюдения консервативных лимитов
-        // Используем ~33% capacity RentProg, оставляя 66% для других сервисов компании
-        if (hasMore) {
+        } else {
+          // Задержка между страницами для соблюдения консервативных лимитов
+          // Используем ~33% capacity RentProg, оставляя 66% для других сервисов компании
           logger.debug(`[Paginate ${path}] ${branch}: Задержка ${DELAY_BETWEEN_GET_REQUESTS}ms перед страницей ${page}`);
           await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_GET_REQUESTS));
         }
