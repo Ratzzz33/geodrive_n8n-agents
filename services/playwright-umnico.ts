@@ -180,33 +180,45 @@ class UmnicoPlaywrightService {
           // Извлекаем ID из разных источников
           let conversationId = null;
           
-          // 1. Из onclick атрибута
-          const onclickAttr = item.getAttribute('onclick') || '';
-          let idMatch = onclickAttr.match(/\/details\/(\d+)/);
-          if (idMatch) {
-            conversationId = idMatch[1];
+          // 1. ИЗ РОДИТЕЛЬСКОЙ ССЫЛКИ (ОСНОВНОЙ МЕТОД) - элемент находится внутри <a class="deals-row" href="/app/inbox/deals/inbox/details/62016374">
+          const parentLink = item.closest('a[href*="/details/"]');
+          if (parentLink) {
+            const href = parentLink.getAttribute('href') || '';
+            const idMatch = href.match(/\/details\/(\d+)/);
+            if (idMatch) {
+              conversationId = idMatch[1];
+            }
           }
           
-          // 2. Из data-атрибутов
+          // 2. Из onclick атрибута самого элемента
+          if (!conversationId) {
+            const onclickAttr = item.getAttribute('onclick') || '';
+            const idMatch = onclickAttr.match(/\/details\/(\d+)/);
+            if (idMatch) {
+              conversationId = idMatch[1];
+            }
+          }
+          
+          // 3. Из data-атрибутов
           if (!conversationId) {
             conversationId = item.getAttribute('data-conversation-id') || 
                            item.getAttribute('data-id') || 
                            item.getAttribute('data-deal-id') || null;
           }
           
-          // 3. Из href в ссылке внутри
+          // 4. Из href в ссылке внутри элемента
           if (!conversationId) {
             const linkEl = item.querySelector('a[href*="/details/"]');
             if (linkEl) {
               const href = linkEl.getAttribute('href') || '';
-              idMatch = href.match(/\/details\/(\d+)/);
+              const idMatch = href.match(/\/details\/(\d+)/);
               if (idMatch) {
                 conversationId = idMatch[1];
               }
             }
           }
           
-          // 4. Из класса или id элемента
+          // 5. Из класса или id элемента
           if (!conversationId) {
             const classList = item.className || '';
             const classMatch = classList.match(/deal-(\d+)|conversation-(\d+)/);
