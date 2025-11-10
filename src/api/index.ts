@@ -17,6 +17,8 @@ app.use(express.json());
 // import processHistoryRouter from './routes/processHistory.js'; // Временно отключено
 import eventLinksRouter from './routes/eventLinks.js';
 import entityTimelineRouter from './routes/entityTimeline.js';
+import syncEmployeeCashRouter from './routes/syncEmployeeCash.js';
+import syncBookingsRouter from './routes/syncBookings.js';
 
 let server: ReturnType<typeof app.listen> | null = null;
 
@@ -34,6 +36,8 @@ export function initApiServer(port: number = 3000): void {
   // app.use('/process-history', processHistoryRouter); // Временно отключено
   app.use('/event-links', eventLinksRouter);
   app.use('/entity-timeline', entityTimelineRouter);
+  app.use('/', syncEmployeeCashRouter); // POST /sync-employee-cash
+  app.use('/', syncBookingsRouter); // POST /sync-bookings
 
   // Health check для RentProg
   app.get('/rentprog/health', async (req, res) => {
@@ -623,6 +627,87 @@ export function initApiServer(port: number = 3000): void {
       res.status(500).json({ 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  // Endpoint для запуска скрипта restore_cars_from_rentprog.mjs
+  app.post('/restore-cars', async (req, res) => {
+    try {
+      logger.info('[Restore Cars] Starting restore_cars_from_rentprog.mjs...');
+      
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+      const path = await import('path');
+      const { fileURLToPath } = await import('url');
+      
+      // Путь к скрипту
+      const scriptPath = path.join(process.cwd(), 'setup', 'restore_cars_from_rentprog.mjs');
+      
+      // Запускаем скрипт
+      const { stdout, stderr } = await execAsync(`node "${scriptPath}"`, {
+        cwd: process.cwd(),
+        maxBuffer: 10 * 1024 * 1024, // 10MB
+        timeout: 600000 // 10 минут
+      });
+      
+      // Парсим вывод для извлечения статистики
+      const output = stdout + (stderr || '');
+      
+      // Извлекаем итоговую статистику из вывода
+      const statsMatch = output.match(/Всего обработано машин: (\d+)[\s\S]*?Добавлено новых: (\d+)[\s\S]*?Обновлено существующих: (\d+)[\s\S]*?Пропущено.*?: (\d+)/);
+      
+      let stats = {
+        totalCars: 0,
+        inserted: 0,
+        updated: 0,
+        skipped: 0
+      };
+      
+      if (statsMatch) {
+        stats = {
+          totalCars: parseInt(statsMatch[1]) || 0,
+          inserted: parseInt(statsMatch[2]) || 0,
+          updated: parseInt(statsMatch[3]) || 0,
+          skipped: parseInt(statsMatch[4]) || 0
+        };
+      }
+      
+      // Извлекаем статистику по филиалам
+      const branchStats: Array<{ branch: string; total: number; inserted: number; updated: number; skipped: number; error?: string }> = [];
+      const branchRegex = /(tbilisi|batumi|kutaisi|service-center):[\s\S]*?Всего машин: (\d+)[\s\S]*?Добавлено: (\d+)[\s\S]*?Обновлено: (\d+)[\s\S]*?Пропущено: (\d+)/g;
+      let branchMatch;
+      
+      while ((branchMatch = branchRegex.exec(output)) !== null) {
+        branchStats.push({
+          branch: branchMatch[1],
+          total: parseInt(branchMatch[2]) || 0,
+          inserted: parseInt(branchMatch[3]) || 0,
+          updated: parseInt(branchMatch[4]) || 0,
+          skipped: parseInt(branchMatch[5]) || 0
+        });
+      }
+      
+      // Проверяем наличие ошибок
+      const hasErrors = output.includes('❌ Ошибка') || stderr?.length > 0;
+      
+      logger.info(`[Restore Cars] Completed: ${stats.totalCars} cars, +${stats.inserted} ~${stats.updated} -${stats.skipped}`);
+      
+      res.json({
+        ok: !hasErrors,
+        stats,
+        branches: branchStats,
+        output: output.slice(-5000), // Последние 5000 символов вывода
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      logger.error('[Restore Cars] Error:', error);
+      res.status(500).json({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
       });
     }
   });
