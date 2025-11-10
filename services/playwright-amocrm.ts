@@ -232,7 +232,7 @@ class AmoCRMPlaywrightService {
       const cookieString = cookies.map(c => `${c.name}=${c.value}`).join('; ');
 
       const response = await page!.evaluate(async ({ baseUrl, pipelineId, cookieString }) => {
-        const res = await fetch(`${baseUrl}/api/v4/leads/pipelines/${pipelineId}`, {
+        const res = await (window as any).fetch(`${baseUrl}/api/v4/leads/pipelines/${pipelineId}`, {
           headers: {
             'Cookie': cookieString,
             'X-Requested-With': 'XMLHttpRequest'
@@ -290,7 +290,8 @@ class AmoCRMPlaywrightService {
 
       const response: any = await page!.evaluate(async (args: { url: string; cookieString: string }) => {
         try {
-          const res = await fetch(args.url, {
+          // Используем нативный fetch браузера
+          const res = await (window as any).fetch(args.url, {
             headers: {
               'Cookie': args.cookieString,
               'X-Requested-With': 'XMLHttpRequest',
@@ -369,7 +370,7 @@ class AmoCRMPlaywrightService {
       const url = `${this.baseUrl}/api/v4/leads/${dealId}?with=contacts`;
 
       const response = await page!.evaluate(async ({ url, cookieString }) => {
-        const res = await fetch(url, {
+        const res = await (window as any).fetch(url, {
           headers: {
             'Cookie': cookieString,
             'X-Requested-With': 'XMLHttpRequest'
@@ -402,7 +403,7 @@ class AmoCRMPlaywrightService {
 
       const response: any = await page!.evaluate(async (args: { url: string; cookieString: string }) => {
         try {
-          const res = await fetch(args.url, {
+          const res = await (window as any).fetch(args.url, {
             headers: {
               'Cookie': args.cookieString,
               'X-Requested-With': 'XMLHttpRequest',
@@ -478,7 +479,7 @@ class AmoCRMPlaywrightService {
 
       const response: any = await page!.evaluate(async (args: { url: string; cookieString: string }) => {
         try {
-          const res = await fetch(args.url, {
+          const res = await (window as any).fetch(args.url, {
             headers: {
               'Cookie': args.cookieString,
               'X-Requested-With': 'XMLHttpRequest',
@@ -658,7 +659,7 @@ class AmoCRMPlaywrightService {
       
       const dealResponse: any = await page!.evaluate(async ({ url, cookieString }) => {
         try {
-          const res = await fetch(url, {
+          const res = await (window as any).fetch(url, {
             headers: {
               'Cookie': cookieString,
               'X-Requested-With': 'XMLHttpRequest',
