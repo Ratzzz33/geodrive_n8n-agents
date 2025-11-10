@@ -796,7 +796,9 @@ app.get('/api/conversations', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 50;
     const all = req.query.all === 'true' || req.query.all === '1';
+    console.log(`📥 API call: limit=${limit}, all=${all}, query.all="${req.query.all}"`);
     const conversations = await service.getConversations(all ? 10000 : limit, all);
+    console.log(`📤 API response: returning ${conversations.length} conversations`);
     // Возвращаем общее количество найденных диалогов
     res.json({ 
       ok: true, 
