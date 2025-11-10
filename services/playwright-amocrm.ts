@@ -624,6 +624,8 @@ class AmoCRMPlaywrightService {
             }
             await this.login(); // Перелогиниваемся
             await new Promise(resolve => setTimeout(resolve, 2000)); // Ждем перед повтором
+            // НЕ увеличиваем page, повторяем запрос для той же страницы
+            continue; // Повторяем цикл
           } else {
             throw error; // Другие ошибки пробрасываем дальше
           }
