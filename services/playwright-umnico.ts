@@ -175,8 +175,10 @@ class UmnicoPlaywrightService {
       }
 
       // Извлекаем список диалогов
-      // Используем $$eval для более надежной работы с DOM
-      const conversations = await page!.$$eval('.card-message-preview__item', (items) => {
+      // Используем evaluate для более гибкой работы с DOM
+      const conversations = await page!.evaluate(() => {
+        const items = Array.from(document.querySelectorAll('.card-message-preview__item'));
+        
         return items.map((item) => {
           const phoneEl = item.querySelector('.message-preview__user-name');
           const lastMsgEl = item.querySelector('.message-preview__text');
@@ -184,10 +186,10 @@ class UmnicoPlaywrightService {
           const assignedEl = item.querySelector('.deals-cell');
           const timestampEl = item.querySelector('.timestamp');
 
-          // Ищем родительскую ссылку - используем closest (работает в браузере)
+          // Ищем ID через все возможные методы
           let conversationId = null;
           
-          // Метод 1: closest (самый надежный)
+          // Метод 1: closest (самый надежный) - ищем родительскую ссылку
           try {
             const parentLink = item.closest('a[href*="/details/"]');
             if (parentLink) {
@@ -198,13 +200,13 @@ class UmnicoPlaywrightService {
               }
             }
           } catch (e) {
-            // closest может не работать в некоторых контекстах
+            // closest может не работать
           }
           
-          // Метод 2: обход parentElement (если closest не сработал)
+          // Метод 2: если closest не сработал, ищем ссылку в родителях
           if (!conversationId) {
             let current = item.parentElement;
-            let maxDepth = 10;
+            let maxDepth = 15; // Увеличиваем глубину поиска
             while (current && maxDepth > 0 && !conversationId) {
               if (current.tagName && current.tagName.toUpperCase() === 'A') {
                 const href = current.getAttribute('href') || '';
@@ -221,35 +223,35 @@ class UmnicoPlaywrightService {
             }
           }
           
-          // 2. Из onclick атрибута самого элемента
+          // Метод 3: ищем ссылку внутри элемента
+          if (!conversationId) {
+            const linkEl = item.querySelector('a[href*="/details/"]');
+            if (linkEl) {
+              const href = linkEl.getAttribute('href') || '';
+              const idMatch = href.match(/\/details\/(\d+)/);
+              if (idMatch && idMatch[1]) {
+                conversationId = idMatch[1];
+              }
+            }
+          }
+          
+          // Метод 4: из onclick атрибута
           if (!conversationId) {
             const onclickAttr = item.getAttribute('onclick') || '';
             const idMatch = onclickAttr.match(/\/details\/(\d+)/);
-            if (idMatch) {
+            if (idMatch && idMatch[1]) {
               conversationId = idMatch[1];
             }
           }
           
-          // 3. Из data-атрибутов
+          // Метод 5: из data-атрибутов
           if (!conversationId) {
             conversationId = item.getAttribute('data-conversation-id') || 
                            item.getAttribute('data-id') || 
                            item.getAttribute('data-deal-id') || null;
           }
           
-          // 4. Из href в ссылке внутри элемента
-          if (!conversationId) {
-            const linkEl = item.querySelector('a[href*="/details/"]');
-            if (linkEl) {
-              const href = linkEl.getAttribute('href') || '';
-              const idMatch = href.match(/\/details\/(\d+)/);
-              if (idMatch) {
-                conversationId = idMatch[1];
-              }
-            }
-          }
-          
-          // 5. Из класса или id элемента
+          // Метод 6: из класса или id элемента
           if (!conversationId) {
             const classList = item.className || '';
             const classMatch = classList.match(/deal-(\d+)|conversation-(\d+)/);
@@ -262,7 +264,7 @@ class UmnicoPlaywrightService {
             conversationId: conversationId,
             phone: phoneEl?.textContent?.trim() || '',
             lastMessage: lastMsgEl?.textContent?.trim() || '',
-            lastMessageTime: timestampEl?.textContent?.trim() || '',  // НОВОЕ!
+            lastMessageTime: timestampEl?.textContent?.trim() || '',
             channelAccount: integrationEl?.textContent?.trim() || '',
             assignedTo: assignedEl?.textContent?.trim() || ''
           };
