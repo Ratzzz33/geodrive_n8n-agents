@@ -178,87 +178,66 @@ class UmnicoPlaywrightService {
       // Используем evaluate для более гибкой работы с DOM
       const conversations = await page!.evaluate(() => {
         const items = Array.from(document.querySelectorAll('.card-message-preview__item'));
+        const allLinks = Array.from(document.querySelectorAll('a[href*="/details/"]'));
         
-        return items.map((item) => {
+        // Создаем карту: индекс элемента -> ID из ближайшей ссылки
+        const itemToIdMap = new Map();
+        
+        items.forEach((item, itemIndex) => {
+          // Метод 1: ищем ссылку, которая содержит этот item
+          let foundLink = null;
+          
+          allLinks.forEach(link => {
+            if (link.contains(item)) {
+              foundLink = link;
+            }
+          });
+          
+          // Метод 2: если не нашли, ищем ссылку в том же родителе
+          if (!foundLink) {
+            const parent = item.parentElement;
+            if (parent) {
+              const linkInParent = parent.querySelector('a[href*="/details/"]');
+              if (linkInParent) {
+                foundLink = linkInParent;
+              }
+            }
+          }
+          
+          // Метод 3: ищем ссылку среди соседей (next/previous sibling)
+          if (!foundLink) {
+            let sibling = item.previousElementSibling;
+            let maxSiblings = 5;
+            while (sibling && maxSiblings > 0 && !foundLink) {
+              const link = sibling.querySelector('a[href*="/details/"]');
+              if (link) {
+                foundLink = link;
+                break;
+              }
+              sibling = sibling.previousElementSibling;
+              maxSiblings--;
+            }
+          }
+          
+          // Извлекаем ID из найденной ссылки
+          if (foundLink) {
+            const href = foundLink.getAttribute('href') || '';
+            const idMatch = href.match(/\/details\/(\d+)/);
+            if (idMatch && idMatch[1]) {
+              itemToIdMap.set(itemIndex, idMatch[1]);
+            }
+          }
+        });
+        
+        return items.map((item, index) => {
           const phoneEl = item.querySelector('.message-preview__user-name');
           const lastMsgEl = item.querySelector('.message-preview__text');
           const integrationEl = item.querySelector('.deals-integration');
           const assignedEl = item.querySelector('.deals-cell');
           const timestampEl = item.querySelector('.timestamp');
 
-          // Ищем ID через все возможные методы
-          let conversationId = null;
-          
-          // Метод 1: closest (самый надежный) - ищем родительскую ссылку
-          try {
-            const parentLink = item.closest('a[href*="/details/"]');
-            if (parentLink) {
-              const href = parentLink.getAttribute('href') || '';
-              const idMatch = href.match(/\/details\/(\d+)/);
-              if (idMatch && idMatch[1]) {
-                conversationId = idMatch[1];
-              }
-            }
-          } catch (e) {
-            // closest может не работать
-          }
-          
-          // Метод 2: если closest не сработал, ищем ссылку в родителях
-          if (!conversationId) {
-            let current = item.parentElement;
-            let maxDepth = 15; // Увеличиваем глубину поиска
-            while (current && maxDepth > 0 && !conversationId) {
-              if (current.tagName && current.tagName.toUpperCase() === 'A') {
-                const href = current.getAttribute('href') || '';
-                if (href && href.includes('/details/')) {
-                  const idMatch = href.match(/\/details\/(\d+)/);
-                  if (idMatch && idMatch[1]) {
-                    conversationId = idMatch[1];
-                    break;
-                  }
-                }
-              }
-              current = current.parentElement;
-              maxDepth--;
-            }
-          }
-          
-          // Метод 3: ищем ссылку внутри элемента
-          if (!conversationId) {
-            const linkEl = item.querySelector('a[href*="/details/"]');
-            if (linkEl) {
-              const href = linkEl.getAttribute('href') || '';
-              const idMatch = href.match(/\/details\/(\d+)/);
-              if (idMatch && idMatch[1]) {
-                conversationId = idMatch[1];
-              }
-            }
-          }
-          
-          // Метод 4: из onclick атрибута
-          if (!conversationId) {
-            const onclickAttr = item.getAttribute('onclick') || '';
-            const idMatch = onclickAttr.match(/\/details\/(\d+)/);
-            if (idMatch && idMatch[1]) {
-              conversationId = idMatch[1];
-            }
-          }
-          
-          // Метод 5: из data-атрибутов
-          if (!conversationId) {
-            conversationId = item.getAttribute('data-conversation-id') || 
-                           item.getAttribute('data-id') || 
-                           item.getAttribute('data-deal-id') || null;
-          }
-          
-          // Метод 6: из класса или id элемента
-          if (!conversationId) {
-            const classList = item.className || '';
-            const classMatch = classList.match(/deal-(\d+)|conversation-(\d+)/);
-            if (classMatch) {
-              conversationId = classMatch[1] || classMatch[2];
-            }
-          }
+          // Получаем ID из карты
+          const conversationId = itemToIdMap.get(index) || null;
 
           return {
             conversationId: conversationId,
