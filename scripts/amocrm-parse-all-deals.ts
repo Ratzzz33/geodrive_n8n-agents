@@ -12,7 +12,9 @@ import postgres from 'postgres';
 import fetch from 'node-fetch';
 
 // Конфигурация
-const PLAYWRIGHT_SERVICE_URL = process.env.AMOCRM_PLAYWRIGHT_URL || 'http://localhost:3002';
+// Используем localhost если запускаем на сервере, иначе удаленный адрес
+const PLAYWRIGHT_SERVICE_URL = process.env.AMOCRM_PLAYWRIGHT_URL || 
+  (process.env.SSH_TUNNEL ? 'http://localhost:3002' : 'http://46.224.17.15:3002');
 const DATABASE_URL = process.env.DATABASE_URL || 
   'postgresql://neondb_owner:npg_cHIT9Kxfk1Am@ep-rough-heart-ahnybmq0-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require';
 const PIPELINE_ID = process.env.AMOCRM_PIPELINE_ID || '8580102';
@@ -32,9 +34,24 @@ interface Deal {
   created_at: number;
   updated_at: number;
   closed_at?: number;
+  responsible_user_id?: number;
+  group_id?: number;
+  loss_reason_id?: number;
+  created_by?: number;
+  updated_by?: number;
+  closest_task_at?: number;
+  is_deleted?: boolean;
+  score?: number;
+  account_id?: number;
+  labor_cost?: number;
+  is_price_computed?: boolean;
+  _embedded?: any;
+  _links?: any;
   custom_fields_values?: Array<{
     field_id: number;
     field_name: string;
+    field_type?: string;
+    field_code?: string;
     values: Array<{ value: string | number }>;
   }>;
 }
@@ -47,6 +64,7 @@ interface DealExtended {
     custom_fields_values?: Array<{
       field_id: number;
       field_name: string;
+      field_type?: string;
       values: Array<{ value: string | number }>;
     }>;
   }>;
@@ -62,6 +80,7 @@ interface DealExtended {
 
 /**
  * Извлечь данные из сделки и контактов
+ * Парсит ВСЕ поля сделки для последующего склеивания в БД
  */
 function extractDealData(extended: DealExtended) {
   const { deal, contacts, notes, scopeId } = extended;
@@ -75,50 +94,126 @@ function extractDealData(extended: DealExtended) {
   let phone: string | null = null;
   let email: string | null = null;
 
+  // Сохраняем ВСЕ поля контакта
+  const contactCustomFields: Record<string, any> = {};
   if (contact.custom_fields_values) {
     for (const field of contact.custom_fields_values) {
-      const fieldName = field.field_name?.toLowerCase() || '';
-      const value = field.values?.[0]?.value;
+      const fieldId = field.field_id;
+      const fieldName = field.field_name || '';
+      const values = field.values || [];
       
-      if (fieldName.includes('телефон') || fieldName.includes('phone')) {
+      // Сохраняем поле с полной информацией
+      contactCustomFields[`field_${fieldId}`] = {
+        field_id: fieldId,
+        field_name: fieldName,
+        field_type: field.field_type,
+        values: values,
+        // Нормализованное имя для поиска
+        normalized_name: fieldName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+      };
+      
+      // Извлечь телефон и email
+      const fieldNameLower = fieldName.toLowerCase();
+      const value = values[0]?.value;
+      
+      if ((fieldNameLower.includes('телефон') || fieldNameLower.includes('phone')) && !phone) {
         phone = value ? String(value).replace(/\D/g, '') : null;
       }
-      if (fieldName.includes('email') || fieldName.includes('почта')) {
+      if ((fieldNameLower.includes('email') || fieldNameLower.includes('почта')) && !email) {
         email = value ? String(value) : null;
       }
     }
   }
 
-  // Извлечь custom fields из сделки
+  // Извлечь ВСЕ custom fields из сделки
   const customFields: Record<string, any> = {};
   let rentprogClientId: string | null = null;
   let rentprogBookingId: string | null = null;
   let rentprogCarId: string | null = null;
 
+  // Известные field_id для RentProg полей (из настроек AmoCRM)
+  const RENTPROG_FIELD_IDS = {
+    BOOKING: 902255,  // "ID брони RentProg"
+    CLIENT: null,     // Найти по имени
+    CAR: null         // Найти по имени
+  };
+
   if (deal.custom_fields_values) {
     for (const field of deal.custom_fields_values) {
-      const fieldName = field.field_name?.toLowerCase() || '';
-      const value = field.values?.[0]?.value;
+      const fieldId = field.field_id;
+      const fieldName = field.field_name || '';
+      const fieldType = field.field_type || '';
+      const values = field.values || [];
       
-      // Нормализовать имя поля
-      const normalizedName = fieldName
+      // Сохраняем поле с ПОЛНОЙ информацией (для последующего склеивания)
+      const fieldKey = `field_${fieldId}`;
+      customFields[fieldKey] = {
+        field_id: fieldId,
+        field_name: fieldName,
+        field_type: fieldType,
+        field_code: field.field_code || null,
+        values: values,
+        // Нормализованное имя для поиска
+        normalized_name: fieldName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
+        // Первое значение для быстрого доступа
+        value: values[0]?.value || null
+      };
+      
+      // Также сохраняем по нормализованному имени (для обратной совместимости)
+      const normalizedName = fieldName.toLowerCase()
         .replace(/\s+/g, '_')
         .replace(/[^a-z0-9_]/g, '');
-      
-      customFields[normalizedName] = value;
+      if (normalizedName && !customFields[normalizedName]) {
+        customFields[normalizedName] = values[0]?.value || null;
+      }
 
       // Извлечь RentProg IDs
-      if (fieldName.includes('rentprog') && fieldName.includes('client')) {
-        rentprogClientId = value ? String(value) : null;
-      }
-      if (fieldName.includes('rentprog') && fieldName.includes('booking')) {
+      const fieldNameLower = fieldName.toLowerCase();
+      const value = values[0]?.value;
+      
+      // 1. По field_id (надежнее)
+      if (fieldId === RENTPROG_FIELD_IDS.BOOKING) {
         rentprogBookingId = value ? String(value) : null;
       }
-      if (fieldName.includes('rentprog') && fieldName.includes('car')) {
+      
+      // 2. По имени поля (fallback)
+      if (!rentprogClientId && fieldNameLower.includes('rentprog') && (fieldNameLower.includes('client') || fieldNameLower.includes('клиент'))) {
+        rentprogClientId = value ? String(value) : null;
+      }
+      if (!rentprogBookingId && fieldNameLower.includes('rentprog') && (fieldNameLower.includes('booking') || fieldNameLower.includes('бронь'))) {
+        rentprogBookingId = value ? String(value) : null;
+      }
+      if (!rentprogCarId && fieldNameLower.includes('rentprog') && (fieldNameLower.includes('car') || fieldNameLower.includes('машин'))) {
         rentprogCarId = value ? String(value) : null;
       }
     }
   }
+  
+  // Сохраняем ВСЕ данные сделки (не только custom_fields)
+  const dealFullData = {
+    id: deal.id,
+    name: deal.name,
+    price: deal.price,
+    responsible_user_id: deal.responsible_user_id,
+    group_id: deal.group_id,
+    status_id: deal.status_id,
+    pipeline_id: deal.pipeline_id,
+    loss_reason_id: deal.loss_reason_id,
+    created_by: deal.created_by,
+    updated_by: deal.updated_by,
+    created_at: deal.created_at,
+    updated_at: deal.updated_at,
+    closed_at: deal.closed_at,
+    closest_task_at: deal.closest_task_at,
+    is_deleted: deal.is_deleted,
+    score: deal.score,
+    account_id: deal.account_id,
+    labor_cost: deal.labor_cost,
+    is_price_computed: deal.is_price_computed,
+    // Встроенные связи
+    _embedded: deal._embedded || {},
+    _links: deal._links || {}
+  };
 
   // Определить статус
   let statusLabel = 'in_progress';
@@ -142,8 +237,9 @@ function extractDealData(extended: DealExtended) {
     contactName: contactName || null,
     email: email || null,
     contactId: contactId || null,
+    contactCustomFields: JSON.stringify(contactCustomFields), // ВСЕ поля контакта
     
-    // RentProg связи
+    // RentProg связи (для быстрого поиска)
     rentprogClientId: rentprogClientId || null,
     rentprogBookingId: rentprogBookingId || null,
     rentprogCarId: rentprogCarId || null,
@@ -151,7 +247,7 @@ function extractDealData(extended: DealExtended) {
     // Scope ID для conversation
     scopeId: scopeId || null,
     
-    // Сделка
+    // Сделка (базовые поля)
     dealId: String(deal.id),
     dealName: deal.name || '',
     pipelineId: String(deal.pipeline_id || PIPELINE_ID),
@@ -160,7 +256,11 @@ function extractDealData(extended: DealExtended) {
     price: deal.price || 0,
     createdAt,
     closedAt,
-    customFields: JSON.stringify(customFields),
+    
+    // ВСЕ поля сделки (для склеивания)
+    customFields: JSON.stringify(customFields), // Все custom_fields_values с полной информацией
+    dealFullData: JSON.stringify(dealFullData), // ВСЕ данные сделки (включая _embedded, _links)
+    
     notesCount: notes?.length || 0,
     
     // Notes для последующей обработки
@@ -229,6 +329,7 @@ async function upsertDeal(extracted: ReturnType<typeof extractDealData>) {
       LIMIT 1
     ),
     -- 7. Upsert AmoCRM deal со всеми связями
+    -- ВАЖНО: Для броней источник правды - RentProg, не используем данные из AmoCRM
     deal_upsert AS (
       INSERT INTO amocrm_deals (
         id, client_id, conversation_id, amocrm_deal_id, pipeline_id, status_id, status_label,
@@ -240,25 +341,34 @@ async function upsertDeal(extracted: ReturnType<typeof extractDealData>) {
         (SELECT id FROM conversation_upsert LIMIT 1),
         $9, $10, $11, $12,
         $13, $14::timestamptz, $15::timestamptz, now(),
-        $16::jsonb,
+        $16::jsonb,  -- ВСЕ custom_fields сделки (для анализа, но не для склеивания броней)
         $17,
         jsonb_build_object(
+          -- RentProg связи (источник правды для броней)
           'rentprog_booking_id', $7,
           'rentprog_car_id', $8,
+          'rentprog_client_id', $5,
+          -- Связанные сущности (из RentProg, не из AmoCRM)
           'booking_id', (SELECT id FROM booking_find LIMIT 1),
           'car_id', COALESCE((SELECT car_id FROM booking_find LIMIT 1), (SELECT id FROM car_find LIMIT 1)),
-          'deal_name', $18
+          -- Метаданные сделки AmoCRM
+          'deal_name', $18,
+          'deal_full_data', $19::jsonb,  -- ВСЕ данные сделки (для анализа, но не для склеивания)
+          'contact_custom_fields', $20::jsonb,  -- ВСЕ поля контакта
+          'scope_id', $6,
+          -- Флаг: данные о бронях из AmoCRM не используются (источник правды - RentProg)
+          'booking_data_source', 'rentprog_only'
         )
       FROM client_upsert
       ON CONFLICT (amocrm_deal_id) DO UPDATE
       SET status_id = EXCLUDED.status_id,
           status_label = EXCLUDED.status_label,
           conversation_id = COALESCE(EXCLUDED.conversation_id, amocrm_deals.conversation_id),
-          price = EXCLUDED.price,
+          price = EXCLUDED.price,  -- Цена из AmoCRM (для анализа, но не для склеивания)
           closed_at = EXCLUDED.closed_at,
-          custom_fields = EXCLUDED.custom_fields,
+          custom_fields = EXCLUDED.custom_fields,  -- Обновляем ВСЕ поля (для анализа)
           notes_count = EXCLUDED.notes_count,
-          metadata = EXCLUDED.metadata,
+          metadata = EXCLUDED.metadata,  -- Обновляем метаданные (включая deal_full_data)
           updated_at = now()
       RETURNING id, client_id, conversation_id
     )
@@ -291,9 +401,11 @@ async function upsertDeal(extracted: ReturnType<typeof extractDealData>) {
     extracted.price,
     extracted.createdAt,
     extracted.closedAt,
-    extracted.customFields,
+    extracted.customFields,  // ВСЕ custom_fields сделки
     extracted.notesCount,
-    extracted.dealName
+    extracted.dealName,
+    extracted.dealFullData || '{}',  // ВСЕ данные сделки
+    extracted.contactCustomFields || '{}'  // ВСЕ поля контакта
   ];
 
   // Заменяем $1, $2, ... на правильные значения с экранированием
@@ -377,7 +489,7 @@ async function insertNotesAsMessages(
           ${sentAt}::timestamptz,
           ${metadata}::jsonb
         )
-        ON CONFLICT DO NOTHING
+        ON CONFLICT (client_id, conversation_id, channel, sent_at, text) DO NOTHING
       `;
       inserted++;
     } catch (error) {
@@ -436,24 +548,61 @@ async function main() {
       const deal = deals[i];
       const progress = ((i + 1) / totalDeals * 100).toFixed(1);
       
-      process.stdout.write(`\r[${i + 1}/${totalDeals}] (${progress}%) Обрабатываю сделку #${deal.id}...`);
+      // Показываем RentProg Booking ID в прогрессе (если есть в базовой информации)
+      const dealInfo = deal.custom_fields_values?.find((f: any) => f.field_id === 902255);
+      const rpBookingId = dealInfo?.values?.[0]?.value;
+      const rpInfo = rpBookingId ? ` [RP:${rpBookingId}]` : '';
+      process.stdout.write(`\r[${i + 1}/${totalDeals}] (${progress}%) Обрабатываю сделку #${deal.id}${rpInfo}...`);
 
       try {
         // Получить расширенные детали
-        const detailsResponse = await fetch(
-          `${PLAYWRIGHT_SERVICE_URL}/api/deals/${deal.id}/extended`
-        );
+        let detailsResponse: Response | null = null;
+        let retries = 3;
+        let detailsData: { ok: boolean; data?: DealExtended; error?: string } | null = null;
 
-        if (!detailsResponse.ok) {
-          console.error(`\n❌ Ошибка получения деталей сделки ${deal.id}: ${detailsResponse.status}`);
-          errors++;
-          continue;
+        while (retries > 0) {
+          try {
+            detailsResponse = await fetch(
+              `${PLAYWRIGHT_SERVICE_URL}/api/deals/${deal.id}/extended`,
+              { timeout: 30000 }
+            );
+
+            if (detailsResponse.ok) {
+              detailsData = await detailsResponse.json() as { ok: boolean; data: DealExtended };
+              break;
+            } else if (detailsResponse.status === 500 && retries > 1) {
+              // При 500 ошибке пробуем еще раз после задержки
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              retries--;
+              continue;
+            } else {
+              const errorText = await detailsResponse.text().catch(() => 'Unknown error');
+              detailsData = { ok: false, error: `HTTP ${detailsResponse.status}: ${errorText}` };
+              console.error(`\n❌ Ошибка получения деталей сделки ${deal.id}: ${detailsResponse.status}`);
+              errors++;
+              break;
+            }
+          } catch (error: any) {
+            if (retries > 1) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              retries--;
+              continue;
+            } else {
+              detailsData = { ok: false, error: error.message };
+              console.error(`\n❌ Ошибка получения деталей сделки ${deal.id}:`, error.message);
+              errors++;
+              break;
+            }
+          }
         }
 
-        const detailsData = await detailsResponse.json() as { ok: boolean; data: DealExtended };
-        
-        if (!detailsData.ok || !detailsData.data) {
-          console.error(`\n❌ Неверный формат ответа для сделки ${deal.id}`);
+        if (!detailsData || !detailsData.ok || !detailsData.data) {
+          // Логируем ошибку, но продолжаем со следующей сделкой
+          if (detailsData && detailsData.error) {
+            console.error(`\n⚠️ Пропускаю сделку ${deal.id}: ${detailsData.error}`);
+          } else {
+            console.error(`\n⚠️ Пропускаю сделку ${deal.id}: нет данных`);
+          }
           errors++;
           continue;
         }
@@ -490,9 +639,9 @@ async function main() {
 
         processed++;
 
-        // Небольшая задержка между запросами
+        // Задержка между запросами (увеличена для стабильности)
         if (i < totalDeals - 1) {
-          await new Promise(resolve => setTimeout(resolve, 200));
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
 
       } catch (error: any) {
