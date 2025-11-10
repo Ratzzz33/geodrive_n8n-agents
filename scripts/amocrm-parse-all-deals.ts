@@ -514,24 +514,46 @@ async function main() {
   console.log(`📊 Pipeline ID: ${PIPELINE_ID}\n`);
 
   try {
-    // 1. Получить все сделки
-    console.log('📋 Получаю список всех сделок...');
-    const dealsResponse = await fetch(
-      `${PLAYWRIGHT_SERVICE_URL}/api/deals/all?pipeline_id=${PIPELINE_ID}`,
-      {}
-    );
-    
-    if (!dealsResponse.ok) {
-      throw new Error(`Ошибка получения сделок: ${dealsResponse.status} ${dealsResponse.statusText}`);
+    // 1. Получить все сделки с пагинацией
+    console.log('📋 Получаю список всех сделок (с пагинацией)...');
+    const deals: Deal[] = [];
+    let page = 1;
+    let hasMore = true;
+    const limit = 250;
+
+    while (hasMore) {
+      console.log(`   Страница ${page}...`);
+      const dealsResponse = await fetch(
+        `${PLAYWRIGHT_SERVICE_URL}/api/deals?pipeline_id=${PIPELINE_ID}&limit=${limit}&page=${page}`,
+        { signal: AbortSignal.timeout(60000) } // Таймаут 60 секунд на страницу
+      );
+      
+      if (!dealsResponse.ok) {
+        throw new Error(`Ошибка получения сделок: ${dealsResponse.status} ${dealsResponse.statusText}`);
+      }
+
+      const dealsData = await dealsResponse.json() as { 
+        ok: boolean;
+        deals: Deal[];
+        total: number;
+        page: number;
+        hasMore: boolean;
+      };
+      
+      if (!dealsData.ok || !dealsData.deals) {
+        throw new Error('Неверный формат ответа от Playwright Service');
+      }
+
+      deals.push(...dealsData.deals);
+      hasMore = dealsData.hasMore && dealsData.deals.length === limit;
+      page++;
+
+      // Задержка между страницами
+      if (hasMore) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     }
 
-    const dealsData = await dealsResponse.json() as { ok: boolean; count: number; deals: Deal[] };
-    
-    if (!dealsData.ok || !dealsData.deals) {
-      throw new Error('Неверный формат ответа от Playwright Service');
-    }
-
-    const deals = dealsData.deals;
     const totalDeals = deals.length;
     
     console.log(`✅ Найдено сделок: ${totalDeals}\n`);
