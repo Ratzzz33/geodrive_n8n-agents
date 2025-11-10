@@ -12,12 +12,22 @@ import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import express from 'express';
 import fs from 'fs/promises';
 import path from 'path';
+import dotenv from 'dotenv';
+import fetch from 'node-fetch';
+
+// Загружаем .env файл
+dotenv.config();
 
 const PORT = process.env.AMOCRM_PLAYWRIGHT_PORT || 3002;
 const STATE_FILE = process.env.AMOCRM_STATE_FILE || './data/amocrm-session.json';
-const AMOCRM_EMAIL = process.env.AMOCRM_EMAIL!;
-const AMOCRM_PASSWORD = process.env.AMOCRM_PASSWORD!;
+const AMOCRM_EMAIL = process.env.AMOCRM_EMAIL || 'geodrive.ge@gmail.com';
+const AMOCRM_PASSWORD = process.env.AMOCRM_PASSWORD || 'wnr3c4%UqN@jY23';
 const AMOCRM_SUBDOMAIN = process.env.AMOCRM_SUBDOMAIN || 'geodrive';
+
+// Proxy configuration
+const PROXY_SERVER = process.env.AMOCRM_PROXY_SERVER || 'socks5://33pokrov33202947:eSZemNt6zrgu@j4mqjbmxfz.cn.fxdx.in:16286';
+const PROXY_CHANGE_IP_URL = process.env.AMOCRM_PROXY_CHANGE_IP_URL || 'https://iproxy.online/api-rt/changeip/nenfv7s5qf/xHXCXBA4CA2N7Y5SCT7TB';
+const USE_PROXY = process.env.AMOCRM_USE_PROXY !== 'false'; // По умолчанию включен
 
 let browser: Browser | null = null;
 let context: BrowserContext | null = null;
@@ -28,6 +38,31 @@ class AmoCRMPlaywrightService {
   private lastLoginAt: Date | null = null;
   private baseUrl = `https://${AMOCRM_SUBDOMAIN}.amocrm.ru`;
 
+  /**
+   * Сменить IP через API прокси
+   */
+  async changeProxyIP(): Promise<void> {
+    if (!USE_PROXY || !PROXY_CHANGE_IP_URL) {
+      return;
+    }
+
+    try {
+      console.log('🔄 Меняю IP через прокси API...');
+      const response = await fetch(PROXY_CHANGE_IP_URL);
+      const result = await response.json();
+      
+      if (result.ok === 1) {
+        console.log('✅ IP изменен, жду 20 секунд...');
+        await new Promise(resolve => setTimeout(resolve, 20000));
+        console.log('✅ Готово к работе с новым IP');
+      } else {
+        console.log('⚠️ Не удалось изменить IP, продолжаю с текущим');
+      }
+    } catch (error) {
+      console.error('❌ Ошибка смены IP:', error);
+    }
+  }
+
   async init() {
     if (this.isInitialized) {
       console.log('✅ AmoCRM browser already initialized');
@@ -36,10 +71,35 @@ class AmoCRMPlaywrightService {
 
     console.log('🚀 Initializing AmoCRM Playwright Service...');
 
+    // Меняем IP перед запуском (если используется прокси)
+    if (USE_PROXY) {
+      await this.changeProxyIP();
+    }
+
+    // Парсим прокси из строки socks5://user:pass@host:port
+    let proxyConfig: { server: string; username?: string; password?: string } | undefined;
+    
+    if (USE_PROXY && PROXY_SERVER) {
+      try {
+        const proxyUrl = new URL(PROXY_SERVER);
+        // Playwright требует формат: socks5://host:port или http://host:port
+        const serverProtocol = proxyUrl.protocol === 'socks5:' ? 'socks5' : proxyUrl.protocol.slice(0, -1);
+        proxyConfig = {
+          server: `${serverProtocol}://${proxyUrl.hostname}:${proxyUrl.port}`,
+          username: proxyUrl.username || undefined,
+          password: proxyUrl.password || undefined
+        };
+        console.log(`🌐 Использую прокси: ${serverProtocol}://${proxyUrl.hostname}:${proxyUrl.port} (user: ${proxyUrl.username || 'none'})`);
+      } catch (error) {
+        console.error('❌ Ошибка парсинга прокси, запускаю без прокси:', error);
+      }
+    }
+
     // Запускаем браузер
     browser = await chromium.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      proxy: proxyConfig
     });
 
     // Создаем контекст с сохранением состояния
@@ -221,21 +281,47 @@ class AmoCRMPlaywrightService {
       const url = `${this.baseUrl}/api/v4/leads?${queryParams.toString()}`;
 
       const response: any = await page!.evaluate(async (args: { url: string; cookieString: string }) => {
-        const res = await fetch(args.url, {
-          headers: {
-            'Cookie': args.cookieString,
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
+        try {
+          const res = await fetch(args.url, {
+            headers: {
+              'Cookie': args.cookieString,
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'application/json'
+            }
+          });
+          
+          if (!res.ok) {
+            const errorText = await res.text().catch(() => 'Unable to read error');
+            return { 
+              error: true, 
+              status: res.status, 
+              statusText: res.statusText, 
+              message: errorText 
+            };
           }
-        });
-        
-        if (!res.ok) {
-          const errorText = await res.text();
-          throw new Error(`API error: ${res.status} ${res.statusText} - ${errorText}`);
+          
+          try {
+            return await res.json();
+          } catch (parseError: any) {
+            return { 
+              error: true, 
+              status: 500, 
+              message: `JSON parse error: ${parseError.message}` 
+            };
+          }
+        } catch (error: any) {
+          return { 
+            error: true, 
+            status: 500, 
+            message: error.message || 'Failed to fetch' 
+          };
         }
-        
-        return await res.json();
       }, { url, cookieString });
+
+      // Проверяем на ошибку в ответе
+      if (response.error) {
+        throw new Error(`API error: ${response.status || 500} ${response.statusText || ''} - ${response.message}`);
+      }
 
       // Проверяем на ошибку авторизации
       if (response.status === 401 || response.detail?.includes('Unauthorized')) {
@@ -294,20 +380,70 @@ class AmoCRMPlaywrightService {
 
   async getDealNotes(dealId: string): Promise<any[]> {
     try {
+      // Проверяем сессию перед запросом
+      const isSessionValid = await this.checkSession();
+      if (!isSessionValid) {
+        console.log('⚠️ Session invalid in getDealNotes, re-logging...');
+        await this.login();
+      }
+
       const cookies = await context!.cookies();
       const cookieString = cookies.map(c => `${c.name}=${c.value}`).join('; ');
 
       const url = `${this.baseUrl}/api/v4/leads/${dealId}/notes`;
 
       const response: any = await page!.evaluate(async (args: { url: string; cookieString: string }) => {
-        const res = await fetch(args.url, {
-          headers: {
-            'Cookie': args.cookieString,
-            'X-Requested-With': 'XMLHttpRequest'
+        try {
+          const res = await fetch(args.url, {
+            headers: {
+              'Cookie': args.cookieString,
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'application/json'
+            }
+          });
+          
+          if (!res.ok) {
+            const errorText = await res.text().catch(() => 'Unable to read error');
+            return { 
+              error: true, 
+              status: res.status, 
+              statusText: res.statusText, 
+              message: errorText 
+            };
           }
-        });
-        return await res.json();
+          
+          // Безопасный парсинг JSON
+          const text = await res.text();
+          if (!text || text.trim() === '') {
+            return { 
+              error: true, 
+              status: 500, 
+              message: 'Empty response from server' 
+            };
+          }
+          
+          try {
+            return JSON.parse(text);
+          } catch (parseError: any) {
+            return { 
+              error: true, 
+              status: 500, 
+              message: `JSON parse error: ${parseError.message}. Response: ${text.substring(0, 200)}` 
+            };
+          }
+        } catch (error: any) {
+          return { 
+            error: true, 
+            status: 500, 
+            message: error.message || 'Unknown error' 
+          };
+        }
       }, { url, cookieString });
+
+      // Проверяем на ошибку
+      if (response.error) {
+        throw new Error(`API error: ${response.status} ${response.statusText || ''} - ${response.message}`);
+      }
 
       const notes = response._embedded?.notes || [];
       console.log(`💬 Found ${notes.length} notes for deal ${dealId}`);
@@ -320,27 +456,80 @@ class AmoCRMPlaywrightService {
 
   async getInboxList(): Promise<any[]> {
     try {
+      // Проверяем сессию перед запросом
+      const isSessionValid = await this.checkSession();
+      if (!isSessionValid) {
+        console.log('⚠️ Session invalid in getInboxList, re-logging...');
+        await this.login();
+      }
+
       const cookies = await context!.cookies();
       const cookieString = cookies.map(c => `${c.name}=${c.value}`).join('; ');
 
       const url = `${this.baseUrl}/ajax/v4/inbox/list?limit=50&order[sort_by]=last_message_at&order[sort_type]=desc`;
 
       const response: any = await page!.evaluate(async (args: { url: string; cookieString: string }) => {
-        const res = await fetch(args.url, {
-          headers: {
-            'Cookie': args.cookieString,
-            'X-Requested-With': 'XMLHttpRequest'
+        try {
+          const res = await fetch(args.url, {
+            headers: {
+              'Cookie': args.cookieString,
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'application/json'
+            }
+          });
+          
+          if (!res.ok) {
+            const errorText = await res.text().catch(() => 'Unable to read error');
+            return { 
+              error: true, 
+              status: res.status, 
+              statusText: res.statusText, 
+              message: errorText 
+            };
           }
-        });
-        return await res.json();
+          
+          // Безопасный парсинг JSON
+          const text = await res.text();
+          if (!text || text.trim() === '') {
+            return { 
+              error: true, 
+              status: 500, 
+              message: 'Empty response from server' 
+            };
+          }
+          
+          try {
+            return JSON.parse(text);
+          } catch (parseError: any) {
+            return { 
+              error: true, 
+              status: 500, 
+              message: `JSON parse error: ${parseError.message}. Response: ${text.substring(0, 200)}` 
+            };
+          }
+        } catch (error: any) {
+          return { 
+            error: true, 
+            status: 500, 
+            message: error.message || 'Unknown error' 
+          };
+        }
       }, { url, cookieString });
+
+      // Проверяем на ошибку
+      if (response.error) {
+        // Для inbox не критично, возвращаем пустой массив
+        console.log(`⚠️ Ошибка получения inbox: ${response.status}, возвращаю пустой массив`);
+        return [];
+      }
 
       const inbox = response.response?.items || [];
       console.log(`📨 Found ${inbox.length} inbox conversations`);
       return inbox;
     } catch (error) {
       console.error('❌ Failed to get inbox:', error);
-      throw error;
+      // Не критично, возвращаем пустой массив
+      return [];
     }
   }
 
@@ -390,21 +579,45 @@ class AmoCRMPlaywrightService {
       let page = 1;
       let hasMore = true;
 
+      let retries = 0;
+      const maxRetries = 3;
+
       while (hasMore) {
-        const result = await this.getDeals({
-          pipelineId,
-          limit,
-          page,
-          updatedSince
-        });
+        try {
+          const result = await this.getDeals({
+            pipelineId,
+            limit,
+            page,
+            updatedSince
+          });
 
-        allDeals.push(...result.deals);
-        hasMore = result.hasMore && result.deals.length === limit;
-        page++;
+          allDeals.push(...result.deals);
+          hasMore = result.hasMore && result.deals.length === limit;
+          page++;
+          retries = 0; // Сбрасываем счетчик при успехе
 
-        // Небольшая задержка между страницами
-        if (hasMore) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Задержка между страницами (увеличена для стабильности)
+          if (hasMore) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        } catch (error: any) {
+          retries++;
+          if (retries >= maxRetries) {
+            console.error(`❌ Failed to get deals after ${maxRetries} retries, stopping pagination`);
+            throw error;
+          }
+          
+          // Если ошибка "Failed to fetch" или сеть, пробуем перелогиниться и сменить IP
+          if (error.message?.includes('Failed to fetch') || error.message?.includes('network')) {
+            console.log(`⚠️ Network error on page ${page}, retry ${retries}/${maxRetries}...`);
+            if (USE_PROXY) {
+              await this.changeProxyIP();
+            }
+            await this.login(); // Перелогиниваемся
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Ждем перед повтором
+          } else {
+            throw error; // Другие ошибки пробрасываем дальше
+          }
         }
       }
 
@@ -436,21 +649,64 @@ class AmoCRMPlaywrightService {
       const url = `${this.baseUrl}/api/v4/leads/${dealId}?with=contacts`;
       
       const dealResponse: any = await page!.evaluate(async ({ url, cookieString }) => {
-        const res = await fetch(url, {
-          headers: {
-            'Cookie': cookieString,
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
+        try {
+          const res = await fetch(url, {
+            headers: {
+              'Cookie': cookieString,
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'application/json'
+            }
+          });
+          
+          if (!res.ok) {
+            const errorText = await res.text().catch(() => 'Unable to read error');
+            return { 
+              error: true, 
+              status: res.status, 
+              statusText: res.statusText, 
+              message: errorText 
+            };
           }
-        });
-        
-        if (!res.ok) {
-          const errorText = await res.text();
-          throw new Error(`API error: ${res.status} ${res.statusText} - ${errorText}`);
+          
+          // Безопасный парсинг JSON
+          const text = await res.text();
+          if (!text || text.trim() === '') {
+            return { 
+              error: true, 
+              status: 500, 
+              message: 'Empty response from server' 
+            };
+          }
+          
+          try {
+            return JSON.parse(text);
+          } catch (parseError: any) {
+            return { 
+              error: true, 
+              status: 500, 
+              message: `JSON parse error: ${parseError.message}. Response: ${text.substring(0, 200)}` 
+            };
+          }
+        } catch (error: any) {
+          return { 
+            error: true, 
+            status: 500, 
+            message: error.message || 'Unknown error' 
+          };
         }
-        
-        return await res.json();
       }, { url, cookieString });
+
+      // Проверяем на ошибку в ответе
+      if (dealResponse.error) {
+        // При ошибке 500 и использовании прокси - пробуем сменить IP
+        if (dealResponse.status === 500 && USE_PROXY) {
+          console.log('⚠️ Ошибка 500, пробую сменить IP...');
+          await this.changeProxyIP();
+          // Повторяем запрос после смены IP
+          return await this.getDealDetailsExtended(dealId);
+        }
+        throw new Error(`API error: ${dealResponse.status} ${dealResponse.statusText || ''} - ${dealResponse.message}`);
+      }
 
       // Проверяем на ошибку авторизации
       if (dealResponse.status === 401 || dealResponse.detail?.includes('Unauthorized')) {
@@ -462,19 +718,39 @@ class AmoCRMPlaywrightService {
 
       const deal = dealResponse._embedded?.leads?.[0] || dealResponse;
 
-      // Получаем примечания
-      const notes = await this.getDealNotes(dealId);
+      // Получаем примечания (с обработкой ошибок)
+      let notes: any[] = [];
+      try {
+        notes = await this.getDealNotes(dealId);
+      } catch (error) {
+        console.error(`⚠️ Ошибка получения notes для сделки ${dealId}:`, error);
+        // Продолжаем без notes
+      }
 
-      // Получаем inbox для поиска scope_id
-      const inbox = await this.getInboxList();
-      const inboxItem = inbox.find((item: any) => 
-        item.lead_id === String(dealId) || 
-        item.entity_id === String(dealId)
-      );
+      // Получаем inbox для поиска scope_id (с обработкой ошибок)
+      let inboxItem: any = null;
+      try {
+        const inbox = await this.getInboxList();
+        inboxItem = inbox.find((item: any) => 
+          item.lead_id === String(dealId) || 
+          item.entity_id === String(dealId)
+        );
+      } catch (error) {
+        console.error(`⚠️ Ошибка получения inbox для сделки ${dealId}:`, error);
+        // Продолжаем без inbox
+      }
+
+      // Извлекаем контакты из deal._embedded.contacts (если есть) или из deal._embedded.leads[0]._embedded.contacts
+      let contacts: any[] = [];
+      if (deal._embedded?.contacts) {
+        contacts = deal._embedded.contacts;
+      } else if (dealResponse._embedded?.leads?.[0]?._embedded?.contacts) {
+        contacts = dealResponse._embedded.leads[0]._embedded.contacts;
+      }
 
       return {
         deal,
-        contacts: deal._embedded?.contacts || [],
+        contacts,
         notes,
         scopeId: inboxItem?.scope_id || null,
         inboxItem: inboxItem || null
@@ -602,6 +878,16 @@ app.post('/api/relogin', async (req, res) => {
   }
 });
 
+// Change proxy IP
+app.post('/api/change-ip', async (req, res) => {
+  try {
+    await (service as any).changeProxyIP();
+    res.json({ ok: true, message: 'IP changed successfully' });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('📡 SIGTERM received, closing...');
@@ -632,6 +918,7 @@ async function start() {
       console.log(`   GET  /api/deals/:id/notes`);
       console.log(`   GET  /api/inbox`);
       console.log(`   POST /api/relogin`);
+      console.log(`   POST /api/change-ip`);
     });
   } catch (error) {
     console.error('❌ Failed to start service:', error);
