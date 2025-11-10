@@ -523,34 +523,48 @@ async function main() {
 
     while (hasMore) {
       console.log(`   Страница ${page}...`);
-      const dealsResponse = await fetch(
-        `${PLAYWRIGHT_SERVICE_URL}/api/deals?pipeline_id=${PIPELINE_ID}&limit=${limit}&page=${page}`,
-        { signal: AbortSignal.timeout(60000) } // Таймаут 60 секунд на страницу
-      );
       
-      if (!dealsResponse.ok) {
-        throw new Error(`Ошибка получения сделок: ${dealsResponse.status} ${dealsResponse.statusText}`);
-      }
-
-      const dealsData = await dealsResponse.json() as { 
-        ok: boolean;
-        deals: Deal[];
-        total: number;
-        page: number;
-        hasMore: boolean;
-      };
+      // Создаем AbortController для таймаута
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 секунд
       
-      if (!dealsData.ok || !dealsData.deals) {
-        throw new Error('Неверный формат ответа от Playwright Service');
-      }
+      try {
+        const dealsResponse = await fetch(
+          `${PLAYWRIGHT_SERVICE_URL}/api/deals?pipeline_id=${PIPELINE_ID}&limit=${limit}&page=${page}`,
+          { signal: controller.signal }
+        );
+        clearTimeout(timeoutId);
+        
+        if (!dealsResponse.ok) {
+          throw new Error(`Ошибка получения сделок: ${dealsResponse.status} ${dealsResponse.statusText}`);
+        }
 
-      deals.push(...dealsData.deals);
-      hasMore = dealsData.hasMore && dealsData.deals.length === limit;
-      page++;
+        const dealsData = await dealsResponse.json() as { 
+          ok: boolean;
+          deals: Deal[];
+          total: number;
+          page: number;
+          hasMore: boolean;
+        };
+        
+        if (!dealsData.ok || !dealsData.deals) {
+          throw new Error('Неверный формат ответа от Playwright Service');
+        }
 
-      // Задержка между страницами
-      if (hasMore) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        deals.push(...dealsData.deals);
+        hasMore = dealsData.hasMore && dealsData.deals.length === limit;
+        page++;
+
+        // Задержка между страницами
+        if (hasMore) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          throw new Error(`Таймаут при получении страницы ${page}`);
+        }
+        throw error;
       }
     }
 
