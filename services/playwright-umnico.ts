@@ -175,9 +175,8 @@ class UmnicoPlaywrightService {
       }
 
       // Извлекаем список диалогов
-      // Простой подход: для каждого элемента ищем родительскую ссылку
-      const result = await page!.evaluate(() => {
-        const items = Array.from(document.querySelectorAll('.card-message-preview__item'));
+      // Используем $$eval для более надежной работы с DOM
+      const conversations = await page!.$$eval('.card-message-preview__item', (items) => {
         return items.map((item) => {
           const phoneEl = item.querySelector('.message-preview__user-name');
           const lastMsgEl = item.querySelector('.message-preview__text');
@@ -189,19 +188,17 @@ class UmnicoPlaywrightService {
           let conversationId = null;
           
           // Метод 1: closest (самый надежный)
-          if (item.closest) {
-            try {
-              const parentLink = item.closest('a[href*="/details/"]');
-              if (parentLink) {
-                const href = parentLink.getAttribute('href') || '';
-                const idMatch = href.match(/\/details\/(\d+)/);
-                if (idMatch && idMatch[1]) {
-                  conversationId = idMatch[1];
-                }
+          try {
+            const parentLink = item.closest('a[href*="/details/"]');
+            if (parentLink) {
+              const href = parentLink.getAttribute('href') || '';
+              const idMatch = href.match(/\/details\/(\d+)/);
+              if (idMatch && idMatch[1]) {
+                conversationId = idMatch[1];
               }
-            } catch (e) {
-              // closest может не работать в некоторых контекстах
             }
+          } catch (e) {
+            // closest может не работать в некоторых контекстах
           }
           
           // Метод 2: обход parentElement (если closest не сработал)
@@ -272,7 +269,6 @@ class UmnicoPlaywrightService {
         });
       });
 
-      const conversations = result; // Переименовываем для совместимости
       console.log(`📋 Found ${conversations.length} conversations`);
       
       // Отладочный вывод для первых 3 элементов
