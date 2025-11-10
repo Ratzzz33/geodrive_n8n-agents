@@ -49,6 +49,10 @@ router.post('/sync-bookings', async (req, res) => {
     let totalBookings = 0;
     
     // Обрабатываем каждый филиал последовательно (чтобы не перегружать API)
+    // Лимиты RentProg API учтены в функции paginate():
+    // - GET запросы: задержка 1.5 сек между страницами (40 запросов/мин)
+    // - Токены: кэширование с автообновлением (4 минуты TTL)
+    // - Используем ~33% от лимита RentProg, оставляя 66% для других сервисов
     for (const branch of branches) {
       logger.info(`[Sync Bookings] Processing branch: ${branch}...`);
       
@@ -64,8 +68,10 @@ router.post('/sync-bookings', async (req, res) => {
       try {
         // Получаем все бронирования из RentProg (активные и неактивные, без архивных)
         // Используем пагинацию через функцию paginate
+        // API /all_bookings использует параметр per_page (не limit), по умолчанию 10
+        // Увеличиваем до 20 для более эффективной загрузки
         const bookings = await paginate<any>(branch, '/all_bookings', {
-          // Параметры пагинации обрабатываются внутри paginate
+          per_page: 20, // Явно указываем per_page для /all_bookings endpoint
         });
         
         branchResult.total = bookings.length;

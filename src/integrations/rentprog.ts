@@ -251,12 +251,21 @@ export async function paginate<T>(
   let page = 1;
   let hasMore = true;
   
+  // Определяем параметр пагинации: per_page для /all_bookings, limit для остальных
+  // Если per_page явно передан в params, используем его, иначе используем pageLimit
+  const usePerPage = path.includes('/all_bookings') || params?.per_page !== undefined;
+  const pageSize = params?.per_page !== undefined ? params.per_page : pageLimit;
+  
   while (hasMore) {
     try {
+      const paginationParam = usePerPage 
+        ? { per_page: pageSize }
+        : { limit: pageSize };
+      
       const pageData = await apiFetch<T[]>(branch, path, {
         ...params,
         page,
-        limit: pageLimit,
+        ...paginationParam,
       });
       
       if (!pageData || pageData.length === 0) {
@@ -266,21 +275,30 @@ export async function paginate<T>(
       
       results.push(...pageData);
       
+      // Определяем ожидаемое количество записей на странице (используем тот же pageSize, что и для запроса)
+      const expectedPageSize = pageSize;
+      
+      // Логируем прогресс каждые 5 страниц или на первой странице
+      if (page === 1 || page % 5 === 0) {
+        logger.info(`[Paginate ${path}] ${branch}: Загружено ${results.length} записей (страница ${page})`);
+      }
+      
       // Если получили меньше запрошенного, значит это последняя страница
-      if (pageData.length < pageLimit) {
+      if (pageData.length < expectedPageSize) {
         hasMore = false;
+        logger.debug(`[Paginate ${path}] ${branch}: Последняя страница (получено ${pageData.length} из ${expectedPageSize})`);
       } else {
         page++;
         // Защита от бесконечного цикла
         if (page > 1000) {
-          logger.warn(`Достигнут максимум страниц для ${path}`);
+          logger.warn(`[Paginate ${path}] ${branch}: Достигнут максимум страниц (1000)`);
           hasMore = false;
         }
         
         // Задержка между страницами для соблюдения консервативных лимитов
         // Используем ~33% capacity RentProg, оставляя 66% для других сервисов компании
         if (hasMore) {
-          logger.debug(`Задержка ${DELAY_BETWEEN_GET_REQUESTS}ms перед следующей страницей`);
+          logger.debug(`[Paginate ${path}] ${branch}: Задержка ${DELAY_BETWEEN_GET_REQUESTS}ms перед страницей ${page}`);
           await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_GET_REQUESTS));
         }
       }
@@ -290,6 +308,7 @@ export async function paginate<T>(
     }
   }
   
+  logger.info(`[Paginate ${path}] ${branch}: Загрузка завершена, всего ${results.length} записей`);
   return results;
 }
 
