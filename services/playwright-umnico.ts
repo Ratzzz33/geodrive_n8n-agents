@@ -175,51 +175,52 @@ class UmnicoPlaywrightService {
       }
 
       // Извлекаем список диалогов
-      // Используем evaluate вместо $$eval для лучшего доступа к DOM
-      const conversations = await page!.evaluate(() => {
+      // Используем комбинированный подход: сначала получаем все ссылки, затем сопоставляем с элементами
+      const result = await page!.evaluate(() => {
+        // 1. Получаем все ссылки deals-row с их ID
+        const links = Array.from(document.querySelectorAll('a.deals-row[href*="/details/"]'));
+        const linkMap = new Map();
+        links.forEach(link => {
+          const href = link.getAttribute('href') || '';
+          const idMatch = href.match(/\/details\/(\d+)/);
+          if (idMatch && idMatch[1]) {
+            // Находим элемент внутри ссылки
+            const item = link.querySelector('.card-message-preview__item');
+            if (item) {
+              linkMap.set(item, idMatch[1]);
+            }
+          }
+        });
+        
+        // 2. Получаем все элементы и сопоставляем с ссылками
         const items = Array.from(document.querySelectorAll('.card-message-preview__item'));
         return items.map(item => {
           const phoneEl = item.querySelector('.message-preview__user-name');
           const lastMsgEl = item.querySelector('.message-preview__text');
           const integrationEl = item.querySelector('.deals-integration');
           const assignedEl = item.querySelector('.deals-cell');
-          const timestampEl = item.querySelector('.timestamp');  // ДЛЯ СРАВНЕНИЯ!
+          const timestampEl = item.querySelector('.timestamp');
 
-          // Извлекаем ID из разных источников
-          let conversationId = null;
+          // Получаем ID из map (если элемент был найден в ссылке)
+          let conversationId = linkMap.get(item) || null;
           
-          // 1. ИЗ РОДИТЕЛЬСКОЙ ССЫЛКИ (ОСНОВНОЙ МЕТОД) - элемент находится внутри <a class="deals-row" href="/app/inbox/deals/inbox/details/62016374">
-          // Ищем родительский элемент <a> через parentElement (closest может не работать в некоторых контекстах)
-          let current = item;
-          let maxDepth = 10; // Защита от бесконечного цикла
-          while (current && maxDepth > 0 && !conversationId) {
-            if (current.tagName && current.tagName === 'A') {
-              const href = current.getAttribute('href') || '';
-              if (href.includes('/details/')) {
-                const idMatch = href.match(/\/details\/(\d+)/);
-                if (idMatch && idMatch[1]) {
-                  conversationId = idMatch[1];
-                  break;
+          // Если не нашли в map, ищем родительскую ссылку
+          if (!conversationId) {
+            let current = item.parentElement;
+            let maxDepth = 5;
+            while (current && maxDepth > 0) {
+              if (current.tagName === 'A') {
+                const href = current.getAttribute('href') || '';
+                if (href.includes('/details/')) {
+                  const idMatch = href.match(/\/details\/(\d+)/);
+                  if (idMatch && idMatch[1]) {
+                    conversationId = idMatch[1];
+                    break;
+                  }
                 }
               }
-            }
-            current = current.parentElement;
-            maxDepth--;
-          }
-          
-          // Альтернативный метод через closest (если доступен)
-          if (!conversationId && item.closest) {
-            try {
-              const parentLink = item.closest('a[href*="/details/"]');
-              if (parentLink) {
-                const href = parentLink.getAttribute('href') || '';
-                const idMatch = href.match(/\/details\/(\d+)/);
-                if (idMatch && idMatch[1]) {
-                  conversationId = idMatch[1];
-                }
-              }
-            } catch (e) {
-              // closest может не работать в некоторых контекстах
+              current = current.parentElement;
+              maxDepth--;
             }
           }
           
