@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "reset-webhook": "tsx setup/reset-bot-webhook.ts",
+    "parse:amocrm:all": "tsx scripts/amocrm-parse-all-deals.ts",
     "lint": "echo 'Linting not configured yet'",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

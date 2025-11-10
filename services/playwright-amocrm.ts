@@ -189,6 +189,13 @@ class AmoCRMPlaywrightService {
     updatedSince?: string;
   } = {}): Promise<any> {
     try {
+      // Проверяем сессию перед запросом
+      const isSessionValid = await this.checkSession();
+      if (!isSessionValid) {
+        console.log('⚠️ Session invalid in getDeals, re-logging...');
+        await this.login();
+      }
+
       const {
         pipelineId = '8580102',
         statusId,
@@ -198,9 +205,10 @@ class AmoCRMPlaywrightService {
       } = params;
 
       // Формируем query params
+      // AmoCRM API v4 использует формат filter[pipelines][]=ID
       const queryParams = new URLSearchParams();
-      queryParams.set('filter[pipeline_id]', pipelineId);
-      if (statusId) queryParams.set('filter[status_id]', statusId);
+      queryParams.set('filter[pipelines][]', pipelineId);
+      if (statusId) queryParams.set('filter[statuses][]', statusId);
       queryParams.set('limit', limit.toString());
       queryParams.set('page', pageNum.toString());
       if (updatedSince) {
@@ -216,11 +224,26 @@ class AmoCRMPlaywrightService {
         const res = await fetch(args.url, {
           headers: {
             'Cookie': args.cookieString,
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
           }
         });
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`API error: ${res.status} ${res.statusText} - ${errorText}`);
+        }
+        
         return await res.json();
       }, { url, cookieString });
+
+      // Проверяем на ошибку авторизации
+      if (response.status === 401 || response.detail?.includes('Unauthorized')) {
+        console.log('⚠️ 401 Unauthorized in getDeals, re-logging...');
+        await this.login();
+        // Повторяем запрос после перелогина
+        return await this.getDeals(params);
+      }
 
       const deals = response._embedded?.leads || [];
       console.log(`📋 Found ${deals.length} deals (pipeline=${pipelineId}, status=${statusId || 'all'})`);
@@ -228,11 +251,18 @@ class AmoCRMPlaywrightService {
       return {
         deals,
         total: response._total_items || deals.length,
-        page: response._page || page,
+        page: response._page || pageNum,
         hasMore: deals.length === limit
       };
     } catch (error) {
       console.error('❌ Failed to get deals:', error);
+      // Если ошибка авторизации, пробуем перелогиниться
+      if (error instanceof Error && (error.message.includes('401') || error.message.includes('Unauthorized'))) {
+        console.log('⚠️ Authorization error, attempting re-login...');
+        await this.login();
+        // Повторяем запрос
+        return await this.getDeals(params);
+      }
       throw error;
     }
   }
@@ -332,6 +362,135 @@ class AmoCRMPlaywrightService {
     }
     this.isInitialized = false;
   }
+
+  /**
+   * Получить ВСЕ сделки воронки с пагинацией
+   * Включает все статусы (активные и закрытые)
+   */
+  async getAllDeals(params: {
+    pipelineId?: string;
+    limit?: number;
+    updatedSince?: string;
+  } = {}): Promise<any[]> {
+    try {
+      // Проверяем сессию перед запросом
+      const isSessionValid = await this.checkSession();
+      if (!isSessionValid) {
+        console.log('⚠️ Session invalid in getAllDeals, re-logging...');
+        await this.login();
+      }
+
+      const {
+        pipelineId = '8580102',
+        limit = 250,
+        updatedSince
+      } = params;
+
+      const allDeals: any[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const result = await this.getDeals({
+          pipelineId,
+          limit,
+          page,
+          updatedSince
+        });
+
+        allDeals.push(...result.deals);
+        hasMore = result.hasMore && result.deals.length === limit;
+        page++;
+
+        // Небольшая задержка между страницами
+        if (hasMore) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      console.log(`�� Total deals found: ${allDeals.length} (pipeline=${pipelineId})`);
+      return allDeals;
+    } catch (error) {
+      console.error('❌ Failed to get all deals:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Получить детали сделки с расширенной информацией
+   * Включает: контакты, custom_fields, связанные сущности
+   */
+  async getDealDetailsExtended(dealId: string): Promise<any> {
+    try {
+      // Проверяем сессию перед запросом
+      const isSessionValid = await this.checkSession();
+      if (!isSessionValid) {
+        console.log('⚠️ Session invalid in getDealDetailsExtended, re-logging...');
+        await this.login();
+      }
+
+      const cookies = await context!.cookies();
+      const cookieString = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+
+      // Получаем детали сделки с контактами
+      const url = `${this.baseUrl}/api/v4/leads/${dealId}?with=contacts`;
+      
+      const dealResponse: any = await page!.evaluate(async ({ url, cookieString }) => {
+        const res = await fetch(url, {
+          headers: {
+            'Cookie': cookieString,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`API error: ${res.status} ${res.statusText} - ${errorText}`);
+        }
+        
+        return await res.json();
+      }, { url, cookieString });
+
+      // Проверяем на ошибку авторизации
+      if (dealResponse.status === 401 || dealResponse.detail?.includes('Unauthorized')) {
+        console.log('⚠️ 401 Unauthorized in getDealDetailsExtended, re-logging...');
+        await this.login();
+        // Повторяем запрос после перелогина
+        return await this.getDealDetailsExtended(dealId);
+      }
+
+      const deal = dealResponse._embedded?.leads?.[0] || dealResponse;
+
+      // Получаем примечания
+      const notes = await this.getDealNotes(dealId);
+
+      // Получаем inbox для поиска scope_id
+      const inbox = await this.getInboxList();
+      const inboxItem = inbox.find((item: any) => 
+        item.lead_id === String(dealId) || 
+        item.entity_id === String(dealId)
+      );
+
+      return {
+        deal,
+        contacts: deal._embedded?.contacts || [],
+        notes,
+        scopeId: inboxItem?.scope_id || null,
+        inboxItem: inboxItem || null
+      };
+    } catch (error) {
+      console.error(`❌ Failed to get extended deal details ${dealId}:`, error);
+      // Если ошибка авторизации, пробуем перелогиниться
+      if (error instanceof Error && (error.message.includes('401') || error.message.includes('Unauthorized'))) {
+        console.log('⚠️ Authorization error, attempting re-login...');
+        await this.login();
+        // Повторяем запрос
+        return await this.getDealDetailsExtended(dealId);
+      }
+      throw error;
+    }
+  }
 }
 
 // Singleton instance
@@ -375,12 +534,38 @@ app.get('/api/deals', async (req, res) => {
   }
 });
 
+// Get all deals with pagination
+app.get('/api/deals/all', async (req, res) => {
+  try {
+    const params = {
+      pipelineId: req.query.pipeline_id as string || '8580102',
+      limit: parseInt(req.query.limit as string) || 250,
+      updatedSince: req.query.updated_since as string
+    };
+    const deals = await service.getAllDeals(params);
+    res.json({ ok: true, count: deals.length, deals });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 // Get deal details
 app.get('/api/deals/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const deal = await service.getDealDetails(id);
     res.json({ ok: true, data: deal });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+// Get extended deal details
+app.get('/api/deals/:id/extended', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const details = await service.getDealDetailsExtended(id);
+    res.json({ ok: true, data: details });
   } catch (error: any) {
     res.status(500).json({ ok: false, error: error.message });
   }
@@ -441,7 +626,9 @@ async function start() {
       console.log(`   GET  /health`);
       console.log(`   GET  /api/pipelines/:id`);
       console.log(`   GET  /api/deals?pipeline_id=8580102&status_id=142`);
+      console.log(`   GET  /api/deals/all?pipeline_id=8580102`);
       console.log(`   GET  /api/deals/:id`);
+      console.log(`   GET  /api/deals/:id/extended`);
       console.log(`   GET  /api/deals/:id/notes`);
       console.log(`   GET  /api/inbox`);
       console.log(`   POST /api/relogin`);

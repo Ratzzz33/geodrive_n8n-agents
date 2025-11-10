@@ -50,7 +50,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ИНКРЕМЕНТАЛЬНАЯ СИНХРОНИЗАЦИЯ\n// Сравниваем lastMessage из UI с кешем в БД\n\nconst startTime = Date.now();\nconst MAX_DURATION = 50 * 1000; // 50 секунд (резерв 10 сек)\nconst MAX_BATCH = 5; // Максимум 5 чатов за цикл\n\n// Данные из БД\nconst dbConversations = $input.first().json ? [$input.first().json] : [];\nconst dbMap = new Map();\n\nfor (const dbConv of dbConversations) {\n  if (dbConv.umnico_conversation_id) {\n    dbMap.set(dbConv.umnico_conversation_id, {\n      lastPreview: dbConv.last_message_preview,\n      lastMessageAt: dbConv.last_message_at\n    });\n  }\n}\n\n// Данные из Umnico UI\nconst uiConversations = $input.all()[1].json.data || [];\n\n// Найти изменившиеся/новые чаты\nconst changed = [];\n\nfor (const uiConv of uiConversations) {\n  const convId = uiConv.conversationId;\n  if (!convId) continue;\n  \n  const dbConv = dbMap.get(convId);\n  \n  // Новый чат - обязательно парсим\n  if (!dbConv) {\n    changed.push({\n      ...uiConv,\n      reason: 'new',\n      priority: 1\n    });\n    continue;\n  }\n  \n  // Превью изменилось - парсим\n  if (dbConv.lastPreview !== uiConv.lastMessage) {\n    changed.push({\n      ...uiConv,\n      reason: 'changed',\n      priority: 2\n    });\n    continue;\n  }\n  \n  // Недавно обновлялись (< 5 минут) и превью не изменилось - пропускаем\n  const minutesSinceUpdate = (Date.now() - new Date(dbConv.lastMessageAt).getTime()) / (60 * 1000);\n  if (minutesSinceUpdate < 5) {\n    console.log(`⏭️  Skip ${convId} - no changes, synced ${minutesSinceUpdate.toFixed(1)} min ago`);\n    continue;\n  }\n  \n  // Давно не обновлялись - проверяем\n  changed.push({\n    ...uiConv,\n    reason: 'stale',\n    priority: 3\n  });\n}\n\n// Приоритизация: новые → измененные → застарелые\nchanged.sort((a, b) => a.priority - b.priority);\n\n// Взять топ-5\nconst batch = changed.slice(0, MAX_BATCH);\n\nconsole.log(`📊 Found ${changed.length} conversations with changes`);\nconsole.log(`🎯 Processing top ${batch.length} conversations`);\nconsole.log(`⏱️  Max duration: ${MAX_DURATION / 1000}s`);\n\nif (batch.length === 0) {\n  console.log('✅ No conversations to process');\n  return [];\n}\n\nreturn batch.map(c => ({ \n  json: { \n    ...c, \n    _startTime: startTime,\n    _maxDuration: MAX_DURATION \n  } \n}));"
+        "jsCode": "// ИНКРЕМЕНТАЛЬНАЯ СИНХРОНИЗАЦИЯ\n// Сравниваем lastMessage из UI с кешем в БД\n\ntry {\nconst startTime = Date.now();\nconst MAX_DURATION = 50 * 1000; // 50 секунд (резерв 10 сек)\nconst MAX_BATCH = 5; // Максимум 5 чатов за цикл\n\n// Безопасная обработка входов\nconst allInputs = ($input && $input.all) ? $input.all() : [];\n\n// Данные из БД (Postgres - может быть пустым)\n// Postgres возвращает массив items, каждый item - это строка результата\nlet dbConversations = [];\nfor (const item of allInputs) {\n  if (!item || !item.json) continue;\n  \n  // Postgres данные - нет полей data или ok\n  if (item.json.data === undefined && item.json.ok === undefined) {\n    // Проверяем есть ли umnico_conversation_id (это строка результата)\n    if (item.json.umnico_conversation_id !== undefined) {\n      dbConversations.push(item.json);\n    }\n  }\n}\n\nconst dbMap = new Map();\nfor (const dbConv of dbConversations) {\n  if (dbConv && dbConv.umnico_conversation_id) {\n    dbMap.set(dbConv.umnico_conversation_id, {\n      lastPreview: dbConv.last_message_preview || null,\n      lastMessageAt: dbConv.last_message_at || null\n    });\n  }\n}\n\n// Данные из Umnico UI (HTTP Request - должен быть с полем data)\nlet uiConversations = [];\nfor (const item of allInputs) {\n  if (!item || !item.json) continue;\n  \n  // HTTP Request данные - есть поле data с массивом\n  if (item.json.data && Array.isArray(item.json.data)) {\n    uiConversations = item.json.data;\n    break;\n  }\n}\n\n// Найти изменившиеся/новые чаты\nconst changed = [];\n\nfor (const uiConv of uiConversations) {\n  const convId = uiConv.conversationId;\n  if (!convId) continue;\n  \n  const dbConv = dbMap.get(convId);\n  \n  // Новый чат - обязательно парсим\n  if (!dbConv) {\n    changed.push({\n      ...uiConv,\n      reason: 'new',\n      priority: 1\n    });\n    continue;\n  }\n  \n  // Превью изменилось - парсим\n  if (dbConv.lastPreview !== uiConv.lastMessage) {\n    changed.push({\n      ...uiConv,\n      reason: 'changed',\n      priority: 2\n    });\n    continue;\n  }\n  \n  // Недавно обновлялись (< 5 минут) и превью не изменилось - пропускаем\n  const minutesSinceUpdate = (Date.now() - new Date(dbConv.lastMessageAt).getTime()) / (60 * 1000);\n  if (minutesSinceUpdate < 5) {\n    console.log(`⏭️  Skip ${convId} - no changes, synced ${minutesSinceUpdate.toFixed(1)} min ago`);\n    continue;\n  }\n  \n  // Давно не обновлялись - проверяем\n  changed.push({\n    ...uiConv,\n    reason: 'stale',\n    priority: 3\n  });\n}\n\n// Приоритизация: новые → измененные → застарелые\nchanged.sort((a, b) => a.priority - b.priority);\n\n// Взять топ-5\nconst batch = changed.slice(0, MAX_BATCH);\n\nconsole.log(`📊 Found ${changed.length} conversations with changes`);\nconsole.log(`🎯 Processing top ${batch.length} conversations`);\nconsole.log(`⏱️  Max duration: ${MAX_DURATION / 1000}s`);\n\nif (batch.length === 0) {\n  console.log('✅ No conversations to process');\n  return [];\n}\n\nreturn batch.map(c => ({ \n  json: { \n    ...c, \n    _startTime: startTime,\n    _maxDuration: MAX_DURATION \n  } \n}));\n} catch (error) {\n  console.error('❌ Error in Find Changed Conversations:', error);\n  console.error('Error message:', error.message);\n  console.error('Error stack:', error.stack);\n  return [];\n}"
       },
       "id": "filter-changed-conversations",
       "name": "Find Changed Conversations (Smart Filter)",
@@ -124,8 +124,21 @@
     {
       "parameters": {
         "operation": "insert",
+        "schema": "public",
         "table": "messages",
-        "columns": "conversation_id, client_id, text, direction, channel, sent_at, metadata",
+        "columnToMatchUp": "",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "conversation_id": "={{ $json.conversation_id }}",
+            "client_id": "={{ $json.client_id }}",
+            "text": "={{ $json.text }}",
+            "direction": "={{ $json.direction }}",
+            "channel": "={{ $json.channel }}",
+            "sent_at": "={{ $json.sent_at }}",
+            "metadata": "={{ $json.metadata }}"
+          }
+        },
         "options": {
           "skipOnConflict": true
         }
@@ -213,7 +226,8 @@
             "type": "main",
             "index": 0
           }
-        ]
+        ],
+        []
       ]
     },
     "Timeout Guard": {

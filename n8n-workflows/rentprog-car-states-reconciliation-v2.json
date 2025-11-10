@@ -1,0 +1,627 @@
+{
+  "name": "RentProg Car States Reconciliation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 4 * * *"
+            }
+          ]
+        },
+        "timezone": "Asia/Tbilisi"
+      },
+      "id": "cron-trigger",
+      "name": "Daily at 04:00 Tbilisi",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        250,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/get_token?company_token=91b83b93963633649f29a04b612bab3f9fbb0471b5928622",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "get-token-tbilisi",
+      "name": "Get Token Tbilisi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/get_token?company_token=7ad345720f8d92f10c187122427c6a2c2bb9494c6bf14e8d",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "get-token-batumi",
+      "name": "Get Token Batumi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        450,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/get_token?company_token=5599ebb7b94827fdfd49ca3a5b7e259cfa99d8ea78edeb50",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "get-token-kutaisi",
+      "name": "Get Token Kutaisi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        450,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/get_token?company_token=5y4j4gcs75o9n5s1e2vrxx4a",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "get-token-service",
+      "name": "Get Token Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        450,
+        750
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/all_cars_full",
+        "authentication": "none",
+        "sendHeaders": true,
+        "options": {
+          "timeout": 15000
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "get-cars-tbilisi",
+      "name": "Get Cars Tbilisi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/all_cars_full",
+        "authentication": "none",
+        "sendHeaders": true,
+        "options": {
+          "timeout": 15000
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "get-cars-batumi",
+      "name": "Get Cars Batumi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        650,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/all_cars_full",
+        "authentication": "none",
+        "sendHeaders": true,
+        "options": {
+          "timeout": 15000
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "get-cars-kutaisi",
+      "name": "Get Cars Kutaisi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        650,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/all_cars_full",
+        "authentication": "none",
+        "sendHeaders": true,
+        "options": {
+          "timeout": 15000
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "get-cars-service",
+      "name": "Get Cars Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        650,
+        750
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Учитываем разные форматы ответа: массив или объект с data\nconst payload = $json;\nlet cars = [];\n\nif (Array.isArray(payload)) {\n  cars = payload;\n} else if (payload && typeof payload === 'object') {\n  if (Array.isArray(payload.data)) {\n    cars = payload.data;\n  } else if (payload.id) {\n    cars = [payload];\n  }\n}\n\nreturn cars.map(car => ({ json: { ...car, company_id: car.company_id || '9247' } }));"
+      },
+      "id": "flatten-tbilisi",
+      "name": "Flatten Tbilisi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        850,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Учитываем разные форматы ответа: массив или объект с data\nconst payload = $json;\nlet cars = [];\n\nif (Array.isArray(payload)) {\n  cars = payload;\n} else if (payload && typeof payload === 'object') {\n  if (Array.isArray(payload.data)) {\n    cars = payload.data;\n  } else if (payload.id) {\n    cars = [payload];\n  }\n}\n\nreturn cars.map(car => ({ json: { ...car, company_id: car.company_id || '9506' } }));"
+      },
+      "id": "flatten-batumi",
+      "name": "Flatten Batumi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        850,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Учитываем разные форматы ответа: массив или объект с data\nconst payload = $json;\nlet cars = [];\n\nif (Array.isArray(payload)) {\n  cars = payload;\n} else if (payload && typeof payload === 'object') {\n  if (Array.isArray(payload.data)) {\n    cars = payload.data;\n  } else if (payload.id) {\n    cars = [payload];\n  }\n}\n\nreturn cars.map(car => ({ json: { ...car, company_id: car.company_id || '9248' } }));"
+      },
+      "id": "flatten-kutaisi",
+      "name": "Flatten Kutaisi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        850,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Учитываем разные форматы ответа: массив или объект с data\nconst payload = $json;\nlet cars = [];\n\nif (Array.isArray(payload)) {\n  cars = payload;\n} else if (payload && typeof payload === 'object') {\n  if (Array.isArray(payload.data)) {\n    cars = payload.data;\n  } else if (payload.id) {\n    cars = [payload];\n  }\n}\n\nreturn cars.map(car => ({ json: { ...car, company_id: car.company_id || '11163' } }));"
+      },
+      "id": "flatten-service",
+      "name": "Flatten Service",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        850,
+        750
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "options": {}
+      },
+      "id": "merge-all-cars",
+      "name": "Merge All API Cars",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1050,
+        525
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Расширенное сравнение данных из API с БД (все параметры + цены)\nconst apiItems = $input.all(0).map(item => item.json);\nconst dbItems = $input.all(1).map(item => item.json);\n\n// Нормализация значений\nconst normalize = (val) => {\n  if (val === null || val === undefined || val === '') return null;\n  const str = String(val).trim();\n  return str === '' || str.toLowerCase() === 'null' ? null : str;\n};\n\n// Нормализация boolean\nconst normalizeBool = (val) => {\n  if (val === true || val === 'true' || val === '1' || val === 1) return 'true';\n  if (val === false || val === 'false' || val === '0' || val === 0) return 'false';\n  return null;\n};\n\n// Мапа машин из БД по rentprog_id (строка)\nconst dbMap = new Map();\ndbItems.forEach(car => {\n  if (car && car.rentprog_id) {\n    const key = String(car.rentprog_id).trim();\n    if (key) {\n      dbMap.set(key, car);\n    }\n  }\n});\n\n// Дополнительная мапа по plate (на случай если rentprog_id не совпадает)\nconst dbMapByPlate = new Map();\ndbItems.forEach(car => {\n  if (car && car.plate) {\n    const key = String(car.plate).trim().toUpperCase();\n    if (key) {\n      dbMapByPlate.set(key, car);\n    }\n  }\n});\n\nconst discrepancies = [];\n\n// Поля для сравнения с русскими названиями\nconst fieldMapping = {\n  // Основные\n  company_id: { api: 'company_id', db: 'company_id', name: 'Компания' },\n  car_name: { api: 'car_name', db: 'model', name: 'Модель' },\n  number: { api: 'number', db: 'plate', name: 'Номер' },\n  state: { api: 'state', db: 'state', name: 'Статус' },\n  transmission: { api: 'transmission', db: 'transmission', name: 'Трансмиссия' },\n  year: { api: 'year', db: 'year', name: 'Год' },\n  color: { api: 'color', db: 'color', name: 'Цвет' },\n  mileage: { api: 'mileage', db: 'mileage', name: 'Пробег' },\n  car_type: { api: 'car_type', db: 'car_type', name: 'Тип кузова' },\n  interior: { api: 'interior', db: 'interior', name: 'Салон' },\n  car_class: { api: 'car_class', db: 'car_class', name: 'Класс' },\n  code: { api: 'code', db: 'code', name: 'Код' },\n  drive_unit: { api: 'drive_unit', db: 'drive_unit', name: 'Привод' },\n  steering_side: { api: 'steering_side', db: 'steering_side', name: 'Руль' },\n  fuel: { api: 'fuel', db: 'fuel', name: 'Топливо' },\n  \n  // Характеристики\n  number_doors: { api: 'number_doors', db: 'number_doors', name: 'Кол-во дверей' },\n  number_seats: { api: 'number_seats', db: 'number_seats', name: 'Кол-во мест' },\n  engine_capacity: { api: 'engine_capacity', db: 'engine_capacity', name: 'Объём двигателя' },\n  engine_power: { api: 'engine_power', db: 'engine_power', name: 'Мощность' },\n  trunk_volume: { api: 'trunk_volume', db: 'trunk_volume', name: 'Объём багажника' },\n  tire_size: { api: 'tire_size', db: 'tire_size', name: 'Размер шин' },\n  tire_type: { api: 'tire_type', db: 'tire_type', name: 'Тип шин' },\n  gas_mileage: { api: 'gas_mileage', db: 'gas_mileage', name: 'Расход топлива' },\n  \n  // Дополнительные\n  vin: { api: 'vin', db: 'vin', name: 'VIN' },\n  body_number: { api: 'body_number', db: 'body_number', name: 'Номер кузова' },\n  pts: { api: 'pts', db: 'pts', name: 'ПТС' },\n  registration_certificate: { api: 'registration_certificate', db: 'registration_certificate', name: 'Свидетельство' },\n  start_mileage: { api: 'start_mileage', db: 'start_mileage', name: 'Начальный пробег' },\n  tank_value: { api: 'tank_value', db: 'tank_value', name: 'Объём бака' },\n  franchise: { api: 'franchise', db: 'franchise', name: 'Франшиза' },\n  max_fine: { api: 'max_fine', db: 'max_fine', name: 'Макс. штраф' },\n  repair_cost: { api: 'repair_cost', db: 'repair_cost', name: 'Стоимость ремонта' },\n  store_place: { api: 'store_place', db: 'store_place', name: 'Место хранения' },\n  roof: { api: 'roof', db: 'roof', name: 'Крыша' },\n  custom_field_1: { api: 'custom_field_1', db: 'custom_field_1', name: 'Поле 1' },\n  custom_field_2: { api: 'custom_field_2', db: 'custom_field_2', name: 'Поле 2' },\n  custom_field_3: { api: 'custom_field_3', db: 'custom_field_3', name: 'Поле 3' },\n  window_lifters: { api: 'window_lifters', db: 'window_lifters', name: 'Стекла' },\n  extra_mileage_km: { api: 'extra_mileage_km', db: 'extra_mileage_km', name: 'Доп. пробег (км)' },\n  extra_mileage_price: { api: 'extra_mileage_price', db: 'extra_mileage_price', name: 'Доп. пробег (цена)' },\n  insurance: { api: 'insurance', db: 'insurance', name: 'Страховка' },\n  avatar_url: { api: 'avatar_url', db: 'avatar_url', name: 'Аватар' },\n  \n  // Boolean поля\n  is_air: { api: 'is_air', db: 'is_air', name: 'Кондиционер', isBool: true },\n  abs: { api: 'abs', db: 'abs', name: 'ABS', isBool: true },\n  ebd: { api: 'ebd', db: 'ebd', name: 'EBD', isBool: true },\n  esp: { api: 'esp', db: 'esp', name: 'ESP', isBool: true },\n  is_electropackage: { api: 'is_electropackage', db: 'is_electropackage', name: 'Электропакет', isBool: true },\n  cd_system: { api: 'cd_system', db: 'cd_system', name: 'CD', isBool: true },\n  tv_system: { api: 'tv_system', db: 'tv_system', name: 'TV', isBool: true },\n  parktronic: { api: 'parktronic', db: 'parktronic', name: 'Парктроник', isBool: true },\n  parktronic_back: { api: 'parktronic_back', db: 'parktronic_back', name: 'Парктроник задний', isBool: true },\n  parktronic_camera: { api: 'parktronic_camera', db: 'parktronic_camera', name: 'Камера', isBool: true },\n  tank_state: { api: 'tank_state', db: 'tank_state', name: 'Состояние бака', isBool: true },\n  heated_seats: { api: 'heated_seats', db: 'heated_seats', name: 'Подогрев сидений', isBool: true },\n  heated_seats_front: { api: 'heated_seats_front', db: 'heated_seats_front', name: 'Подогрев передних', isBool: true },\n  clean_state: { api: 'clean_state', db: 'clean_state', name: 'Чистота', isBool: true },\n  audio_system: { api: 'audio_system', db: 'audio_system', name: 'Аудио', isBool: true },\n  video_system: { api: 'video_system', db: 'video_system', name: 'Видео', isBool: true },\n  folding_seats: { api: 'folding_seats', db: 'folding_seats', name: 'Складные сиденья', isBool: true },\n  climate_control: { api: 'climate_control', db: 'climate_control', name: 'Климат-контроль', isBool: true },\n  usb_system: { api: 'usb_system', db: 'usb_system', name: 'USB', isBool: true },\n  rain_sensor: { api: 'rain_sensor', db: 'rain_sensor', name: 'Датчик дождя', isBool: true },\n  wheel_adjustment: { api: 'wheel_adjustment', db: 'wheel_adjustment', name: 'Регулировка руля', isBool: true },\n  wheel_adjustment_full: { api: 'wheel_adjustment_full', db: 'wheel_adjustment_full', name: 'Полная регулировка', isBool: true },\n  heated_windshield: { api: 'heated_windshield', db: 'heated_windshield', name: 'Подогрев стекла', isBool: true }\n};\n\n// Функция сравнения цен\nconst comparePrices = (apiPrices, dbPrices) => {\n  // Если в API нет цен - не сравниваем\n  if (!apiPrices || !Array.isArray(apiPrices) || apiPrices.length === 0) {\n    return null;\n  }\n  \n  // Если в БД нет цен - это расхождение\n  if (!dbPrices || !Array.isArray(dbPrices) || dbPrices.length === 0) {\n    return { type: 'missing_in_db', count: apiPrices.length, api_seasons: apiPrices.map(p => p.season_id).filter(Boolean) };\n  }\n  \n  // Нормализуем цены из API\n  const apiPriceMap = new Map();\n  apiPrices.forEach(price => {\n    if (price && price.season_id !== undefined && price.season_id !== null) {\n      const key = String(price.season_id);\n      // В API: values - это массив чисел [179, 173, 168, ...]\n      const values = Array.isArray(price.values) ? price.values : [];\n      apiPriceMap.set(key, {\n        season_id: price.season_id,\n        values: values,\n        id: price.id\n      });\n    }\n  });\n  \n  // Нормализуем цены из БД\n  const dbPriceMap = new Map();\n  dbPrices.forEach(price => {\n    if (price && price.season_id !== undefined && price.season_id !== null) {\n      const key = String(price.season_id);\n      // В БД: price_values может быть JSONB (массив или объект)\n      let values = [];\n      if (price.price_values) {\n        if (Array.isArray(price.price_values)) {\n          // Если это массив напрямую [179, 173, ...]\n          values = price.price_values;\n        } else if (price.price_values.values && Array.isArray(price.price_values.values)) {\n          // Если это объект с полем values {values: [179, 173, ...]}\n          values = price.price_values.values;\n        } else if (typeof price.price_values === 'string') {\n          // Если это строка JSON\n          try {\n            const parsed = JSON.parse(price.price_values);\n            values = Array.isArray(parsed) ? parsed : (parsed.values || []);\n          } catch (e) {\n            values = [];\n          }\n        } else if (typeof price.price_values === 'object') {\n          // Если это объект (JSONB уже распарсен)\n          values = Array.isArray(price.price_values) ? price.price_values : (price.price_values.values || []);\n        }\n      } else if (price.values && Array.isArray(price.values)) {\n        // Fallback на values\n        values = price.values;\n      }\n      \n      dbPriceMap.set(key, {\n        season_id: price.season_id,\n        values: values,\n        season_name: price.season_name || null\n      });\n    }\n  });\n  \n  const priceDiffs = [];\n  \n  // Проверяем цены из API\n  for (const [seasonId, apiPrice] of apiPriceMap.entries()) {\n    const dbPrice = dbPriceMap.get(seasonId);\n    \n    if (!dbPrice) {\n      priceDiffs.push({\n        season_id: seasonId,\n        type: 'missing_in_db',\n        api_values: apiPrice.values\n      });\n      continue;\n    }\n    \n    // Сравниваем значения цен (массивы чисел)\n    const apiValuesStr = JSON.stringify(apiPrice.values || []);\n    const dbValuesStr = JSON.stringify(dbPrice.values || []);\n    \n    if (apiValuesStr !== dbValuesStr) {\n      priceDiffs.push({\n        season_id: seasonId,\n        season_name: dbPrice.season_name,\n        type: 'mismatch',\n        api_values: apiPrice.values,\n        db_values: dbPrice.values\n      });\n    }\n  }\n  \n  // Проверяем цены из БД, которых нет в API\n  for (const [seasonId, dbPrice] of dbPriceMap.entries()) {\n    if (!apiPriceMap.has(seasonId)) {\n      priceDiffs.push({\n        season_id: seasonId,\n        season_name: dbPrice.season_name,\n        type: 'missing_in_api',\n        db_values: dbPrice.values\n      });\n    }\n  }\n  \n  return priceDiffs.length > 0 ? priceDiffs : null;\n};\n\napiItems.forEach(apiCar => {\n  if (!apiCar || !apiCar.id) return;\n\n  const rentprogId = String(apiCar.id).trim();\n  let dbCar = dbMap.get(rentprogId);\n\n  // Если не нашли по RentProg ID, пробуем найти по plate\n  if (!dbCar && apiCar.number) {\n    const plateKey = String(apiCar.number).trim().toUpperCase();\n    dbCar = dbMapByPlate.get(plateKey);\n    \n    if (dbCar) {\n      // Нашли по plate, но RentProg ID не совпадает - это расхождение\n      discrepancies.push({\n        rentprog_id: rentprogId,\n        type: 'rentprog_id_mismatch',\n        plate: apiCar.number || null,\n        model: apiCar.car_name || apiCar.model || null,\n        api_rentprog_id: rentprogId,\n        db_rentprog_id: dbCar.rentprog_id,\n        message: 'Машина найдена по plate, но RentProg ID не совпадает'\n      });\n      // Продолжаем сравнение с найденной машиной\n    }\n  }\n\n  // Машина есть в API, но отсутствует в БД\n  if (!dbCar) {\n    discrepancies.push({\n      rentprog_id: rentprogId,\n      type: 'missing_in_db',\n      plate: apiCar.number || null,\n      model: apiCar.car_name || apiCar.model || null,\n      api_data: apiCar\n    });\n    return;\n  }\n\n  // Сравниваем все поля\n  const fieldDiffs = [];\n\n  // Проходим по всем полям из fieldMapping\n  for (const [fieldKey, fieldConfig] of Object.entries(fieldMapping)) {\n    const apiField = fieldConfig.api;\n    const dbField = fieldConfig.db;\n    const fieldName = fieldConfig.name;\n    const isBool = fieldConfig.isBool || false;\n\n    let apiValue = apiCar[apiField];\n    let dbValue = dbCar[dbField];\n\n    // Нормализация\n    if (isBool) {\n      apiValue = normalizeBool(apiValue);\n      dbValue = normalizeBool(dbValue);\n    } else {\n      // Для числовых полей\n      if (['year', 'mileage', 'number_doors', 'number_seats', 'tire_type', \n           'franchise', 'max_fine', 'start_mileage', 'tank_value', \n           'repair_cost', 'extra_mileage_km', 'extra_mileage_price'].includes(fieldKey)) {\n        apiValue = apiValue !== undefined && apiValue !== null ? String(apiValue) : null;\n        dbValue = dbValue !== undefined && dbValue !== null ? String(dbValue) : null;\n      } else {\n        apiValue = normalize(apiValue);\n        dbValue = normalize(dbValue);\n      }\n    }\n\n    // Сравнение\n    if (apiValue !== dbValue) {\n      fieldDiffs.push({\n        field: dbField,\n        fieldNameRu: fieldName,\n        apiValue: apiValue,\n        dbValue: dbValue\n      });\n    }\n  }\n\n  // Сравнение цен\n  const priceDiffs = comparePrices(apiCar.prices, dbCar.prices);\n  if (priceDiffs) {\n    if (Array.isArray(priceDiffs)) {\n      // Есть расхождения в ценах\n      fieldDiffs.push({\n        field: 'prices',\n        fieldNameRu: 'Цены',\n        apiValue: `Расхождений: ${priceDiffs.length}`,\n        dbValue: 'См. детали',\n        priceDetails: priceDiffs\n      });\n    } else {\n      // Цены отсутствуют в БД\n      fieldDiffs.push({\n        field: 'prices',\n        fieldNameRu: 'Цены',\n        apiValue: `В API: ${priceDiffs.count} сезонов`,\n        dbValue: 'Отсутствуют в БД'\n      });\n    }\n  }\n\n  if (fieldDiffs.length > 0) {\n    discrepancies.push({\n      rentprog_id: rentprogId,\n      type: 'field_mismatch',\n      car_id: dbCar.car_db_id || dbCar.id,\n      plate: dbCar.plate,\n      model: dbCar.model,\n      fields: fieldDiffs\n    });\n  }\n});\n\nreturn discrepancies.map(d => ({ json: d }));"
+      },
+      "id": "compare-api-db",
+      "name": "Compare API vs DB",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1450,
+        525
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Подготовка отчета о расхождениях (без генерации SQL)\nconst items = $input.all();\n\nif (!items || items.length === 0) {\n  return [{ json: { hasChanges: false, discrepancies: [] } }];\n}\n\nconst discrepancies = [];\n\nitems.forEach(item => {\n  const data = item.json;\n  discrepancies.push(data);\n});\n\nreturn [{\n  json: {\n    hasChanges: discrepancies.length > 0,\n    totalDiscrepancies: discrepancies.length,\n    discrepancies: discrepancies\n  }\n}];"
+      },
+      "id": "prepare-updates",
+      "name": "Prepare Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1650,
+        525
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-changes",
+              "leftValue": "={{ $json.hasChanges }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-changes",
+      "name": "If Has Changes",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1850,
+        525
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { totalDiscrepancies, discrepancies } = $json;\n\nconst stateNames = {\n  '1': 'Можно выдавать',\n  '2': 'В ремонте',\n  '3': 'Критическое состояние',\n  '4': 'В долгосрочной аренде',\n  '5': 'Не выдавать',\n  '6': 'Необходимо обслуживание'\n};\n\nconst showValue = (value, field) => {\n  if (value === null || value === undefined || value === '') return '∅';\n  if (field === 'state') {\n    return stateNames[value] || value;\n  }\n  return value;\n};\n\nconst lines = [\n  '🔄 Сравнение состояний автомобилей (RentProg API vs БД)',\n  '',\n  `📊 Обнаружено расхождений: ${totalDiscrepancies}`,\n  '',\n  '📋 Детали:',\n  ''\n];\n\nfor (const d of discrepancies) {\n  if (d.type === 'missing_in_db') {\n    const plate = showValue(d.plate);\n    const model = showValue(d.model);\n    lines.push(\n      `🚗 ${plate} (${model})`,\n      '   ⚠️ Есть в RentProg API, НЕТ в БД',\n      '   💡 Запустите скрипт restore_cars_from_rentprog.mjs для добавления',\n      ''\n    );\n    continue;\n  }\n\n  if (d.type === 'rentprog_id_mismatch') {\n    const plate = showValue(d.plate);\n    const model = showValue(d.model);\n    lines.push(\n      `🚗 ${plate} (${model})`,\n      `   ⚠️ RentProg ID не совпадает: API=${d.api_rentprog_id}, БД=${d.db_rentprog_id}`,\n      '   💡 Проверьте связь в external_refs',\n      ''\n    );\n    continue;\n  }\n\n  if (d.type === 'field_mismatch') {\n    const plate = showValue(d.plate);\n    const model = showValue(d.model);\n    lines.push(`🚗 ${plate} (${model})`);\n\n    // Показываем ВСЕ поля с изменениями\n    for (const field of d.fields) {\n      const oldVal = showValue(field.dbValue, field.field);\n      const newVal = showValue(field.apiValue, field.field);\n      \n      // Специальная обработка для цен\n      if (field.field === 'prices' && field.priceDetails) {\n        lines.push('   💰 Цены:');\n        for (const priceDiff of field.priceDetails) {\n          if (priceDiff.type === 'missing_in_db') {\n            lines.push(`      Сезон ${priceDiff.season_id}: отсутствует в БД (API: ${JSON.stringify(priceDiff.api_values)})`);\n          } else if (priceDiff.type === 'missing_in_api') {\n            lines.push(`      Сезон ${priceDiff.season_id} (${priceDiff.season_name || ''}): есть в БД, нет в API`);\n          } else if (priceDiff.type === 'mismatch') {\n            lines.push(`      Сезон ${priceDiff.season_id} (${priceDiff.season_name || ''}):`);\n            lines.push(`         API: ${JSON.stringify(priceDiff.api_values)}`);\n            lines.push(`         БД:  ${JSON.stringify(priceDiff.db_values)}`);\n          }\n        }\n      } else {\n        lines.push(`   ${field.fieldNameRu}: ${oldVal} → ${newVal}`);\n      }\n    }\n\n    lines.push('   💡 Запустите скрипт restore_cars_from_rentprog.mjs для обновления');\n    lines.push('');\n  }\n}\n\nlines.push('━'.repeat(30));\nlines.push(`🕐 ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Tbilisi' })}`);\n\nreturn [{ json: { alertText: lines.join('\\n') } }];"
+      },
+      "id": "format-alert",
+      "name": "Format Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2050,
+        650
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "-5004140602",
+        "text": "={{ $json.alertText }}",
+        "additionalFields": {}
+      },
+      "id": "send-telegram-alert",
+      "name": "Send Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2250,
+        650
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram_alert_bot",
+          "name": "Telegram Alert Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  c.id AS car_db_id,\n  c.branch_id AS branch_id,\n  er.external_id::text AS rentprog_id,\n  c.company_id::text AS company_id,\n  c.model AS model,\n  c.plate AS plate,\n  c.state AS state,\n  c.transmission AS transmission,\n  c.year AS year,\n  c.number_doors AS number_doors,\n  c.number_seats AS number_seats,\n  c.is_air AS is_air,\n  c.engine_capacity AS engine_capacity,\n  c.engine_power AS engine_power,\n  c.trunk_volume AS trunk_volume,\n  c.avatar_url AS avatar_url,\n  c.color AS color,\n  c.mileage AS mileage,\n  c.car_type AS car_type,\n  c.interior AS interior,\n  c.car_class AS car_class,\n  c.code AS code,\n  c.drive_unit AS drive_unit,\n  c.steering_side AS steering_side,\n  c.tire_size AS tire_size,\n  c.tire_type AS tire_type,\n  c.franchise AS franchise,\n  c.max_fine AS max_fine,\n  c.insurance AS insurance,\n  c.start_mileage AS start_mileage,\n  c.registration_certificate AS registration_certificate,\n  c.tank_value AS tank_value,\n  c.gas_mileage AS gas_mileage,\n  c.repair_cost AS repair_cost,\n  c.store_place AS store_place,\n  c.pts AS pts,\n  c.roof AS roof,\n  c.custom_field_1 AS custom_field_1,\n  c.custom_field_2 AS custom_field_2,\n  c.custom_field_3 AS custom_field_3,\n  c.window_lifters AS window_lifters,\n  c.extra_mileage_km AS extra_mileage_km,\n  c.extra_mileage_price AS extra_mileage_price,\n  c.body_number AS body_number,\n  c.abs AS abs,\n  c.ebd AS ebd,\n  c.esp AS esp,\n  c.cd_system AS cd_system,\n  c.tv_system AS tv_system,\n  c.parktronic AS parktronic,\n  c.parktronic_back AS parktronic_back,\n  c.parktronic_camera AS parktronic_camera,\n  c.tank_state AS tank_state,\n  c.heated_seats AS heated_seats,\n  c.heated_seats_front AS heated_seats_front,\n  c.clean_state AS clean_state,\n  c.audio_system AS audio_system,\n  c.video_system AS video_system,\n  c.folding_seats AS folding_seats,\n  c.climate_control AS climate_control,\n  c.usb_system AS usb_system,\n  c.rain_sensor AS rain_sensor,\n  c.wheel_adjustment AS wheel_adjustment,\n  c.wheel_adjustment_full AS wheel_adjustment_full,\n  c.heated_windshield AS heated_windshield,\n  c.is_electropackage AS is_electropackage,\n  c.fuel AS fuel,\n  b.code AS branch_code,\n  -- Цены (подзапрос)\n  (\n    SELECT COALESCE(\n      json_agg(\n        json_build_object(\n          'season_id', cp.season_id,\n          'season_name', cp.season_name,\n          'price_values', cp.price_values,\n          'active', cp.active\n        )\n        ORDER BY cp.season_id\n      ),\n      '[]'::json\n    )\n    FROM car_prices cp\n    WHERE cp.car_id = c.id AND cp.active = TRUE\n  ) AS prices\nFROM cars c\nJOIN external_refs er ON er.entity_id = c.id\nJOIN branches b ON b.id = c.branch_id\nWHERE er.system = 'rentprog'\n  AND er.entity_type = 'car'",
+        "options": {}
+      },
+      "id": "get-cars-from-db",
+      "name": "Get Cars from DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1250,
+        525
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "PostgreSQL (Neon)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily at 04:00 Tbilisi": {
+      "main": [
+        [
+          {
+            "node": "Get Token Tbilisi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Token Batumi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Token Kutaisi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Token Service",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Cars from DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Token Tbilisi": {
+      "main": [
+        [
+          {
+            "node": "Get Cars Tbilisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Token Batumi": {
+      "main": [
+        [
+          {
+            "node": "Get Cars Batumi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Token Kutaisi": {
+      "main": [
+        [
+          {
+            "node": "Get Cars Kutaisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Token Service": {
+      "main": [
+        [
+          {
+            "node": "Get Cars Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Cars Tbilisi": {
+      "main": [
+        [
+          {
+            "node": "Flatten Tbilisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Cars Batumi": {
+      "main": [
+        [
+          {
+            "node": "Flatten Batumi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Cars Kutaisi": {
+      "main": [
+        [
+          {
+            "node": "Flatten Kutaisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Cars Service": {
+      "main": [
+        [
+          {
+            "node": "Flatten Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten Tbilisi": {
+      "main": [
+        [
+          {
+            "node": "Merge All API Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten Batumi": {
+      "main": [
+        [
+          {
+            "node": "Merge All API Cars",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Flatten Kutaisi": {
+      "main": [
+        [
+          {
+            "node": "Merge All API Cars",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Flatten Service": {
+      "main": [
+        [
+          {
+            "node": "Merge All API Cars",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merge All API Cars": {
+      "main": [
+        [
+          {
+            "node": "Compare API vs DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Cars from DB": {
+      "main": [
+        [
+          {
+            "node": "Compare API vs DB",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Compare API vs DB": {
+      "main": [
+        [
+          {
+            "node": "Prepare Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Report": {
+      "main": [
+        [
+          {
+            "node": "If Has Changes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Has Changes": {
+      "main": [
+        [
+          {
+            "node": "Format Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveManualExecutions": true,
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all"
+  }
+}

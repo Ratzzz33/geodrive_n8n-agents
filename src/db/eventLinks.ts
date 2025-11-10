@@ -36,12 +36,18 @@ export interface LinkOptions {
 
 /**
  * Получить company_id филиала из кода
+ * 
+ * В RentProg company_id (4-5 цифр) означает ID филиала:
+ * - tbilisi → 9247
+ * - kutaisi → 9248
+ * - batumi → 9506
+ * - service-center → 11163
  */
 async function getCompanyId(branchCode: BranchName): Promise<number | null> {
   const companyIdMap: Record<BranchName, number> = {
     'tbilisi': 9247,
-    'batumi': 9248,
-    'kutaisi': 9506,
+    'kutaisi': 9248,
+    'batumi': 9506,
     'service-center': 11163,
   };
   
@@ -141,35 +147,139 @@ export async function linkPayment(
     };
   }
 
-  // 1. Поиск события в events по payment_id и времени
-  // Используем прямой SQL запрос, так как events не в Drizzle схеме
-  const eventQuery = sql`
-    SELECT id, ts, rentprog_id, payload
-    FROM events
-    WHERE 
-      entity_type = 'payment'
-      AND rentprog_id = ${String(rpPaymentId)}
-      AND company_id = ${companyId}
-      AND ABS(EXTRACT(EPOCH FROM (ts - ${paymentDate}::timestamptz))) < ${timeWindowSeconds}
-    ORDER BY ABS(EXTRACT(EPOCH FROM (ts - ${paymentDate}::timestamptz)))
-    LIMIT 1
-  `;
+  // 1. Найти booking_id платежа через external_refs
+  let bookingRpId: string | null = null;
+  const paymentRef = await db
+    .select({ entity_id: externalRefs.entity_id })
+    .from(externalRefs)
+    .where(
+      and(
+        eq(externalRefs.system, 'rentprog'),
+        eq(externalRefs.entity_type, 'payment'),
+        eq(externalRefs.external_id, String(rpPaymentId)),
+        eq(externalRefs.branch_code, branch)
+      )
+    )
+    .limit(1);
 
-  const events = await db.execute(eventQuery) as any[];
-  const event = events[0] as { id: number; ts: Date; rentprog_id: string; payload: any } | undefined;
+  if (paymentRef.length > 0) {
+    // Получить booking_id из payments
+    const paymentRow = await db
+      .select({ booking_id: payments.booking_id, raw_data: payments.raw_data })
+      .from(payments)
+      .where(eq(payments.id, paymentId))
+      .limit(1);
 
-  // 2. Поиск записи в history по operation_type и entity_id
-  const historyQuery = sql`
-    SELECT id, operation_type, created_at, raw_data
-    FROM history
-    WHERE 
-      branch = ${branch}
-      AND entity_type = 'payment'
-      AND entity_id = ${String(rpPaymentId)}
-      AND ABS(EXTRACT(EPOCH FROM (created_at - ${paymentDate}::timestamptz))) < ${timeWindowSeconds}
-    ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - ${paymentDate}::timestamptz)))
-    LIMIT 1
-  `;
+    if (paymentRow.length > 0) {
+      const payment = paymentRow[0];
+      if (payment.booking_id) {
+        // Найти booking_rp_id через external_refs
+        const bookingRef = await db
+          .select({ external_id: externalRefs.external_id })
+          .from(externalRefs)
+          .where(
+            and(
+              eq(externalRefs.system, 'rentprog'),
+              eq(externalRefs.entity_type, 'booking'),
+              eq(externalRefs.entity_id, payment.booking_id)
+            )
+          )
+          .limit(1);
+
+        if (bookingRef.length > 0) {
+          bookingRpId = bookingRef[0].external_id;
+        }
+      } else if (payment.raw_data && typeof payment.raw_data === 'object' && 'booking_id' in payment.raw_data) {
+        // Если booking_id в raw_data
+        bookingRpId = String((payment.raw_data as any).booking_id);
+      }
+    }
+  }
+
+  // 2. Поиск события о booking, связанном с платежом
+  // В событиях о bookings (выдача, приемка, продление) есть информация о платежах
+  let event: { id: number; ts: Date; rentprog_id: string; payload: any } | undefined = undefined;
+  
+  if (bookingRpId) {
+    const eventQuery = sql`
+      SELECT id, ts, rentprog_id, payload, type
+      FROM events
+      WHERE 
+        entity_type = 'booking'
+        AND rentprog_id = ${bookingRpId}
+        AND company_id = ${companyId}
+        AND (
+          type LIKE '%issue%' 
+          OR type LIKE '%return%' 
+          OR type LIKE '%prolong%'
+          OR type LIKE '%update%'
+        )
+        AND ABS(EXTRACT(EPOCH FROM (ts - ${paymentDate}::timestamptz))) < ${timeWindowSeconds}
+        AND (
+          -- Проверяем, что в payload есть информация о платежах
+          payload::text LIKE '%payment%'
+          OR payload::text LIKE '%count%'
+          OR payload::text LIKE '%${String(rpPaymentId)}%'
+        )
+      ORDER BY ABS(EXTRACT(EPOCH FROM (ts - ${paymentDate}::timestamptz)))
+      LIMIT 1
+    `;
+
+    const events = await db.execute(eventQuery) as any[];
+    event = events[0];
+  }
+
+  // 3. Если не нашли через booking, попробуем прямой поиск по payment_id в payload
+  if (!event) {
+    const directEventQuery = sql`
+      SELECT id, ts, rentprog_id, payload, type
+      FROM events
+      WHERE 
+        company_id = ${companyId}
+        AND ABS(EXTRACT(EPOCH FROM (ts - ${paymentDate}::timestamptz))) < ${timeWindowSeconds}
+        AND (
+          payload::text LIKE '%"id":${String(rpPaymentId)}%'
+          OR payload::text LIKE '%"payment_id":${String(rpPaymentId)}%'
+          OR payload::text LIKE '%"count_id":${String(rpPaymentId)}%'
+        )
+      ORDER BY ABS(EXTRACT(EPOCH FROM (ts - ${paymentDate}::timestamptz)))
+      LIMIT 1
+    `;
+
+    const directEvents = await db.execute(directEventQuery) as any[];
+    event = directEvents[0];
+  }
+
+  // 4. Поиск записи в history по operation_type и entity_id
+  // Ищем записи о платежах или о bookings с платежами
+  let historyQuery;
+  if (bookingRpId) {
+    historyQuery = sql`
+      SELECT id, operation_type, created_at, raw_data, entity_type, entity_id
+      FROM history
+      WHERE 
+        branch = ${branch}
+        AND (
+          (entity_type = 'payment' AND entity_id = ${String(rpPaymentId)})
+          OR (entity_type = 'booking' AND entity_id = ${bookingRpId})
+        )
+        AND ABS(EXTRACT(EPOCH FROM (created_at - ${paymentDate}::timestamptz))) < ${timeWindowSeconds}
+      ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - ${paymentDate}::timestamptz)))
+      LIMIT 1
+    `;
+  } else {
+    historyQuery = sql`
+      SELECT id, operation_type, created_at, raw_data, entity_type, entity_id
+      FROM history
+      WHERE 
+        branch = ${branch}
+        AND entity_type = 'payment'
+        AND entity_id = ${String(rpPaymentId)}
+        AND ABS(EXTRACT(EPOCH FROM (created_at - ${paymentDate}::timestamptz))) < ${timeWindowSeconds}
+      ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - ${paymentDate}::timestamptz)))
+      LIMIT 1
+    `;
+  }
 
   const historyRecords = await db.execute(historyQuery) as any[];
   const history = historyRecords[0] as { id: number; operation_type: string; created_at: Date; raw_data: any } | undefined;

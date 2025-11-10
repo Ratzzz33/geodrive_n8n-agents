@@ -3,14 +3,23 @@
  */
 
 import express from 'express';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { healthCheck } from '../integrations/rentprog.js';
 import { sendHealthToN8n } from '../integrations/n8n.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
 import type { BranchName } from '../integrations/rentprog.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const app = express();
 app.use(express.json());
+
+// Статическая раздача веб-интерфейса
+const webPath = join(__dirname, '../../web');
+app.use('/conversations', express.static(webPath));
 
 // Подключаем роутеры
 // import carSearchRouter from './car-search'; // Временно закомментировано
@@ -19,6 +28,8 @@ import eventLinksRouter from './routes/eventLinks.js';
 import entityTimelineRouter from './routes/entityTimeline.js';
 import syncEmployeeCashRouter from './routes/syncEmployeeCash.js';
 import syncBookingsRouter from './routes/syncBookings.js';
+import umnicoSendRouter from './routes/umnico-send.js';
+import umnicoConversationRouter from './routes/umnico-conversation.js';
 
 let server: ReturnType<typeof app.listen> | null = null;
 
@@ -38,6 +49,8 @@ export function initApiServer(port: number = 3000): void {
   app.use('/entity-timeline', entityTimelineRouter);
   app.use('/', syncEmployeeCashRouter); // POST /sync-employee-cash
   app.use('/', syncBookingsRouter); // POST /sync-bookings
+  app.use('/api/umnico', umnicoSendRouter); // POST /api/umnico/send
+  app.use('/api/umnico/conversations', umnicoConversationRouter); // GET /api/umnico/conversations/:id
 
   // Health check для RentProg
   app.get('/rentprog/health', async (req, res) => {

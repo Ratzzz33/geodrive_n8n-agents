@@ -1,0 +1,540 @@
+/**
+ * Ручной парсинг всех сделок из AmoCRM
+ * 
+ * Использование:
+ *   npm run ts-node scripts/amocrm-parse-all-deals.ts
+ * 
+ * Или:
+ *   npx tsx scripts/amocrm-parse-all-deals.ts
+ */
+
+import postgres from 'postgres';
+import fetch from 'node-fetch';
+
+// Конфигурация
+const PLAYWRIGHT_SERVICE_URL = process.env.AMOCRM_PLAYWRIGHT_URL || 'http://localhost:3002';
+const DATABASE_URL = process.env.DATABASE_URL || 
+  'postgresql://neondb_owner:npg_cHIT9Kxfk1Am@ep-rough-heart-ahnybmq0-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require';
+const PIPELINE_ID = process.env.AMOCRM_PIPELINE_ID || '8580102';
+
+// Подключение к БД
+const sql = postgres(DATABASE_URL, {
+  max: 1,
+  ssl: { rejectUnauthorized: false }
+});
+
+interface Deal {
+  id: string;
+  name: string;
+  price: number;
+  status_id: number;
+  pipeline_id: number;
+  created_at: number;
+  updated_at: number;
+  closed_at?: number;
+  custom_fields_values?: Array<{
+    field_id: number;
+    field_name: string;
+    values: Array<{ value: string | number }>;
+  }>;
+}
+
+interface DealExtended {
+  deal: Deal;
+  contacts: Array<{
+    id: string;
+    name?: string;
+    custom_fields_values?: Array<{
+      field_id: number;
+      field_name: string;
+      values: Array<{ value: string | number }>;
+    }>;
+  }>;
+  notes: Array<{
+    id: string;
+    note_type: string;
+    created_at: number;
+    params?: { text?: string };
+  }>;
+  scopeId: string | null;
+  inboxItem: any;
+}
+
+/**
+ * Извлечь данные из сделки и контактов
+ */
+function extractDealData(extended: DealExtended) {
+  const { deal, contacts, notes, scopeId } = extended;
+
+  // Извлечь контакт
+  const contact = contacts?.[0] || {};
+  const contactId = contact.id || null;
+  const contactName = contact.name || null;
+
+  // Извлечь телефон и email из контакта
+  let phone: string | null = null;
+  let email: string | null = null;
+
+  if (contact.custom_fields_values) {
+    for (const field of contact.custom_fields_values) {
+      const fieldName = field.field_name?.toLowerCase() || '';
+      const value = field.values?.[0]?.value;
+      
+      if (fieldName.includes('телефон') || fieldName.includes('phone')) {
+        phone = value ? String(value).replace(/\D/g, '') : null;
+      }
+      if (fieldName.includes('email') || fieldName.includes('почта')) {
+        email = value ? String(value) : null;
+      }
+    }
+  }
+
+  // Извлечь custom fields из сделки
+  const customFields: Record<string, any> = {};
+  let rentprogClientId: string | null = null;
+  let rentprogBookingId: string | null = null;
+  let rentprogCarId: string | null = null;
+
+  if (deal.custom_fields_values) {
+    for (const field of deal.custom_fields_values) {
+      const fieldName = field.field_name?.toLowerCase() || '';
+      const value = field.values?.[0]?.value;
+      
+      // Нормализовать имя поля
+      const normalizedName = fieldName
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '');
+      
+      customFields[normalizedName] = value;
+
+      // Извлечь RentProg IDs
+      if (fieldName.includes('rentprog') && fieldName.includes('client')) {
+        rentprogClientId = value ? String(value) : null;
+      }
+      if (fieldName.includes('rentprog') && fieldName.includes('booking')) {
+        rentprogBookingId = value ? String(value) : null;
+      }
+      if (fieldName.includes('rentprog') && fieldName.includes('car')) {
+        rentprogCarId = value ? String(value) : null;
+      }
+    }
+  }
+
+  // Определить статус
+  let statusLabel = 'in_progress';
+  if (deal.status_id === 142) {
+    statusLabel = 'successful';
+  } else if (deal.status_id === 143) {
+    statusLabel = 'unsuccessful';
+  }
+
+  // Форматировать даты
+  const createdAt = deal.created_at 
+    ? new Date(deal.created_at * 1000).toISOString() 
+    : null;
+  const closedAt = deal.closed_at 
+    ? new Date(deal.closed_at * 1000).toISOString() 
+    : null;
+
+  return {
+    // Контакт
+    phone: phone || null,
+    contactName: contactName || null,
+    email: email || null,
+    contactId: contactId || null,
+    
+    // RentProg связи
+    rentprogClientId: rentprogClientId || null,
+    rentprogBookingId: rentprogBookingId || null,
+    rentprogCarId: rentprogCarId || null,
+    
+    // Scope ID для conversation
+    scopeId: scopeId || null,
+    
+    // Сделка
+    dealId: String(deal.id),
+    dealName: deal.name || '',
+    pipelineId: String(deal.pipeline_id || PIPELINE_ID),
+    statusId: deal.status_id,
+    statusLabel,
+    price: deal.price || 0,
+    createdAt,
+    closedAt,
+    customFields: JSON.stringify(customFields),
+    notesCount: notes?.length || 0,
+    
+    // Notes для последующей обработки
+    notes: notes || []
+  };
+}
+
+/**
+ * Upsert сделки в БД
+ */
+async function upsertDeal(extracted: ReturnType<typeof extractDealData>) {
+  const query = `
+    -- Комплексный upsert с полным связыванием всех сущностей
+    WITH 
+    -- 1. Upsert клиента по телефону
+    client_upsert AS (
+      INSERT INTO clients (id, phone, name, email, updated_at)
+      VALUES (gen_random_uuid(), $1, NULLIF($2, ''), NULLIF($3, ''), now())
+      ON CONFLICT (phone) DO UPDATE
+      SET name = COALESCE(NULLIF(EXCLUDED.name, ''), clients.name),
+          email = COALESCE(NULLIF(EXCLUDED.email, ''), clients.email),
+          updated_at = now()
+      RETURNING id
+    ),
+    -- 2. Добавить external_ref для AmoCRM контакта
+    amocrm_contact_ref AS (
+      INSERT INTO external_refs (entity_type, entity_id, system, external_id)
+      SELECT 'client', client_upsert.id, 'amocrm', $4
+      FROM client_upsert
+      WHERE $4 IS NOT NULL
+      ON CONFLICT (entity_type, system, external_id) DO NOTHING
+    ),
+    -- 3. Добавить external_ref для RentProg клиента (если есть)
+    rentprog_client_ref AS (
+      INSERT INTO external_refs (entity_type, entity_id, system, external_id)
+      SELECT 'client', client_upsert.id, 'rentprog', $5
+      FROM client_upsert
+      WHERE $5 IS NOT NULL AND $5 != ''
+      ON CONFLICT (entity_type, system, external_id) DO NOTHING
+    ),
+    -- 4. Найти или создать conversation (если есть scope_id)
+    conversation_upsert AS (
+      INSERT INTO conversations (id, client_id, amocrm_scope_id, status, updated_at)
+      SELECT gen_random_uuid(), client_upsert.id, $6, 'active', now()
+      FROM client_upsert
+      WHERE $6 IS NOT NULL
+      ON CONFLICT (amocrm_scope_id) DO UPDATE
+      SET client_id = EXCLUDED.client_id,
+          updated_at = now()
+      RETURNING id
+    ),
+    -- 5. Найти booking по RentProg booking_id (если есть)
+    booking_find AS (
+      SELECT b.id, b.car_id, b.client_id, b.branch_id
+      FROM bookings b
+      INNER JOIN external_refs er ON b.id = er.entity_id AND er.entity_type = 'booking'
+      WHERE er.system = 'rentprog' AND er.external_id = $7
+      LIMIT 1
+    ),
+    -- 6. Найти car по RentProg car_id (если есть, но booking не найден)
+    car_find AS (
+      SELECT c.id, c.branch_id
+      FROM cars c
+      INNER JOIN external_refs er ON c.id = er.entity_id AND er.entity_type = 'car'
+      WHERE er.system = 'rentprog' AND er.external_id = $8
+      LIMIT 1
+    ),
+    -- 7. Upsert AmoCRM deal со всеми связями
+    deal_upsert AS (
+      INSERT INTO amocrm_deals (
+        id, client_id, conversation_id, amocrm_deal_id, pipeline_id, status_id, status_label,
+        price, created_at, closed_at, updated_at, custom_fields, notes_count, metadata
+      )
+      SELECT 
+        gen_random_uuid(),
+        client_upsert.id,
+        (SELECT id FROM conversation_upsert LIMIT 1),
+        $9, $10, $11, $12,
+        $13, $14::timestamptz, $15::timestamptz, now(),
+        $16::jsonb,
+        $17,
+        jsonb_build_object(
+          'rentprog_booking_id', $7,
+          'rentprog_car_id', $8,
+          'booking_id', (SELECT id FROM booking_find LIMIT 1),
+          'car_id', COALESCE((SELECT car_id FROM booking_find LIMIT 1), (SELECT id FROM car_find LIMIT 1)),
+          'deal_name', $18
+        )
+      FROM client_upsert
+      ON CONFLICT (amocrm_deal_id) DO UPDATE
+      SET status_id = EXCLUDED.status_id,
+          status_label = EXCLUDED.status_label,
+          conversation_id = COALESCE(EXCLUDED.conversation_id, amocrm_deals.conversation_id),
+          price = EXCLUDED.price,
+          closed_at = EXCLUDED.closed_at,
+          custom_fields = EXCLUDED.custom_fields,
+          notes_count = EXCLUDED.notes_count,
+          metadata = EXCLUDED.metadata,
+          updated_at = now()
+      RETURNING id, client_id, conversation_id
+    )
+    SELECT 
+      deal_upsert.id as deal_id,
+      deal_upsert.client_id,
+      deal_upsert.conversation_id,
+      (SELECT id FROM booking_find LIMIT 1) as booking_id,
+      COALESCE(
+        (SELECT car_id FROM booking_find LIMIT 1),
+        (SELECT id FROM car_find LIMIT 1)
+      ) as car_id
+    FROM deal_upsert;
+  `;
+
+  // Используем параметризованный запрос через sql.unsafe с правильной подстановкой
+  const params = [
+    extracted.phone,
+    extracted.contactName,
+    extracted.email,
+    extracted.contactId,
+    extracted.rentprogClientId,
+    extracted.scopeId,
+    extracted.rentprogBookingId,
+    extracted.rentprogCarId,
+    extracted.dealId,
+    extracted.pipelineId,
+    extracted.statusId,
+    extracted.statusLabel,
+    extracted.price,
+    extracted.createdAt,
+    extracted.closedAt,
+    extracted.customFields,
+    extracted.notesCount,
+    extracted.dealName
+  ];
+
+  // Заменяем $1, $2, ... на правильные значения с экранированием
+  let safeQuery = query;
+  for (let i = 0; i < params.length; i++) {
+    const param = params[i];
+    let value: string;
+    
+    if (param === null || param === undefined) {
+      value = 'NULL';
+    } else if (typeof param === 'string') {
+      // Для JSONB полей (customFields) - это уже JSON строка
+      if (i === 15 && param.startsWith('{')) {
+        // customFields - это JSONB, нужно экранировать как JSON
+        value = `'${param.replace(/'/g, "''")}'::jsonb`;
+      } else {
+        // Обычные строки
+        value = `'${param.replace(/'/g, "''")}'`;
+      }
+    } else if (typeof param === 'number') {
+      value = String(param);
+    } else if (typeof param === 'boolean') {
+      value = param ? 'TRUE' : 'FALSE';
+    } else {
+      value = `'${JSON.stringify(param).replace(/'/g, "''")}'`;
+    }
+    
+    safeQuery = safeQuery.replace(new RegExp(`\\$${i + 1}\\b`, 'g'), value);
+  }
+
+  const result = await sql.unsafe(safeQuery);
+
+  return result[0] || null;
+}
+
+/**
+ * Вставить notes как messages
+ */
+async function insertNotesAsMessages(
+  notes: DealExtended['notes'],
+  links: { client_id: string; conversation_id: string | null; booking_id: string | null; deal_id: string },
+  dealId: string,
+  dealName: string
+) {
+  if (!notes || notes.length === 0) {
+    return 0;
+  }
+
+  // Фильтруем только текстовые примечания
+  const messageNotes = notes.filter(n => 
+    n && ['common', 'call_in', 'call_out'].includes(n.note_type)
+  );
+
+  if (messageNotes.length === 0) {
+    return 0;
+  }
+
+  // Вставляем notes по одной (проще и надежнее)
+  let inserted = 0;
+  for (const n of messageNotes) {
+    const text = n.params?.text || '';
+    const direction = n.note_type === 'call_in' ? 'incoming' : 'outgoing';
+    const sentAt = new Date(n.created_at * 1000).toISOString();
+    const metadata = JSON.stringify({
+      note_type: n.note_type,
+      amocrm_note_id: n.id,
+      amocrm_deal_id: dealId,
+      deal_name: dealName
+    });
+
+    try {
+      await sql`
+        INSERT INTO messages (client_id, conversation_id, booking_id, text, direction, channel, sent_at, metadata)
+        VALUES (
+          ${links.client_id}::uuid,
+          ${links.conversation_id || null}::uuid,
+          ${links.booking_id || null}::uuid,
+          ${text},
+          ${direction},
+          'amocrm_note',
+          ${sentAt}::timestamptz,
+          ${metadata}::jsonb
+        )
+        ON CONFLICT DO NOTHING
+      `;
+      inserted++;
+    } catch (error) {
+      // Игнорируем ошибки вставки отдельных notes
+      console.error(`\n⚠️  Ошибка вставки note ${n.id}:`, error);
+    }
+  }
+
+  return inserted;
+}
+
+/**
+ * Главная функция
+ */
+async function main() {
+  console.log('🚀 Начинаю парсинг всех сделок из AmoCRM\n');
+  console.log(`📡 Playwright Service: ${PLAYWRIGHT_SERVICE_URL}`);
+  console.log(`📊 Pipeline ID: ${PIPELINE_ID}\n`);
+
+  try {
+    // 1. Получить все сделки
+    console.log('📋 Получаю список всех сделок...');
+    const dealsResponse = await fetch(
+      `${PLAYWRIGHT_SERVICE_URL}/api/deals/all?pipeline_id=${PIPELINE_ID}`
+    );
+    
+    if (!dealsResponse.ok) {
+      throw new Error(`Ошибка получения сделок: ${dealsResponse.status} ${dealsResponse.statusText}`);
+    }
+
+    const dealsData = await dealsResponse.json() as { ok: boolean; count: number; deals: Deal[] };
+    
+    if (!dealsData.ok || !dealsData.deals) {
+      throw new Error('Неверный формат ответа от Playwright Service');
+    }
+
+    const deals = dealsData.deals;
+    const totalDeals = deals.length;
+    
+    console.log(`✅ Найдено сделок: ${totalDeals}\n`);
+    console.log('='.repeat(60));
+    console.log('');
+
+    if (totalDeals === 0) {
+      console.log('⚠️  Сделки не найдены. Завершаю работу.');
+      await sql.end();
+      process.exit(0);
+    }
+
+    // 2. Обработать каждую сделку
+    let processed = 0;
+    let errors = 0;
+    let notesInserted = 0;
+
+    for (let i = 0; i < totalDeals; i++) {
+      const deal = deals[i];
+      const progress = ((i + 1) / totalDeals * 100).toFixed(1);
+      
+      process.stdout.write(`\r[${i + 1}/${totalDeals}] (${progress}%) Обрабатываю сделку #${deal.id}...`);
+
+      try {
+        // Получить расширенные детали
+        const detailsResponse = await fetch(
+          `${PLAYWRIGHT_SERVICE_URL}/api/deals/${deal.id}/extended`
+        );
+
+        if (!detailsResponse.ok) {
+          console.error(`\n❌ Ошибка получения деталей сделки ${deal.id}: ${detailsResponse.status}`);
+          errors++;
+          continue;
+        }
+
+        const detailsData = await detailsResponse.json() as { ok: boolean; data: DealExtended };
+        
+        if (!detailsData.ok || !detailsData.data) {
+          console.error(`\n❌ Неверный формат ответа для сделки ${deal.id}`);
+          errors++;
+          continue;
+        }
+
+        const extended = detailsData.data;
+
+        // Извлечь данные
+        const extracted = extractDealData(extended);
+
+        // Upsert в БД
+        const links = await upsertDeal(extracted);
+
+        if (!links) {
+          console.error(`\n❌ Ошибка upsert сделки ${deal.id}`);
+          errors++;
+          continue;
+        }
+
+        // Вставить notes как messages
+        if (extracted.notes.length > 0 && links.client_id) {
+          const notesCount = await insertNotesAsMessages(
+            extracted.notes,
+            {
+              client_id: links.client_id,
+              conversation_id: links.conversation_id,
+              booking_id: links.booking_id || null,
+              deal_id: links.deal_id
+            },
+            extracted.dealId,
+            extracted.dealName
+          );
+          notesInserted += notesCount;
+        }
+
+        processed++;
+
+        // Небольшая задержка между запросами
+        if (i < totalDeals - 1) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+
+      } catch (error: any) {
+        console.error(`\n❌ Ошибка обработки сделки ${deal.id}:`, error.message);
+        errors++;
+      }
+    }
+
+    console.log('\n');
+    console.log('='.repeat(60));
+    console.log('✅ Парсинг завершен!\n');
+    console.log(`📊 Статистика:`);
+    console.log(`   Всего сделок: ${totalDeals}`);
+    console.log(`   Обработано: ${processed}`);
+    console.log(`   Ошибок: ${errors}`);
+    console.log(`   Notes вставлено: ${notesInserted}\n`);
+
+    // Обновить sync_state
+    await sql`
+      INSERT INTO sync_state (workflow_name, system, last_sync_at, last_marker, status, items_processed, items_added, metadata)
+      VALUES ('amocrm_all_deals_parser', 'amocrm', now(), now()::text, 'success', ${totalDeals}, ${processed}, '{}'::jsonb)
+      ON CONFLICT (workflow_name, system) DO UPDATE
+      SET last_sync_at = now(), last_marker = now()::text, status = 'success', 
+          items_processed = EXCLUDED.items_processed, items_added = EXCLUDED.items_added
+    `;
+
+    console.log('💾 Sync state обновлен\n');
+
+  } catch (error: any) {
+    console.error('\n❌ Критическая ошибка:', error.message);
+    if (error.stack) {
+      console.error(error.stack);
+    }
+    process.exit(1);
+  } finally {
+    await sql.end();
+  }
+}
+
+// Запуск
+main().catch(error => {
+  console.error('Fatal error:', error);
+  process.exit(1);
+});
+

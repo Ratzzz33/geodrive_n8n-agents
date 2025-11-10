@@ -344,14 +344,28 @@ export function initBot(): Telegraf {
     }
   });
 
-  // Обработка текстовых сообщений (эхо для MVP)
+  // Обработка callback кнопок для Umnico
+  bot.action(/^close_dialog_(.+)$/, async (ctx) => {
+    const conversationId = ctx.match[1];
+    const { handleCloseDialog } = await import('./handlers/umnicoCallbacks.js');
+    await handleCloseDialog(ctx, conversationId);
+  });
+
+  bot.action(/^extend_dialog_(.+)$/, async (ctx) => {
+    const conversationId = ctx.match[1];
+    const { handleExtendDialog } = await import('./handlers/umnicoCallbacks.js');
+    await handleExtendDialog(ctx, conversationId);
+  });
+
+  // Обработка текстовых сообщений
   bot.on('text', async (ctx) => {
     const text = 'text' in ctx.message ? ctx.message.text : '';
     logger.info('Text message received', { 
       userId: ctx.from?.id, 
       chatId: ctx.chat?.id,
       text,
-      isCommand: text.startsWith('/')
+      isCommand: text.startsWith('/'),
+      messageThreadId: 'message_thread_id' in ctx.message ? ctx.message.message_thread_id : undefined
     });
     
     // Игнорируем команды (они обрабатываются отдельно через bot.command())
@@ -359,8 +373,15 @@ export function initBot(): Telegraf {
       logger.debug('Text handler: ignoring command, should be handled by command handler');
       return;
     }
+
+    // Проверяем является ли это сообщением в теме Umnico диалога
+    if ('message_thread_id' in ctx.message && ctx.message.message_thread_id) {
+      const { handleUmnicoTopicMessage } = await import('./handlers/umnicoMessages.js');
+      await handleUmnicoTopicMessage(ctx);
+      return; // Обработано, не нужно эхо
+    }
     
-    // В MVP просто возвращаем эхо
+    // В MVP просто возвращаем эхо для обычных сообщений
     try {
       await ctx.reply(`Получено: ${text}\n\n(В MVP режиме бот просто повторяет сообщения)`);
     } catch (error) {

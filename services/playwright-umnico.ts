@@ -264,14 +264,14 @@ class UmnicoPlaywrightService {
     }
   }
 
-  async getMessages(conversationId: string): Promise<any[]> {
+  async getMessages(conversationId: string, options?: { all?: boolean; since?: Date }): Promise<any[]> {
     try {
       const url = `https://umnico.com/app/inbox/deals/inbox/details/${conversationId}`;
       
       // ОПТИМИЗАЦИЯ 1: domcontentloaded вместо networkidle (в 2 раза быстрее!)
       await page!.goto(url, { 
         waitUntil: 'domcontentloaded',
-        timeout: 10000  // Уменьшен с 30000
+        timeout: 10000
       });
 
       // ОПТИМИЗАЦИЯ 2: Ждем только появления сообщений, не всей страницы
@@ -281,40 +281,138 @@ class UmnicoPlaywrightService {
         console.log(`⚠️ No messages container for ${conversationId}`);
       });
 
-      // Извлекаем все сообщения
-      const messages = await page!.$$eval('.im-stack__messages-item-wrap', wraps =>
-        wraps.map((wrap, index) => {
-          const messageDiv = wrap.querySelector('.im-message');
-          if (!messageDiv) return null;
-
-          const textEl = messageDiv.querySelector('.im-message__text');
-          const timeEl = messageDiv.querySelector('.im-info__date');
-          const dateAttr = wrap.querySelector('.im-stack__messages-item')?.getAttribute('name');
-
-          const isOutgoing = messageDiv.classList.contains('im-message_out') ||
-                            messageDiv.classList.contains('im-message--outgoing');
-
-          return {
-            index,
-            text: textEl?.textContent?.trim() || '',
-            time: timeEl?.textContent?.trim() || '',
-            datetime: dateAttr || '',
-            direction: isOutgoing ? 'outgoing' : 'incoming',
-            hasAttachments: messageDiv.querySelectorAll('img:not([alt])').length > 0
-          };
-        }).filter(m => m !== null)
-      );
-
-      // Извлекаем информацию о канале
+      // Извлекаем информацию о канале (один раз)
       const sourceText = await page!.$eval('.im-source-item', el => el.textContent?.trim() || '').catch(() => '');
       const channelMatch = sourceText.match(/WhatsApp.*?(\d+)/);
 
-      // ОПТИМИЗАЦИЯ 3: Ограничить глубину - только последние 50 сообщений
-      const recentMessages = messages.slice(-50);
+      let allMessages: any[] = [];
+      let previousCount = 0;
+      let scrollAttempts = 0;
+      const maxScrollAttempts = options?.all ? 200 : 1; // Для всех сообщений - много попыток, для последних - 1
+      const targetDate = options?.since || (options?.all ? new Date('2024-09-01') : undefined);
 
-      console.log(`💬 Found ${recentMessages.length} messages in conversation ${conversationId} (total: ${messages.length})`);
+      // Функция извлечения сообщений
+      const extractMessages = async (): Promise<any[]> => {
+        return await page!.$$eval('.im-stack__messages-item-wrap', wraps =>
+          wraps.map((wrap, index) => {
+            const messageDiv = wrap.querySelector('.im-message');
+            if (!messageDiv) return null;
 
-      return recentMessages.map(m => ({
+            const textEl = messageDiv.querySelector('.im-message__text');
+            const timeEl = messageDiv.querySelector('.im-info__date');
+            const dateAttr = wrap.querySelector('.im-stack__messages-item')?.getAttribute('name');
+
+            const isOutgoing = messageDiv.classList.contains('im-message_out') ||
+                              messageDiv.classList.contains('im-message--outgoing');
+
+            return {
+              index,
+              text: textEl?.textContent?.trim() || '',
+              time: timeEl?.textContent?.trim() || '',
+              datetime: dateAttr || '',
+              direction: isOutgoing ? 'outgoing' : 'incoming',
+              hasAttachments: messageDiv.querySelectorAll('img:not([alt])').length > 0
+            };
+          }).filter(m => m !== null)
+        );
+      };
+
+      // Первая загрузка
+      allMessages = await extractMessages();
+      previousCount = allMessages.length;
+
+      // Если нужны все сообщения или сообщения с определенной даты - скроллим вверх
+      if (options?.all || targetDate) {
+        console.log(`📜 Loading all messages for conversation ${conversationId}...`);
+        
+        while (scrollAttempts < maxScrollAttempts) {
+          // Находим контейнер сообщений и скроллим вверх
+          const messagesContainer = await page!.$('.im-stack__messages').catch(() => null);
+          if (!messagesContainer) {
+            console.log(`⚠️ Messages container not found`);
+            break;
+          }
+
+          // Сохраняем текущее количество сообщений перед скроллом
+          const beforeScroll = allMessages.length;
+
+          // Скроллим вверх (к началу истории)
+          await page!.evaluate(() => {
+            const container = (document as any).querySelector('.im-stack__messages');
+            if (container) {
+              container.scrollTop = 0; // Скроллим к самому верху
+            }
+          });
+
+          // Ждем загрузки новых сообщений (обычно 1-2 секунды)
+          await page!.waitForTimeout(2000);
+
+          // Проверяем, загрузились ли новые сообщения
+          allMessages = await extractMessages();
+          
+          // Если количество не изменилось - значит больше нет сообщений
+          if (allMessages.length === beforeScroll) {
+            console.log(`   ✅ Reached the beginning of conversation (${allMessages.length} messages total)`);
+            break;
+          }
+
+          // Проверяем, достигли ли целевой даты
+          if (targetDate) {
+            const oldestMessage = allMessages
+              .filter(m => m.datetime)
+              .sort((a, b) => {
+                try {
+                  const dateA = new Date(a.datetime.replace(/(\d{2})\.(\d{2})\.(\d{4})/, '$3-$2-$1'));
+                  const dateB = new Date(b.datetime.replace(/(\d{2})\.(\d{2})\.(\d{4})/, '$3-$2-$1'));
+                  return dateA.getTime() - dateB.getTime();
+                } catch {
+                  return 0;
+                }
+              })[0];
+
+            if (oldestMessage) {
+              try {
+                const oldestDate = new Date(oldestMessage.datetime.replace(/(\d{2})\.(\d{2})\.(\d{4})/, '$3-$2-$1'));
+                if (oldestDate < targetDate) {
+                  console.log(`   ✅ Reached target date ${targetDate.toISOString().split('T')[0]} (oldest: ${oldestMessage.datetime})`);
+                  // Фильтруем только сообщения после целевой даты
+                  allMessages = allMessages.filter(m => {
+                    if (!m.datetime) return false;
+                    try {
+                      const msgDate = new Date(m.datetime.replace(/(\d{2})\.(\d{2})\.(\d{4})/, '$3-$2-$1'));
+                      return msgDate >= targetDate;
+                    } catch {
+                      return true;
+                    }
+                  });
+                  break;
+                }
+              } catch (e) {
+                // Продолжаем если не удалось распарсить дату
+              }
+            }
+          }
+
+          scrollAttempts++;
+          
+          if (scrollAttempts % 10 === 0) {
+            console.log(`   📜 Scrolled ${scrollAttempts} times, found ${allMessages.length} messages so far...`);
+          }
+
+          // Защита от бесконечного цикла
+          if (allMessages.length > 10000) {
+            console.log(`   ⚠️  Reached 10000 messages limit, stopping`);
+            break;
+          }
+        }
+      } else {
+        // Для быстрой синхронизации - только последние 50 сообщений
+        allMessages = allMessages.slice(-50);
+      }
+
+      console.log(`💬 Found ${allMessages.length} messages in conversation ${conversationId}`);
+
+      return allMessages.map(m => ({
         ...m,
         conversationId,
         channel: channelMatch ? 'whatsapp' : 'unknown',
@@ -322,6 +420,160 @@ class UmnicoPlaywrightService {
       }));
     } catch (error) {
       console.error(`❌ Failed to get messages for conversation ${conversationId}:`, error);
+      throw error;
+    }
+  }
+
+  async sendMessage(conversationId: string, text: string): Promise<void> {
+    try {
+      const url = `https://umnico.com/app/inbox/deals/inbox/details/${conversationId}`;
+      
+      console.log(`📤 Sending message to conversation ${conversationId}...`);
+      
+      // Открываем диалог
+      await page!.goto(url, { 
+        waitUntil: 'domcontentloaded',
+        timeout: 10000
+      });
+
+      // Ждем появления поля ввода (может быть несколько вариантов селекторов)
+      const inputSelectors = [
+        'textarea[placeholder*="message"]',
+        'textarea[placeholder*="сообщение"]',
+        '.im-input__field',
+        'textarea.im-input__field',
+        'textarea[class*="input"]',
+        'textarea'
+      ];
+
+      let inputElement = null;
+      for (const selector of inputSelectors) {
+        try {
+          await page!.waitForSelector(selector, { timeout: 3000 });
+          inputElement = await page!.$(selector);
+          if (inputElement) {
+            console.log(`✅ Found input field with selector: ${selector}`);
+            break;
+          }
+        } catch (e) {
+          // Пробуем следующий селектор
+          continue;
+        }
+      }
+
+      if (!inputElement) {
+        throw new Error('Could not find message input field');
+      }
+
+      // Очищаем поле и вводим текст
+      await inputElement.clear();
+      await inputElement.fill(text);
+      
+      // Небольшая задержка для обработки ввода
+      await page!.waitForTimeout(500);
+
+      // Пробуем отправить через Enter
+      await inputElement.press('Enter');
+      
+      // Ждем подтверждения отправки (появление сообщения в списке или изменение UI)
+      await page!.waitForTimeout(2000);
+
+      // Альтернативный способ: поиск кнопки отправки
+      const sendButtonSelectors = [
+        'button[type="submit"]',
+        'button[class*="send"]',
+        'button[class*="submit"]',
+        '.im-input__send-button',
+        'button:has-text("Отправить")',
+        'button:has-text("Send")'
+      ];
+
+      // Проверяем, отправилось ли сообщение (если Enter не сработал)
+      const lastMessage = await page!.$$eval('.im-stack__messages-item-wrap', wraps => {
+        if (wraps.length === 0) return null;
+        const last = wraps[wraps.length - 1];
+        const textEl = last.querySelector('.im-message__text');
+        return textEl?.textContent?.trim() || null;
+      }).catch(() => null);
+
+      // Если сообщение не появилось, пробуем кнопку
+      if (!lastMessage || !lastMessage.includes(text.substring(0, 20))) {
+        for (const selector of sendButtonSelectors) {
+          try {
+            const button = await page!.$(selector);
+            if (button) {
+              await button.click();
+              await page!.waitForTimeout(2000);
+              console.log(`✅ Clicked send button with selector: ${selector}`);
+              break;
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+      }
+
+      console.log(`✅ Message sent successfully to conversation ${conversationId}`);
+    } catch (error) {
+      console.error(`❌ Failed to send message to conversation ${conversationId}:`, error);
+      throw error;
+    }
+  }
+
+  async getNewMessages(conversationId: string, since?: Date): Promise<any[]> {
+    try {
+      // Получаем все сообщения
+      const allMessages = await this.getMessages(conversationId);
+      
+      if (!since) {
+        // Если since не указан, возвращаем все сообщения
+        return allMessages;
+      }
+
+      // Фильтруем сообщения по времени
+      const newMessages = allMessages.filter(m => {
+        if (!m.datetime) return false;
+        
+        // Парсим datetime (может быть в разных форматах)
+        let messageDate: Date;
+        try {
+          // Пробуем разные форматы
+          if (m.datetime.includes('T') || m.datetime.includes('-')) {
+            // ISO формат
+            messageDate = new Date(m.datetime);
+          } else {
+            // Формат "09.11.2025 10:40"
+            const parts = m.datetime.match(/(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2})/);
+            if (parts) {
+              const [, day, month, year, hour, minute] = parts;
+              messageDate = new Date(
+                parseInt(year),
+                parseInt(month) - 1,
+                parseInt(day),
+                parseInt(hour),
+                parseInt(minute)
+              );
+            } else {
+              messageDate = new Date(m.datetime);
+            }
+          }
+          
+          // Проверяем что дата валидна
+          if (isNaN(messageDate.getTime())) {
+            return false;
+          }
+          
+          return messageDate > since;
+        } catch (e) {
+          console.warn(`⚠️ Failed to parse datetime for message: ${m.datetime}`, e);
+          return false;
+        }
+      });
+
+      console.log(`📥 Found ${newMessages.length} new messages since ${since.toISOString()} in conversation ${conversationId}`);
+      return newMessages;
+    } catch (error) {
+      console.error(`❌ Failed to get new messages for conversation ${conversationId}:`, error);
       throw error;
     }
   }
@@ -373,8 +625,35 @@ app.get('/api/conversations', async (req, res) => {
 app.get('/api/conversations/:id/messages', async (req, res) => {
   try {
     const { id } = req.params;
-    const messages = await service.getMessages(id);
+    const all = req.query.all === 'true' || req.query.all === '1';
+    const since = req.query.since ? new Date(req.query.since as string) : undefined;
+    
+    // Если указан параметр since, используем getNewMessages (быстрый метод)
+    if (since && !all) {
+      const messages = await service.getNewMessages(id, since);
+      return res.json({ ok: true, conversationId: id, count: messages.length, data: messages });
+    }
+    
+    // Иначе используем getMessages с опциями
+    const messages = await service.getMessages(id, { all, since });
     res.json({ ok: true, conversationId: id, count: messages.length, data: messages });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+// Send message to conversation
+app.post('/api/conversations/:id/send', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text } = req.body;
+    
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({ ok: false, error: 'Text is required and must be a string' });
+    }
+    
+    await service.sendMessage(id, text);
+    res.json({ ok: true, conversationId: id, message: 'Message sent successfully' });
   } catch (error: any) {
     res.status(500).json({ ok: false, error: error.message });
   }
@@ -458,7 +737,8 @@ async function start() {
       console.log(`📋 API endpoints:`);
       console.log(`   GET  /health`);
       console.log(`   GET  /api/conversations?limit=50`);
-      console.log(`   GET  /api/conversations/:id/messages`);
+      console.log(`   GET  /api/conversations/:id/messages?since=ISO_DATE`);
+      console.log(`   POST /api/conversations/:id/send`);
       console.log(`   POST /api/relogin`);
     });
   } catch (error) {

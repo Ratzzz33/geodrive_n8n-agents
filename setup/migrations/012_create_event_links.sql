@@ -95,8 +95,8 @@ SELECT
   e.id::TEXT as record_id,
   CASE 
     WHEN e.company_id = 9247 THEN 'tbilisi'
-    WHEN e.company_id = 9248 THEN 'batumi'
-    WHEN e.company_id = 9506 THEN 'kutaisi'
+    WHEN e.company_id = 9248 THEN 'kutaisi'
+    WHEN e.company_id = 9506 THEN 'batumi'
     WHEN e.company_id = 11163 THEN 'service-center'
     ELSE 'unknown'
   END as branch,

@@ -14,10 +14,11 @@ const sql = postgres('postgresql://neondb_owner:npg_cHIT9Kxfk1Am@ep-rough-heart-
 });
 
 // Маппинг company_id -> branch
+// В RentProg company_id (4-5 цифр) означает ID филиала
 const COMPANY_TO_BRANCH = {
   9247: 'tbilisi',
-  9248: 'batumi',
-  9506: 'kutaisi',
+  9248: 'kutaisi',
+  9506: 'batumi',
   11163: 'service-center',
   11157: 'tbilisi',     // Дополнительные ID из реальных данных
   11158: 'service-center',

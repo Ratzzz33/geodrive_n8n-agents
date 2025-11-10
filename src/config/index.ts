@@ -64,6 +64,10 @@ const configSchema = z.object({
   // Бот: @n8n_alert_geodrive_bot
   n8nAlertsTelegramBotToken: z.string().optional(),
   dedupTtlMinutes: z.coerce.number().optional(),
+  // Umnico Telegram интеграция
+  umnicoForumChatId: z.string().optional(), // ID Telegram чата для Umnico диалогов (например, "-5015844768")
+  umnicoPollingInterval: z.coerce.number().default(5), // Интервал polling активных чатов (секунды)
+  webAppUrl: z.string().url().optional(), // URL веб-приложения для истории переписки (например, "https://conversations.rentflow.rentals")
 });
 
 type Config = z.infer<typeof configSchema>;
@@ -106,6 +110,10 @@ export function getConfig(): Config {
       n8nAlertsUrl: process.env.N8N_ALERTS_URL,
       n8nAlertsTelegramBotToken: process.env.N8N_ALERTS_TELEGRAM_BOT_TOKEN,
       dedupTtlMinutes: process.env.DEDUP_TTL_MINUTES,
+      // Umnico Telegram интеграция
+      umnicoForumChatId: process.env.UMNICO_FORUM_CHAT_ID,
+      umnicoPollingInterval: process.env.UMNICO_POLLING_INTERVAL,
+      webAppUrl: process.env.WEB_APP_URL,
     });
   }
 

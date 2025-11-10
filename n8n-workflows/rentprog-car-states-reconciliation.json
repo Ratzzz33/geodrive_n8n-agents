@@ -1,0 +1,304 @@
+{
+  "name": "RentProg Car States Reconciliation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 4 * * *"
+            }
+          ]
+        },
+        "timezone": "Asia/Tbilisi"
+      },
+      "id": "cron-daily-4am",
+      "name": "Daily at 04:00 Tbilisi",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Подготовить список филиалов для проверки\nconst branches = [\n  { code: 'tbilisi', name: 'Тбилиси', token: '91b83b93963633649f29a04b612bab3f9fbb0471b5928622' },\n  { code: 'batumi', name: 'Батуми', token: '7ad345720f8d92f10c187122427c6a2c2bb9494c6bf14e8d' },\n  { code: 'kutaisi', name: 'Кутаиси', token: '5599ebb7b94827fdfd49ca3a5b7e259cfa99d8ea78edeb50' },\n  { code: 'service-center', name: 'Сервис', token: '5y4j4gcs75o9n5s1e2vrxx4a' }\n];\n\nreturn branches.map(branch => ({ json: branch }));"
+      },
+      "id": "prepare-branches",
+      "name": "Prepare Branches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 400]
+    },
+    {
+      "parameters": {
+        "url": "=https://rentprog.net/api/v1/public/get_token?company_token={{ $json.token }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "get-rentprog-token",
+      "name": "Get RentProg Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Сохранить токен и данные филиала для следующих нодов\nconst branchData = $input.first().json;\nconst tokenData = $input.last().json;\n\nreturn [{\n  branchCode: branchData.code,\n  branchName: branchData.name,\n  requestToken: tokenData.token\n}];"
+      },
+      "id": "merge-branch-token",
+      "name": "Merge Branch & Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/all_cars",
+        "authentication": "none",
+        "sendHeaders": true,
+        "options": {
+          "timeout": 15000
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json.requestToken }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "get-cars-from-api",
+      "name": "Get All Cars from RentProg API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT \n  c.id,\n  c.plate,\n  c.model,\n  c.data->>'state' as state_in_db,\n  er.external_id as rentprog_id\nFROM cars c\nINNER JOIN external_refs er ON er.entity_id = c.id\nINNER JOIN branches b ON b.id = c.branch_id\nWHERE er.system = 'rentprog'\n  AND er.entity_type = 'car'\n  AND b.code = '{{ $json.branchCode }}'",
+        "options": {}
+      },
+      "id": "get-cars-from-db",
+      "name": "Get Cars from DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1050, 600],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_neon",
+          "name": "PostgreSQL (Neon)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll"
+      },
+      "id": "merge-api-db",
+      "name": "Merge API & DB Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1250, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Сравнить состояния машин из API и БД\n\nconst branchCode = $input.first().json.branchCode;\nconst branchName = $input.first().json.branchName;\n\n// Данные из API (последний элемент - ответ RentProg)\nconst apiResponse = $input.all().find(item => item.json.data);\nconst apiCars = apiResponse?.json.data || [];\n\n// Данные из БД\nconst dbCars = $input.all().filter(item => item.json.plate && item.json.rentprog_id);\n\n// Создать мапу БД машин: rentprog_id -> state\nconst dbCarsMap = {};\ndbCars.forEach(car => {\n  dbCarsMap[car.json.rentprog_id] = {\n    plate: car.json.plate,\n    model: car.json.model,\n    state: car.json.state_in_db\n  };\n});\n\n// Найти расхождения\nconst discrepancies = [];\n\napiCars.forEach(apiCar => {\n  const rentprogId = String(apiCar.id);\n  const apiState = apiCar.state !== undefined ? String(apiCar.state) : null;\n  const dbCar = dbCarsMap[rentprogId];\n  \n  if (!dbCar) {\n    // Машина есть в RentProg, но нет в БД\n    discrepancies.push({\n      type: 'missing_in_db',\n      plate: apiCar.number || apiCar.code,\n      model: apiCar.model,\n      rentprogId,\n      apiState,\n      dbState: null\n    });\n    return;\n  }\n  \n  // Сравнить state\n  const dbState = dbCar.state;\n  \n  if (apiState !== dbState) {\n    discrepancies.push({\n      type: 'state_mismatch',\n      plate: dbCar.plate,\n      model: dbCar.model,\n      rentprogId,\n      apiState,\n      dbState\n    });\n  }\n});\n\nconst stateNames = {\n  '1': 'Можно выдавать (🟢)',\n  '2': 'В ремонте (⚫)',\n  '3': 'Критическое состояние (🔴)',\n  '4': 'В долгосрочной аренде (🩷)',\n  '5': 'Не выдавать (🔵)',\n  '6': 'Необходимо обслуживание (🟠)',\n  'null': 'Не указан',\n  'undefined': 'Не указан'\n};\n\nreturn [{\n  branchCode,\n  branchName,\n  totalApiCars: apiCars.length,\n  totalDbCars: dbCars.length,\n  hasDiscrepancy: discrepancies.length > 0,\n  discrepancyCount: discrepancies.length,\n  discrepancies: discrepancies.map(d => ({\n    ...d,\n    apiStateName: stateNames[d.apiState] || d.apiState,\n    dbStateName: stateNames[d.dbState] || d.dbState\n  }))\n}];"
+      },
+      "id": "compare-states",
+      "name": "Compare States",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-discrepancy",
+              "leftValue": "={{ $json.hasDiscrepancy }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-discrepancy",
+      "name": "If Has Discrepancy",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1650, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Форматировать alert о расхождениях состояний машин\n\nconst { branchName, branchCode, totalApiCars, totalDbCars, discrepancyCount, discrepancies } = $json;\n\nconst lines = [\n  '⚠️ Расхождение состояний автомобилей',\n  '',\n  `🏢 Филиал: ${branchName} (${branchCode})`,\n  `📊 Машин в RentProg: ${totalApiCars}`,\n  `📊 Машин в БД: ${totalDbCars}`,\n  `❌ Расхождений: ${discrepancyCount}`,\n  '',\n  '📋 Детали расхождений:',\n  ''\n];\n\nlet shown = 0;\nconst maxShow = 20;\n\nfor (const d of discrepancies) {\n  if (shown >= maxShow) {\n    lines.push(`... и ещё ${discrepancies.length - maxShow} машин`);\n    break;\n  }\n  \n  if (d.type === 'missing_in_db') {\n    lines.push(\n      `🚗 ${d.plate} (${d.model})`,\n      `   ⚠️ Есть в RentProg, НЕТ в БД`,\n      `   State в RentProg: ${d.apiStateName}`,\n      ''\n    );\n  } else if (d.type === 'state_mismatch') {\n    lines.push(\n      `🚗 ${d.plate} (${d.model})`,\n      `   RentProg: ${d.apiStateName}`,\n      `   БД: ${d.dbStateName}`,\n      ''\n    );\n  }\n  \n  shown++;\n}\n\nlines.push('━'.repeat(30));\nlines.push(`🕐 ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Tbilisi' })}`);\n\nreturn [{ alertText: lines.join('\\n') }];"
+      },
+      "id": "format-alert",
+      "name": "Format Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1850, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "-5004140602",
+        "text": "={{ $json.alertText }}",
+        "additionalFields": {}
+      },
+      "id": "send-telegram-alert",
+      "name": "Send Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2050, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram_alert_bot",
+          "name": "Telegram Alert Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily at 04:00 Tbilisi": {
+      "main": [
+        [
+          {
+            "node": "Prepare Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Branches": {
+      "main": [
+        [
+          {
+            "node": "Get RentProg Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get RentProg Token": {
+      "main": [
+        [
+          {
+            "node": "Merge Branch & Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Branch & Token": {
+      "main": [
+        [
+          {
+            "node": "Get Cars from RentProg API",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Cars from DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Cars from RentProg API": {
+      "main": [
+        [
+          {
+            "node": "Merge API & DB Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Cars from DB": {
+      "main": [
+        [
+          {
+            "node": "Merge API & DB Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge API & DB Data": {
+      "main": [
+        [
+          {
+            "node": "Compare States",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare States": {
+      "main": [
+        [
+          {
+            "node": "If Has Discrepancy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Has Discrepancy": {
+      "main": [
+        [
+          {
+            "node": "Format Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveManualExecutions": true,
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all"
+  }
+}
+

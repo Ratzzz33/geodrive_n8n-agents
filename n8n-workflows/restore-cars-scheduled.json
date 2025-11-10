@@ -1,0 +1,122 @@
+{
+  "name": "Restore Cars from RentProg (Scheduled)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8,11,14,17,20,23 * * *"
+            }
+          ]
+        },
+        "timezone": "Asia/Tbilisi"
+      },
+      "id": "schedule-trigger",
+      "name": "Every 3 hours (8-23)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/restore-cars",
+        "method": "POST",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "call-jarvis-api",
+      "name": "Call Jarvis API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Форматирование отчета для Telegram\nconst response = $input.first().json;\n\nif (!response || !response.ok) {\n  const errorMsg = response?.error || 'Unknown error';\n  return [{\n    json: {\n      alertText: `❌ Ошибка при восстановлении данных машин:\\n\\n${errorMsg}\\n\\n🕐 ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Tbilisi' })}`\n    }\n  }];\n}\n\nconst { stats, branches } = response;\n\n// Формируем сообщение\nconst lines = [\n  '🚀 Восстановление данных машин из RentProg API',\n  '',\n  '📊 ИТОГОВАЯ СТАТИСТИКА',\n  '━'.repeat(30),\n  `Всего обработано машин: ${stats.totalCars}`,\n  `Добавлено новых: ${stats.inserted}`,\n  `Обновлено существующих: ${stats.updated}`,\n  `Пропущено (фейковые номера): ${stats.skipped}`,\n  '',\n  '📋 По филиалам:',\n  ''\n];\n\n// Добавляем статистику по филиалам\nif (branches && branches.length > 0) {\n  for (const branch of branches) {\n    const branchName = branch.branch.charAt(0).toUpperCase() + branch.branch.slice(1);\n    lines.push(`${branchName}:`);\n    lines.push(`  Всего машин: ${branch.total}`);\n    lines.push(`  Добавлено: ${branch.inserted}`);\n    lines.push(`  Обновлено: ${branch.updated}`);\n    lines.push(`  Пропущено: ${branch.skipped}`);\n    if (branch.error) {\n      lines.push(`  ❌ Ошибка: ${branch.error}`);\n    }\n    lines.push('');\n  }\n}\n\nlines.push('━'.repeat(30));\nlines.push(`🕐 ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Tbilisi' })}`);\n\nreturn [{\n  json: {\n    alertText: lines.join('\\n')\n  }\n}];"
+      },
+      "id": "format-report",
+      "name": "Format Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ $json.alertText }}",
+        "parseMode": "Markdown"
+      },
+      "id": "send-telegram",
+      "name": "Send Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        850,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 3 hours (8-23)": {
+      "main": [
+        [
+          {
+            "node": "Call Jarvis API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Jarvis API": {
+      "main": [
+        [
+          {
+            "node": "Format Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Report": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-11-10T12:00:00.000Z",
+  "versionId": "1"
+}
+

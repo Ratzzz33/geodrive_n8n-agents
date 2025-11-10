@@ -116,6 +116,7 @@ export async function savePaymentFromRentProg(
     
     if (existingRef) {
       // Платеж уже существует, обновляем
+      const existingPaymentId = existingRef.entity_id;
       await db
         .update(payments)
         .set({
@@ -128,9 +129,84 @@ export async function savePaymentFromRentProg(
           raw_data: payment.rawData,
           updated_at: new Date(),
         })
-        .where(eq(payments.id, existingRef.entity_id));
+        .where(eq(payments.id, existingPaymentId));
       
-      return { paymentId: existingRef.entity_id, created: false };
+      // Проверить и обновить связывание (если еще не связано)
+      try {
+        const { linkPayment } = await import('./eventLinks');
+        const { getLinksForPayment } = await import('./eventLinks');
+        const existingLinks = await getLinksForPayment(existingPaymentId);
+        
+        // Если нет связей, попробуем связать
+        if (existingLinks.length === 0) {
+          await linkPayment(
+            existingPaymentId,
+            payment.branch as any,
+            Number(rentprogCountId),
+            new Date(payment.paymentDate),
+            { timeWindowSeconds: 300, autoCreate: true }
+          );
+        }
+      } catch (linkError) {
+        // Не критично
+        console.warn('Failed to link existing payment:', linkError);
+      }
+      
+      // Проверить и добавить в timeline (если еще нет)
+      try {
+        const { getDatabase } = await import('./index');
+        const { sql } = await import('drizzle-orm');
+        const db = getDatabase();
+        if (db) {
+          const existingTimeline = await db.execute(sql`
+            SELECT id FROM entity_timeline
+            WHERE entity_type = 'payment'
+              AND entity_id = ${existingPaymentId}
+            LIMIT 1
+          `);
+          
+          if (!existingTimeline || (existingTimeline as any[]).length === 0) {
+            const { addPaymentToTimeline } = await import('./entityTimeline');
+            
+            // Найти client_id если есть
+            let clientId: string | undefined;
+            if (payment.rawData.client_id) {
+              const [clientRef] = await db
+                .select()
+                .from(externalRefs)
+                .where(
+                  and(
+                    eq(externalRefs.entity_type, 'client'),
+                    eq(externalRefs.system, 'rentprog'),
+                    eq(externalRefs.external_id, String(payment.rawData.client_id))
+                  )
+                )
+                .limit(1);
+              if (clientRef) {
+                clientId = clientRef.entity_id;
+              }
+            }
+            
+            await addPaymentToTimeline(
+              existingPaymentId,
+              payment.branch as any,
+              {
+                amount: String(payment.amount),
+                currency: payment.currency,
+                description: payment.comment,
+                bookingId: bookingId || undefined,
+                clientId,
+                employeeId: undefined,
+              }
+            );
+          }
+        }
+      } catch (timelineError) {
+        // Не критично
+        console.warn('Failed to add existing payment to timeline:', timelineError);
+      }
+      
+      return { paymentId: existingPaymentId, created: false };
     }
     
     // 4. Создать новый платеж

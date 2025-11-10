@@ -1,0 +1,483 @@
+{
+  "name": "AmoCRM All Deals Parser (Full Details)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT MAX(updated_at) as last_sync FROM amocrm_deals",
+        "options": {}
+      },
+      "id": "get-last-sync",
+      "name": "Get Last Sync Time",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [470, 300],
+      "credentials": {
+        "postgres": {
+          "id": "neon-postgres",
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://playwright-amocrm:3002/api/deals/all?pipeline_id=8580102&limit=250{{ $json.last_sync ? '&updated_since=' + $json.last_sync : '' }}",
+        "authentication": "none",
+        "options": {}
+      },
+      "id": "get-all-deals",
+      "name": "Get All Deals",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-deals",
+      "name": "Loop Through Deals",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "url": "=http://playwright-amocrm:3002/api/deals/{{ $json.id }}/extended",
+        "authentication": "none",
+        "options": {}
+      },
+      "id": "get-deal-extended",
+      "name": "Get Deal Extended Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1130, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Извлекаем все данные и связи из сделки\nconst dealData = $input.first().json.data || $input.first().json;\nconst deal = dealData.deal || dealData;\nconst contacts = dealData.contacts || [];\nconst notes = dealData.notes || [];\nconst scopeId = dealData.scopeId || null;\n\n// Определяем статус\nconst statusId = String(deal.status_id || '');\nlet statusLabel = 'in_progress';\nif (statusId === '142') statusLabel = 'successful';\nelse if (statusId === '143') statusLabel = 'unsuccessful';\n\n// Извлекаем телефон из контактов\nconst primaryContact = contacts[0] || {};\nconst phoneField = primaryContact.custom_fields_values\n  ?.find(f => f.field_code === 'PHONE');\nconst phone = phoneField?.values[0]?.value || '';\nconst contactName = primaryContact.name || '';\nconst contactId = primaryContact.id || null;\nconst emailField = primaryContact.custom_fields_values\n  ?.find(f => f.field_code === 'EMAIL');\nconst email = emailField?.values[0]?.value || '';\n\n// Извлекаем custom fields из сделки\nconst customFields = {};\ndeal.custom_fields_values?.forEach(f => {\n  const fieldName = f.field_name?.toLowerCase().replace(/\\s+/g, '_') || f.field_code || '';\n  const value = f.values?.[0]?.value || f.values?.[0]?.enum_value || null;\n  if (fieldName && value) {\n    customFields[fieldName] = value;\n  }\n});\n\n// Извлекаем RentProg IDs\nconst rentprogClientId = customFields.rentprog_client_id || customFields.client_id || null;\nconst rentprogBookingId = customFields.rentprog_booking_id || customFields.booking_id || null;\nconst rentprogCarId = customFields.rentprog_car_id || customFields.car_id || null;\n\n// Финансы\nconst price = deal.price || 0;\n\n// Даты\nconst createdAt = deal.created_at ? new Date(deal.created_at * 1000).toISOString() : new Date().toISOString();\nconst updatedAt = deal.updated_at ? new Date(deal.updated_at * 1000).toISOString() : new Date().toISOString();\nconst closedAt = statusLabel !== 'in_progress' && deal.closed_at ? new Date(deal.closed_at * 1000).toISOString() : null;\n\nreturn [{\n  json: {\n    dealId: deal.id,\n    dealName: deal.name || '',\n    pipelineId: deal.pipeline_id || '8580102',\n    statusId,\n    statusLabel,\n    price,\n    createdAt,\n    updatedAt,\n    closedAt,\n    phone,\n    contactName,\n    contactId,\n    email,\n    customFields,\n    rentprogClientId,\n    rentprogBookingId,\n    rentprogCarId,\n    scopeId,\n    notesCount: notes.length,\n    notes\n  }\n}];"
+      },
+      "id": "extract-all-data",
+      "name": "Extract All Data & Links",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1350, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "phone",
+              "name": "phone",
+              "value": "={{ $json.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "contactName",
+              "name": "contactName",
+              "value": "={{ $json.contactName }}",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "contactId",
+              "name": "contactId",
+              "value": "={{ $json.contactId }}",
+              "type": "string"
+            },
+            {
+              "id": "rentprogClientId",
+              "name": "rentprogClientId",
+              "value": "={{ $json.rentprogClientId }}",
+              "type": "string"
+            },
+            {
+              "id": "scopeId",
+              "name": "scopeId",
+              "value": "={{ $json.scopeId }}",
+              "type": "string"
+            },
+            {
+              "id": "rentprogBookingId",
+              "name": "rentprogBookingId",
+              "value": "={{ $json.rentprogBookingId }}",
+              "type": "string"
+            },
+            {
+              "id": "rentprogCarId",
+              "name": "rentprogCarId",
+              "value": "={{ $json.rentprogCarId }}",
+              "type": "string"
+            },
+            {
+              "id": "dealId",
+              "name": "dealId",
+              "value": "={{ $json.dealId }}",
+              "type": "string"
+            },
+            {
+              "id": "pipelineId",
+              "name": "pipelineId",
+              "value": "={{ $json.pipelineId }}",
+              "type": "string"
+            },
+            {
+              "id": "statusId",
+              "name": "statusId",
+              "value": "={{ $json.statusId }}",
+              "type": "string"
+            },
+            {
+              "id": "statusLabel",
+              "name": "statusLabel",
+              "value": "={{ $json.statusLabel }}",
+              "type": "string"
+            },
+            {
+              "id": "price",
+              "name": "price",
+              "value": "={{ $json.price }}",
+              "type": "number"
+            },
+            {
+              "id": "createdAt",
+              "name": "createdAt",
+              "value": "={{ $json.createdAt }}",
+              "type": "string"
+            },
+            {
+              "id": "closedAt",
+              "name": "closedAt",
+              "value": "={{ $json.closedAt }}",
+              "type": "string"
+            },
+            {
+              "id": "customFields",
+              "name": "customFields",
+              "value": "={{ JSON.stringify($json.customFields) }}",
+              "type": "string"
+            },
+            {
+              "id": "notesCount",
+              "name": "notesCount",
+              "value": "={{ $json.notesCount }}",
+              "type": "number"
+            },
+            {
+              "id": "dealName",
+              "name": "dealName",
+              "value": "={{ $json.dealName }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "dotNotation": true
+        }
+      },
+      "id": "prepare-params",
+      "name": "Prepare SQL Params",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1350, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Комплексный upsert с полным связыванием всех сущностей\nWITH \n-- 1. Upsert клиента по телефону\nclient_upsert AS (\n  INSERT INTO clients (id, phone, name, email, updated_at)\n  VALUES (gen_random_uuid(), $1, NULLIF($2, ''), NULLIF($3, ''), now())\n  ON CONFLICT (phone) DO UPDATE\n  SET name = COALESCE(NULLIF(EXCLUDED.name, ''), clients.name),\n      email = COALESCE(NULLIF(EXCLUDED.email, ''), clients.email),\n      updated_at = now()\n  RETURNING id\n),\n-- 2. Добавить external_ref для AmoCRM контакта\namocrm_contact_ref AS (\n  INSERT INTO external_refs (entity_type, entity_id, system, external_id)\n  SELECT 'client', client_upsert.id, 'amocrm', $4\n  FROM client_upsert\n  WHERE $4 IS NOT NULL\n  ON CONFLICT (entity_type, system, external_id) DO NOTHING\n),\n-- 3. Добавить external_ref для RentProg клиента (если есть)\nrentprog_client_ref AS (\n  INSERT INTO external_refs (entity_type, entity_id, system, external_id)\n  SELECT 'client', client_upsert.id, 'rentprog', $5\n  FROM client_upsert\n  WHERE $5 IS NOT NULL AND $5 != ''\n  ON CONFLICT (entity_type, system, external_id) DO NOTHING\n),\n-- 4. Найти или создать conversation (если есть scope_id)\nconversation_upsert AS (\n  INSERT INTO conversations (id, client_id, amocrm_scope_id, status, updated_at)\n  SELECT gen_random_uuid(), client_upsert.id, $6, 'active', now()\n  FROM client_upsert\n  WHERE $6 IS NOT NULL\n  ON CONFLICT (amocrm_scope_id) DO UPDATE\n  SET client_id = EXCLUDED.client_id,\n      updated_at = now()\n  RETURNING id\n),\n-- 5. Найти booking по RentProg booking_id (если есть)\nbooking_find AS (\n  SELECT b.id, b.car_id, b.client_id, b.branch_id\n  FROM bookings b\n  INNER JOIN external_refs er ON b.id = er.entity_id AND er.entity_type = 'booking'\n  WHERE er.system = 'rentprog' AND er.external_id = $7\n  LIMIT 1\n),\n-- 6. Найти car по RentProg car_id (если есть, но booking не найден)\ncar_find AS (\n  SELECT c.id, c.branch_id\n  FROM cars c\n  INNER JOIN external_refs er ON c.id = er.entity_id AND er.entity_type = 'car'\n  WHERE er.system = 'rentprog' AND er.external_id = $8\n  LIMIT 1\n),\n-- 7. Upsert AmoCRM deal со всеми связями\ndeal_upsert AS (\n  INSERT INTO amocrm_deals (\n    id, client_id, conversation_id, amocrm_deal_id, pipeline_id, status_id, status_label,\n    price, created_at, closed_at, updated_at, custom_fields, notes_count, metadata\n  )\n  SELECT \n    gen_random_uuid(),\n    client_upsert.id,\n    (SELECT id FROM conversation_upsert LIMIT 1),\n    $9, $10, $11, $12,\n    $13, $14::timestamptz, $15::timestamptz, now(),\n    $16::jsonb,\n    $17,\n    jsonb_build_object(\n      'rentprog_booking_id', $7,\n      'rentprog_car_id', $8,\n      'booking_id', (SELECT id FROM booking_find LIMIT 1),\n      'car_id', COALESCE((SELECT car_id FROM booking_find LIMIT 1), (SELECT id FROM car_find LIMIT 1)),\n      'deal_name', $18\n    )\n  FROM client_upsert\n  ON CONFLICT (amocrm_deal_id) DO UPDATE\n  SET status_id = EXCLUDED.status_id,\n      status_label = EXCLUDED.status_label,\n      conversation_id = COALESCE(EXCLUDED.conversation_id, amocrm_deals.conversation_id),\n      price = EXCLUDED.price,\n      closed_at = EXCLUDED.closed_at,\n      custom_fields = EXCLUDED.custom_fields,\n      notes_count = EXCLUDED.notes_count,\n      metadata = EXCLUDED.metadata,\n      updated_at = now()\n  RETURNING id, client_id, conversation_id\n)\nSELECT \n  deal_upsert.id as deal_id,\n  deal_upsert.client_id,\n  deal_upsert.conversation_id,\n  (SELECT id FROM booking_find LIMIT 1) as booking_id,\n  COALESCE(\n    (SELECT car_id FROM booking_find LIMIT 1),\n    (SELECT id FROM car_find LIMIT 1)\n  ) as car_id\nFROM deal_upsert;",
+        "options": {
+          "queryReplacement": "={{ $json.phone }},={{ $json.contactName }},={{ $json.email }},={{ $json.contactId }},={{ $json.rentprogClientId }},={{ $json.scopeId }},={{ $json.rentprogBookingId }},={{ $json.rentprogCarId }},={{ $json.dealId }},={{ $json.pipelineId }},={{ $json.statusId }},={{ $json.statusLabel }},={{ $json.price }},={{ $json.createdAt }},={{ $json.closedAt }},={{ $json.customFields }},={{ $json.notesCount }},={{ $json.dealName }}"
+        }
+      },
+      "id": "upsert-all-links",
+      "name": "Upsert with All Links",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1570, 300],
+      "credentials": {
+        "postgres": {
+          "id": "neon-postgres",
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "id": "merge-for-notes",
+      "name": "Merge for Notes",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1790, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Подготовить notes как messages с полными связями\n// Получаем данные из обеих предыдущих нод\nconst allInputs = $input.all();\nlet extracted = null;\nlet links = null;\n\n// Найти extracted (содержит dealId, dealName, notes)\nfor (const item of allInputs) {\n  if (item.json && item.json.dealId && item.json.notes) {\n    extracted = item.json;\n    break;\n  }\n}\n\n// Найти links (содержит client_id, conversation_id, booking_id, deal_id)\nfor (const item of allInputs) {\n  if (item.json && (item.json.client_id || item.json.deal_id)) {\n    links = item.json;\n    break;\n  }\n}\n\nif (!extracted || !links || !extracted.notes || extracted.notes.length === 0) {\n  return [];\n}\n\nconst notes = extracted.notes || [];\n\n// Фильтруем только текстовые примечания\nconst messageNotes = notes.filter(n => \n  n && ['common', 'call_in', 'call_out'].includes(n.note_type)\n);\n\nif (messageNotes.length === 0) {\n  return [];\n}\n\nreturn messageNotes.map(n => ({\n  json: {\n    client_id: links.client_id,\n    conversation_id: links.conversation_id || null,\n    booking_id: links.booking_id || null,\n    text: n.params?.text || '',\n    direction: n.note_type === 'call_in' ? 'incoming' : 'outgoing',\n    channel: 'amocrm_note',\n    sent_at: new Date(n.created_at * 1000).toISOString(),\n    metadata: JSON.stringify({\n      note_type: n.note_type,\n      amocrm_note_id: n.id,\n      amocrm_deal_id: extracted.dealId,\n      deal_name: extracted.dealName\n    })\n  }\n}));"
+      },
+      "id": "prepare-notes",
+      "name": "Prepare Notes as Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2010, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "messages",
+        "columns": "client_id, conversation_id, booking_id, text, direction, channel, sent_at, metadata",
+        "options": {
+          "skipOnConflict": true
+        }
+      },
+      "id": "insert-messages",
+      "name": "Insert Notes as Messages",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2230, 300],
+      "credentials": {
+        "postgres": {
+          "id": "neon-postgres",
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Подсчитать количество обработанных сделок\nconst allDeals = $('Get All Deals').all();\nconst totalDeals = allDeals.length;\nconst processedDeals = $('Loop Through Deals').context.noItemsProcessed || 0;\n\nreturn [{\n  json: {\n    items_processed: totalDeals,\n    items_added: processedDeals\n  }\n}];"
+      },
+      "id": "count-processed",
+      "name": "Count Processed Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Update sync state\nINSERT INTO sync_state (workflow_name, system, last_sync_at, last_marker, status, items_processed, items_added, metadata)\nVALUES ('amocrm_all_deals_parser', 'amocrm', now(), now()::text, 'success', $1, $2, '{}'::jsonb)\nON CONFLICT (workflow_name, system) DO UPDATE\nSET last_sync_at = now(), last_marker = now()::text, status = 'success', items_processed = EXCLUDED.items_processed, items_added = EXCLUDED.items_added;",
+        "options": {
+          "queryReplacement": "={{ $json.items_processed || 0 }},={{ $json.items_added || 0 }}"
+        }
+      },
+      "id": "update-sync-state",
+      "name": "Update Sync State",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2670, 300],
+      "credentials": {
+        "postgres": {
+          "id": "neon-postgres",
+          "name": "Neon PostgreSQL"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": {
+      "main": [
+        [
+          {
+            "node": "Get Last Sync Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Last Sync Time": {
+      "main": [
+        [
+          {
+            "node": "Get All Deals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Deals": {
+      "main": [
+        [
+          {
+            "node": "Loop Through Deals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Through Deals": {
+      "main": [
+        [
+          {
+            "node": "Get Deal Extended Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Deal Extended Details": {
+      "main": [
+        [
+          {
+            "node": "Extract All Data & Links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract All Data & Links": {
+      "main": [
+        [
+          {
+            "node": "Prepare SQL Params",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare SQL Params": {
+      "main": [
+        [
+          {
+            "node": "Upsert with All Links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert with All Links": {
+      "main": [
+        [
+          {
+            "node": "Merge for Notes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract All Data & Links": {
+      "main": [
+        [
+          {
+            "node": "Merge for Notes",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge for Notes": {
+      "main": [
+        [
+          {
+            "node": "Prepare Notes as Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Notes as Messages": {
+      "main": [
+        [
+          {
+            "node": "Insert Notes as Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Notes as Messages": {
+      "main": [
+        [
+          {
+            "node": "Loop Through Deals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Through Deals": {
+      "main": [
+        [
+          {
+            "node": "Get Deal Extended Details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Count Processed Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count Processed Items": {
+      "main": [
+        [
+          {
+            "node": "Update Sync State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Sync State": {
+      "main": []
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "timezone": "Asia/Tbilisi",
+    "executionTimeout": 7200
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-11-09T00:00:00.000Z",
+  "versionId": "1"
+}
+

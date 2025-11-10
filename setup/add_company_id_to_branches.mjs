@@ -25,8 +25,8 @@ try {
   
   const mapping = {
     'tbilisi': 9247,
-    'batumi': 9506,
     'kutaisi': 9248,
+    'batumi': 9506,
     'service-center': 11163
   };
   

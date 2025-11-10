@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>История переписки - Umnico</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .client-info {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-item strong {
+      color: #666;
+    }
+
+    .messages-container {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .message {
+      margin-bottom: 20px;
+      padding: 12px;
+      border-radius: 8px;
+      animation: fadeIn 0.3s;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.incoming {
+      background: #e3f2fd;
+      margin-right: 20%;
+    }
+
+    .message.outgoing {
+      background: #f1f8e9;
+      margin-left: 20%;
+      text-align: right;
+    }
+
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .message-direction {
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .message-direction.incoming {
+      color: #1976d2;
+    }
+
+    .message-direction.outgoing {
+      color: #388e3c;
+    }
+
+    .message-time {
+      font-size: 11px;
+    }
+
+    .message-text {
+      word-wrap: break-word;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    .error {
+      background: #ffebee;
+      color: #c62828;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .pagination button {
+      padding: 8px 16px;
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .pagination button:hover:not(:disabled) {
+      background: #f5f5f5;
+      border-color: #999;
+    }
+
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .booking-info {
+      background: #fff3e0;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      border-left: 4px solid #ff9800;
+    }
+
+    .booking-info h3 {
+      font-size: 16px;
+      margin-bottom: 10px;
+      color: #e65100;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>💬 История переписки</h1>
+      <div id="clientInfo" class="client-info"></div>
+      <div id="bookingInfo" class="booking-info" style="display: none;"></div>
+    </div>
+
+    <div id="error" class="error" style="display: none;"></div>
+
+    <div id="messagesContainer" class="messages-container">
+      <div class="loading">Загрузка сообщений...</div>
+    </div>
+
+    <div id="pagination" class="pagination" style="display: none;">
+      <button id="prevBtn" onclick="loadMessages(offset - limit)">← Назад</button>
+      <span id="pageInfo"></span>
+      <button id="nextBtn" onclick="loadMessages(offset + limit)">Вперед →</button>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    let conversationId = null;
+    let limit = 50;
+    let offset = 0;
+    let total = 0;
+
+    // Получаем conversationId из URL параметров или пути
+    const urlParams = new URLSearchParams(window.location.search);
+    conversationId = urlParams.get('id');
+    
+    // Если нет в параметрах, пробуем из пути
+    if (!conversationId) {
+      const pathParts = window.location.pathname.split('/').filter(p => p && p !== 'conversations' && p !== 'index.html');
+      conversationId = pathParts[pathParts.length - 1];
+    }
+
+    if (!conversationId) {
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error').textContent = 'Ошибка: не указан ID диалога в URL. Используйте формат: /conversations/index.html?id=CONVERSATION_ID';
+      document.getElementById('messagesContainer').innerHTML = '';
+    } else {
+      loadConversation();
+    }
+
+    async function loadConversation() {
+      try {
+        const response = await fetch(`${API_BASE}/api/umnico/conversations/${conversationId}?limit=${limit}&offset=${offset}`);
+        const data = await response.json();
+
+        if (!data.ok) {
+          throw new Error(data.error || 'Ошибка загрузки диалога');
+        }
+
+        // Отображаем информацию о клиенте
+        displayClientInfo(data.conversation);
+
+        // Отображаем сообщения
+        displayMessages(data.messages);
+
+        // Обновляем пагинацию
+        total = data.pagination.total;
+        updatePagination(data.pagination);
+      } catch (error) {
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('error').textContent = `Ошибка: ${error.message}`;
+        document.getElementById('messagesContainer').innerHTML = '';
+      }
+    }
+
+    function displayClientInfo(conversation) {
+      const clientInfo = document.getElementById('clientInfo');
+      clientInfo.innerHTML = `
+        <div class="info-item">
+          <strong>👤 Клиент:</strong>
+          <span>${escapeHtml(conversation.client.name || 'Неизвестно')}</span>
+        </div>
+        <div class="info-item">
+          <strong>📞 Телефон:</strong>
+          <span>${escapeHtml(conversation.client.phone || 'N/A')}</span>
+        </div>
+        ${conversation.carInfo ? `
+          <div class="info-item">
+            <strong>🚗 Автомобиль:</strong>
+            <span>${escapeHtml(conversation.carInfo)}</span>
+          </div>
+        ` : ''}
+        ${conversation.bookingDates ? `
+          <div class="info-item">
+            <strong>📅 Даты:</strong>
+            <span>${escapeHtml(conversation.bookingDates)}</span>
+          </div>
+        ` : ''}
+      `;
+
+      // Отображаем информацию о брони
+      if (conversation.booking) {
+        const bookingInfo = document.getElementById('bookingInfo');
+        bookingInfo.style.display = 'block';
+        bookingInfo.innerHTML = `
+          <h3>📋 Активная бронь</h3>
+          ${conversation.booking.car ? `<p><strong>Автомобиль:</strong> ${escapeHtml(conversation.booking.car)}</p>` : ''}
+          ${conversation.booking.startAt ? `<p><strong>Начало:</strong> ${formatDate(conversation.booking.startAt)}</p>` : ''}
+          ${conversation.booking.endAt ? `<p><strong>Конец:</strong> ${formatDate(conversation.booking.endAt)}</p>` : ''}
+          <p><strong>Статус:</strong> ${escapeHtml(conversation.booking.status || 'N/A')}</p>
+        `;
+      }
+    }
+
+    function displayMessages(messages) {
+      const container = document.getElementById('messagesContainer');
+      
+      if (messages.length === 0) {
+        container.innerHTML = '<div class="loading">Нет сообщений</div>';
+        return;
+      }
+
+      // Сортируем по времени (старые первыми)
+      messages.sort((a, b) => new Date(a.sentAt) - new Date(b.sentAt));
+
+      container.innerHTML = messages.map(msg => `
+        <div class="message ${msg.direction}">
+          <div class="message-header">
+            <span class="message-direction ${msg.direction}">
+              ${msg.direction === 'incoming' ? '👤 Клиент' : '💬 Ответ'}
+            </span>
+            <span class="message-time">${formatDate(msg.sentAt)}</span>
+          </div>
+          <div class="message-text">${escapeHtml(msg.text || '')}</div>
+        </div>
+      `).join('');
+
+      // Прокручиваем вниз
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function updatePagination(pagination) {
+      const paginationEl = document.getElementById('pagination');
+      const pageInfo = document.getElementById('pageInfo');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+
+      if (pagination.total <= limit) {
+        paginationEl.style.display = 'none';
+        return;
+      }
+
+      paginationEl.style.display = 'flex';
+      pageInfo.textContent = `${offset + 1}-${Math.min(offset + limit, pagination.total)} из ${pagination.total}`;
+      prevBtn.disabled = offset === 0;
+      nextBtn.disabled = !pagination.hasMore;
+    }
+
+    function loadMessages(newOffset) {
+      offset = Math.max(0, newOffset);
+      loadConversation();
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return 'N/A';
+      const date = new Date(dateString);
+      return date.toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
+

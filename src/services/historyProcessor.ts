@@ -182,10 +182,85 @@ export async function extractPayment(
       })
       .returning({ id: payments.id });
     
+    const paymentId = result[0].id;
+    
+    // Автоматически связать с events и history (если еще не связано)
+    if (paymentData.rp_payment_id) {
+      try {
+        const { linkPayment, getLinksForPayment } = await import('../db/eventLinks');
+        
+        // Проверить, есть ли уже связи
+        const existingLinks = await getLinksForPayment(paymentId);
+        
+        // Если нет связей, попробуем связать
+        if (existingLinks.length === 0) {
+          await linkPayment(
+            paymentId,
+            item.branch as any,
+            Number(paymentData.rp_payment_id),
+            paymentData.payment_date,
+            { timeWindowSeconds: 300, autoCreate: true }
+          );
+        }
+      } catch (linkError) {
+        // Не критично, если связывание не удалось - логируем и продолжаем
+        console.warn('Failed to link payment from history:', linkError);
+      }
+    }
+    
+    // Записать в timeline (для всех платежей, проверяем дубликаты)
+    try {
+      const { addPaymentToTimeline } = await import('../db/entityTimeline');
+      
+      // Проверить, есть ли уже в timeline
+      const existingTimeline = await db.execute(sql`
+        SELECT id FROM entity_timeline
+        WHERE entity_type = 'payment'
+          AND entity_id = ${paymentId}
+        LIMIT 1
+      `);
+      
+      if (!existingTimeline || existingTimeline.length === 0) {
+        // Найти client_id если есть
+        let clientId: string | undefined;
+        if (paymentData.rp_client_id) {
+          const clientIdResult = await findEntityByRpId('client', String(paymentData.rp_client_id));
+          if (clientIdResult) {
+            clientId = clientIdResult;
+          }
+        }
+        
+        // Найти booking_id если есть в rawData
+        let bookingId: string | undefined;
+        if (rawData.booking_id) {
+          const bookingIdResult = await findEntityByRpId('booking', String(rawData.booking_id));
+          if (bookingIdResult) {
+            bookingId = bookingIdResult;
+          }
+        }
+        
+        await addPaymentToTimeline(
+          paymentId,
+          item.branch as any,
+          {
+            amount: paymentData.amount,
+            currency: paymentData.currency || 'GEL',
+            description: paymentData.description || item.description,
+            bookingId,
+            clientId,
+            employeeId: undefined,
+          }
+        );
+      }
+    } catch (timelineError) {
+      // Не критично, если запись в timeline не удалась - логируем и продолжаем
+      console.warn('Failed to add payment to timeline from history:', timelineError);
+    }
+    
     return {
       ok: true,
       action: 'payment_saved',
-      entityId: result[0].id,
+      entityId: paymentId,
       details: { payment_type: paymentData.payment_type, amount: paymentData.amount }
     };
     

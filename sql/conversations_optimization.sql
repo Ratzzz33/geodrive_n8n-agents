@@ -8,10 +8,10 @@ ADD COLUMN IF NOT EXISTS last_message_preview TEXT;
 -- Комментарий для документации
 COMMENT ON COLUMN conversations.last_message_preview IS 'Кеш текста последнего сообщения для быстрого сравнения при инкрементальной синхронизации';
 
--- Индекс для быстрой фильтрации активных чатов за последний час
+-- Индекс для быстрой фильтрации активных чатов
+-- (без WHERE с NOW() - не immutable функция)
 CREATE INDEX IF NOT EXISTS idx_conversations_recent 
-ON conversations(last_message_at DESC) 
-WHERE last_message_at > NOW() - INTERVAL '1 hour';
+ON conversations(last_message_at DESC NULLS LAST);
 
 -- Индекс для поиска по превью (для дедупликации)
 CREATE INDEX IF NOT EXISTS idx_conversations_preview 

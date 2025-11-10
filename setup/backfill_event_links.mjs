@@ -21,10 +21,11 @@ const sql = postgres(CONNECTION_STRING, {
 /**
  * Маппинг company_id на branch name (из RentProg)
  */
+// В RentProg company_id (4-5 цифр) означает ID филиала
 const COMPANY_ID_TO_BRANCH = {
   9247: 'tbilisi',
-  9248: 'batumi',
-  9506: 'kutaisi',
+  9248: 'kutaisi',
+  9506: 'batumi',
   11163: 'service-center'
 };
 
