@@ -411,6 +411,51 @@ app.post('/api/relogin', async (req, res) => {
   }
 });
 
+// Debug endpoint - возвращает HTML первого элемента и все ссылки
+app.get('/api/debug', async (req, res) => {
+  try {
+    const page = (service as any).page;
+    if (!page) {
+      return res.status(500).json({ ok: false, error: 'Page not initialized' });
+    }
+
+    await page.goto('https://umnico.com/app/inbox/deals/inbox', {
+      waitUntil: 'domcontentloaded',
+      timeout: 10000
+    });
+
+    await page.waitForSelector('.card-message-preview__item', { 
+      timeout: 10000,
+      state: 'attached'
+    });
+
+    const debugInfo = await page.evaluate(() => {
+      const firstItem = document.querySelector('.card-message-preview__item');
+      const allLinks = Array.from(document.querySelectorAll('a[href*="/details/"]'));
+      
+      return {
+        firstItemHtml: firstItem ? firstItem.outerHTML.substring(0, 2000) : null,
+        firstItemClasses: firstItem ? firstItem.className : null,
+        firstItemParent: firstItem?.parentElement ? {
+          tagName: firstItem.parentElement.tagName,
+          className: firstItem.parentElement.className,
+          href: firstItem.parentElement.tagName === 'A' ? firstItem.parentElement.getAttribute('href') : null
+        } : null,
+        linksCount: allLinks.length,
+        linksSample: allLinks.slice(0, 5).map(link => ({
+          href: link.getAttribute('href'),
+          text: link.textContent?.trim().substring(0, 50),
+          hasItem: !!link.closest('.card-message-preview__item')
+        }))
+      };
+    });
+
+    res.json({ ok: true, debug: debugInfo });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('📡 SIGTERM received, closing...');
