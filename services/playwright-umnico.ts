@@ -272,6 +272,7 @@ class UmnicoPlaywrightService {
         });
       });
 
+      const conversations = result; // Переименовываем для совместимости
       console.log(`📋 Found ${conversations.length} conversations`);
       return conversations.slice(0, limit);
     } catch (error) {
