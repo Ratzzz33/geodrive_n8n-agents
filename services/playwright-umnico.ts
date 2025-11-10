@@ -261,7 +261,7 @@ class UmnicoPlaywrightService {
             }
           }
 
-          const result = {
+          return {
             conversationId: conversationId,
             phone: phoneEl?.textContent?.trim() || '',
             lastMessage: lastMsgEl?.textContent?.trim() || '',
@@ -269,13 +269,6 @@ class UmnicoPlaywrightService {
             channelAccount: integrationEl?.textContent?.trim() || '',
             assignedTo: assignedEl?.textContent?.trim() || ''
           };
-          
-          // Добавляем отладочную информацию для первых 3 элементов
-          if (debugData) {
-            (result as any).debug = debugData;
-          }
-          
-          return result;
         });
       });
 
