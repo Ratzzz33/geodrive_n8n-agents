@@ -169,11 +169,10 @@ class UmnicoPlaywrightService {
       }
 
       // Извлекаем список диалогов
-      // Используем комбинированный подход: получаем все ссылки и элементы вместе
+      // Используем evaluate вместо $$eval для лучшего доступа к DOM
       const conversations = await page!.evaluate(() => {
         const items = Array.from(document.querySelectorAll('.card-message-preview__item'));
         return items.map(item => {
-        items.map(item => {
           const phoneEl = item.querySelector('.message-preview__user-name');
           const lastMsgEl = item.querySelector('.message-preview__text');
           const integrationEl = item.querySelector('.deals-integration');
