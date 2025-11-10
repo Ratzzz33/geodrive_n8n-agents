@@ -159,8 +159,14 @@ class UmnicoPlaywrightService {
 
       // Ждем появления списка чатов
       await page!.waitForSelector('.card-message-preview__item', { 
-        timeout: 5000 
+        timeout: 10000  // Увеличиваем таймаут
       });
+
+      // Дополнительная проверка: получаем HTML первого элемента для отладки
+      const firstItemHtml = await page!.$eval('.card-message-preview__item:first-child', el => el.outerHTML).catch(() => null);
+      if (firstItemHtml) {
+        console.log('🔍 First item HTML (first 500 chars):', firstItemHtml.substring(0, 500));
+      }
 
       // Извлекаем список диалогов
       const conversations = await page!.$$eval('.card-message-preview__item', items =>
