@@ -185,34 +185,43 @@ class UmnicoPlaywrightService {
           const assignedEl = item.querySelector('.deals-cell');
           const timestampEl = item.querySelector('.timestamp');
 
-          // Ищем родительскую ссылку напрямую
+          // Ищем родительскую ссылку - используем closest (работает в браузере)
           let conversationId = null;
-          let current = item;
-          let maxDepth = 10;
-          let debugInfo = [];
           
-          while (current && maxDepth > 0 && !conversationId) {
-            const tagName = current.tagName ? current.tagName.toUpperCase() : 'UNKNOWN';
-            const href = current.getAttribute('href') || '';
-            
-            debugInfo.push(`${tagName}:${href.substring(0, 50)}`);
-            
-            // Проверяем сам элемент
-            if (tagName === 'A' && href && href.includes('/details/')) {
-              const idMatch = href.match(/\/details\/(\d+)/);
-              if (idMatch && idMatch[1]) {
-                conversationId = idMatch[1];
-                break;
+          // Метод 1: closest (самый надежный)
+          if (item.closest) {
+            try {
+              const parentLink = item.closest('a[href*="/details/"]');
+              if (parentLink) {
+                const href = parentLink.getAttribute('href') || '';
+                const idMatch = href.match(/\/details\/(\d+)/);
+                if (idMatch && idMatch[1]) {
+                  conversationId = idMatch[1];
+                }
               }
+            } catch (e) {
+              // closest может не работать в некоторых контекстах
             }
-            // Переходим к родителю
-            current = current.parentElement;
-            maxDepth--;
           }
           
-          // Отладочный вывод для первых 3 элементов
-          if (items.indexOf(item) < 3 && !conversationId) {
-            console.log(`DEBUG item ${items.indexOf(item)}:`, debugInfo.join(' -> '));
+          // Метод 2: обход parentElement (если closest не сработал)
+          if (!conversationId) {
+            let current = item.parentElement;
+            let maxDepth = 10;
+            while (current && maxDepth > 0 && !conversationId) {
+              if (current.tagName && current.tagName.toUpperCase() === 'A') {
+                const href = current.getAttribute('href') || '';
+                if (href && href.includes('/details/')) {
+                  const idMatch = href.match(/\/details\/(\d+)/);
+                  if (idMatch && idMatch[1]) {
+                    conversationId = idMatch[1];
+                    break;
+                  }
+                }
+              }
+              current = current.parentElement;
+              maxDepth--;
+            }
           }
           
           // 2. Из onclick атрибута самого элемента
@@ -252,7 +261,7 @@ class UmnicoPlaywrightService {
             }
           }
 
-          return {
+          const result = {
             conversationId: conversationId,
             phone: phoneEl?.textContent?.trim() || '',
             lastMessage: lastMsgEl?.textContent?.trim() || '',
@@ -260,6 +269,13 @@ class UmnicoPlaywrightService {
             channelAccount: integrationEl?.textContent?.trim() || '',
             assignedTo: assignedEl?.textContent?.trim() || ''
           };
+          
+          // Добавляем отладочную информацию для первых 3 элементов
+          if (debugData) {
+            (result as any).debug = debugData;
+          }
+          
+          return result;
         });
       });
 
