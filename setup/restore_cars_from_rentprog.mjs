@@ -33,10 +33,10 @@ const COMPANY_TO_BRANCH = {
 
 const BRANCHES = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];
 
-// Консервативные задержки согласно инструкциям (используем ~33% от лимитов RentProg)
-const DELAY_BETWEEN_GET_REQUESTS = 1500;  // 1.5 сек = 40 запросов/мин (лимит RentProg: 120/мин)
-const DELAY_BETWEEN_POST_REQUESTS = 3000; // 3 сек = 20 запросов/мин (лимит RentProg: 60/мин)
-const DELAY_BETWEEN_BRANCHES = 5000;      // 5 сек между филиалами
+// Консервативные задержки согласно инструкциям (используем ~15% от лимитов RentProg для безопасности)
+const DELAY_BETWEEN_GET_REQUESTS = 3000;  // 3 сек = 20 запросов/мин (лимит RentProg: 120/мин)
+const DELAY_BETWEEN_POST_REQUESTS = 6000; // 6 сек = 10 запросов/мин (лимит RentProg: 60/мин)
+const DELAY_BETWEEN_BRANCHES = 10000;     // 10 сек между филиалами
 
 // Кэш токенов по филиалам (TTL ~240 секунд = 4 минуты)
 const tokenCache = new Map();
