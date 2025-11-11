@@ -20,16 +20,37 @@
 
 ### 3. n8n (оркестр интеграций и наблюдаемость)
 - Визуальные workflow для приёма вебхуков и фоновых задач
-- Workflows: `RentProg Webhooks Monitor`, `RentProg Upsert Processor`, `Health & Status`, `Sync Progress`, а также 4 per-branch processor'а: `Tbilisi/Batumi/Kutaisi/Service Center Processor Rentprog`
-- **UI Events**: `RentProg Events Scraper` (Playwright парсинг страницы "События" каждые 5 минут), `Cash Register Reconciliation` (ночная сверка касс в 04:00)
+- **RentProg workflows:**
+  - `RentProg Webhooks Monitor` (единый webhook)
+  - `RentProg Upsert Processor` (обработка events)
+  - `Health & Status`, `Sync Progress`
+  - 4 per-branch processor'а: `Tbilisi/Batumi/Kutaisi/Service Center Processor Rentprog`
+- **UI Events workflows:**
+  - `RentProg Events Scraper` (Playwright парсинг страницы "События" каждые 5 минут)
+  - `Cash Register Reconciliation` (ночная сверка касс в 04:00)
+- **History Processing workflows:**
+  - `History Matcher & Processor` (обработка операций из history каждые 5 минут)
+- **Data Collection workflows:**
+  - `Umnico Chat Scraper` (сбор диалогов каждые 5 минут)
+  - `AmoCRM Deals Scraper` (сбор сделок каждые 30 минут)
+  - `AmoCRM All Deals Parser` (полный парсинг всех сделок каждые 6 часов)
 - Параллельные Telegram-алерты (Code → Telegram node) с Chat ID из `$env.TELEGRAM_ALERT_CHAT_ID` (-5004140602)
 - Двухэтапная обработка (быстрый ACK → отложенный upsert) и/или прямой upsert из processors (см. ниже)
 
 ### 4. Jarvis API (Express)
 - HTTP шлюз между n8n и бизнес-логикой
-- Эндпоинты: `/rentprog/health`, `/process-event`, `/process-ui-event` (обработка UI событий из Playwright), `/entity-timeline/*`, `/event-links/*`
+- **Основные эндпоинты:**
+  - RentProg: `/rentprog/health`, `/process-event`, `/process-webhook`, `/upsert-car`, `/upsert-client`
+  - UI Events: `/process-ui-event` (обработка UI событий из Playwright)
+  - History: `/process-history`, `/process-history/stats`, `/process-history/unknown`, `/process-history/learn`
+  - Entity Timeline: `/entity-timeline/*`, `/event-links/*`
+  - Umnico: `/api/umnico/conversations/:id`, `/api/umnico/send`
+  - Starline: `/starline/update-gps`, `/starline/sync-devices`, `/starline/match-devices`
+  - Sync: `/sync-prices/:branch`, `/sync-employee-cash`
+  - Health: `/health`
 - Выполняет auto-fetch, upsert и архивацию сущностей
 - Обработка UI событий: классификация, парсинг, обновление касс, создание задач
+- Обработка истории операций: автоматическая обработка платежей, кассовых операций, техобслуживания
 - Планируется запуск как постоянно работающий сервис (сейчас запускается вручную)
 
 ### 5. Агенты (Microservices/Workers)
@@ -41,7 +62,10 @@
 ### 6. База данных (PostgreSQL/Neon)
 - Хранение всех бизнес-данных
 - External References pattern для интеграций
-- Таблицы мониторинга (`events`, `sync_runs`, `health`, `webhook_dedup`)
+- **Таблицы мониторинга:** `events`, `sync_runs`, `health`, `webhook_dedup`, `event_processing_log`, `sync_state`
+- **Таблицы диалогов:** `conversations`, `messages`, `message_chunks`, `message_embeddings` (pgvector)
+- **Таблицы AmoCRM:** `amocrm_deals`, `amocrm_contacts`
+- **Таблицы истории:** `history`, `history_operation_mappings`
 - Поддержка миграций через Drizzle
 
 ### 7. Объектное хранилище (GCS/S3/MinIO)
@@ -76,11 +100,28 @@
 - Возможности:
   - Быстрый доступ без сложных JOIN (агрегаты и фильтры по типу/источнику/времени/филиалу)
   - Автосвязывание новых платежей в скользящем окне времени с оценкой уверенности (high/medium/low)
-  - Диагностика “несвязанных” записей для ручной обработки
+  - Диагностика "несвязанных" записей для ручной обработки
 - API:
   - `/entity-timeline/stats` — агрегаты событий
   - `/event-links/stats` — агрегаты связей
   - `/event-links/unlinked` — список несвязанных платежей
+
+### 12. Playwright Services (Umnico & AmoCRM)
+- **Umnico Service** (`:3001`): постоянно работающий браузер с сохраненной сессией, автологин, HTTP API для n8n
+  - Endpoints: `/api/conversations`, `/api/conversations/:id/messages`
+- **AmoCRM Service** (`:3002`): постоянно работающий браузер с сохраненной сессией, автологин, HTTP API + REST API через браузерную сессию
+  - Endpoints: `/api/deals`, `/api/deals/:id`, `/api/deals/:id/notes`, `/api/deals/all`, `/api/deals/:id/extended`
+- Автозапуск при рестарте сервера (Docker Compose)
+
+### 13. History Processing System
+- Назначение: автоматическая обработка ВСЕХ операций из истории RentProg (не только вебхуки)
+- Компоненты:
+  - Таблица `history` — все операции из `/history_items` API
+  - Таблица `history_operation_mappings` — маппинг типов операций на стратегии обработки
+  - Автоматическая обработка: платежи, кассовые операции, техобслуживание, статусы броней
+  - Incremental Learning — автосоздание маппингов для новых типов операций
+- API: `/process-history`, `/process-history/stats`, `/process-history/unknown`, `/process-history/learn`
+- Workflow: `History Matcher & Processor` (каждые 5 минут)
 
 ## Структура Telegram-чатов
 
@@ -134,9 +175,18 @@
 ### Потоки данных (AmoCRM ночной агент)
 1) n8n (cron) → AmoCRM API: получить диалоги в ожидании ответа (ночное окно).
 2) Jarvis API / БД: собрать контекст (история диалога, карточка сделки/контакта).
-3) RAG (pgvector): извлечь релевантные “победные” фрагменты; сгенерировать ответ (LLM/Ollama).
-4) n8n → AmoCRM “Чаты в CRM”: отправить ответ (conversation_id, текст).
+3) RAG (pgvector): извлечь релевантные "победные" фрагменты; сгенерировать ответ (LLM/Ollama).
+4) n8n → AmoCRM "Чаты в CRM": отправить ответ (conversation_id, текст).
 5) БД: лог решений (источники RAG, scores, ограничения), метрики KPI.
+
+### Потоки данных (Umnico & AmoCRM сбор данных)
+1) **Umnico:** n8n (cron каждые 5 мин) → Playwright Service `:3001` → `/api/conversations` → извлечение сообщений → сохранение в `conversations`, `messages`, `clients` → добавление `external_refs` (umnico → client)
+2) **AmoCRM:** n8n (cron каждые 30 мин / 6 часов) → Playwright Service `:3002` → `/api/deals/all` → `/api/deals/:id/extended` → извлечение данных → сохранение в `amocrm_deals`, `clients`, `conversations`, `messages` → связывание с RentProg через `external_refs`
+
+### Потоки данных (History Processing)
+1) n8n (cron каждые 3 мин) → RentProg History API `/history_items` → сохранение в `history` (`processed=false`)
+2) n8n (cron каждые 5 мин) → `History Matcher & Processor` → загрузка маппингов → обработка необработанных операций → Jarvis API `/process-history` → применение стратегий (extract_payment, update_employee_cash, add_maintenance_note) → обновление `payments`, `employees`, `cars`, `bookings` → `processed=true`
+3) Telegram алерты при ошибках и обнаружении новых типов операций
 
 ## Безопасность
 

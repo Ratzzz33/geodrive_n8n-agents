@@ -725,6 +725,45 @@ export function initApiServer(port: number = 3000): void {
     }
   });
 
+  // AmoCRM webhook processing endpoint
+  app.post('/amocrm/process-webhook', async (req, res) => {
+    try {
+      const { event_type, entity_type, amocrm_entity_id, payload, details } = req.body;
+
+      // Быстрый ACK
+      res.json({ ok: true, received: true });
+
+      if (!event_type || !entity_type || !amocrm_entity_id) {
+        logger.warn('[AmoCRM Webhook] Missing required fields:', { event_type, entity_type, amocrm_entity_id });
+        return;
+      }
+
+      logger.info(`[AmoCRM Webhook] Processing: ${event_type} (${entity_type}) - ID: ${amocrm_entity_id}`);
+
+      // Для сделок (leads) - обрабатываем данные, полученные через AmoCRM API v4
+      if (entity_type === 'lead' && (event_type === 'lead.add' || event_type === 'lead.update' || event_type === 'lead.status')) {
+        // Детали уже получены в n8n через AmoCRM API v4
+        if (details && details._embedded) {
+          logger.info(`[AmoCRM Webhook] Deal ${amocrm_entity_id} details received from API, processing...`);
+          // TODO: Upsert в БД через существующую логику
+          // details содержит полные данные сделки из AmoCRM API v4
+        } else {
+          logger.warn(`[AmoCRM Webhook] Deal ${amocrm_entity_id} details not provided, skipping processing`);
+        }
+      }
+
+      // Для контактов - обновляем если нужно
+      if (entity_type === 'contact' && (event_type === 'contact.add' || event_type === 'contact.update')) {
+        logger.info(`[AmoCRM Webhook] Contact ${amocrm_entity_id} ${event_type}`);
+        // TODO: Upsert контакта в БД
+      }
+
+    } catch (error) {
+      logger.error('[AmoCRM Webhook] Error processing webhook:', error);
+      // Не возвращаем ошибку, т.к. уже отправили ACK
+    }
+  });
+
   // Health check endpoint
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

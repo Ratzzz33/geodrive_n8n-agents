@@ -169,9 +169,14 @@ async function upsertBooking(rentprogId, branchCode) {
 
     if (response.ok) {
       const data = await response.json();
-      return { success: true, data };
+      if (data.ok) {
+        return { success: true, data };
+      } else {
+        return { success: false, error: data.error || 'Unknown error' };
+      }
     } else {
-      return { success: false, error: `HTTP ${response.status}` };
+      const errorText = await response.text().catch(() => '');
+      return { success: false, error: `HTTP ${response.status}: ${errorText}` };
     }
   } catch (error) {
     return { success: false, error: error.message };

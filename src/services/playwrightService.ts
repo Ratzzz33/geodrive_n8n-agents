@@ -274,10 +274,11 @@ app.post('/scrape-exchange-rates', async (req, res) => {
       const result: Record<string, number> = {};
       
       // Находим все кнопки с курсами
+      // @ts-expect-error - DOM types available in browser context
       const buttons = Array.from(document.querySelectorAll('.v-expansion-panel-header'))
-        .filter(btn => btn.textContent?.includes('GEL <->'));
+        .filter((btn: any) => btn.textContent?.includes('GEL <->'));
       
-      for (const button of buttons) {
+      for (const button of buttons as any[]) {
         const text = button.textContent?.trim() || '';
         let currency: string | null = null;
         
@@ -288,14 +289,16 @@ app.post('/scrape-exchange-rates', async (req, res) => {
         if (!currency) continue;
         
         // Кликаем на кнопку чтобы раскрыть панель
+        // @ts-expect-error - DOM types available in browser context
         (button as HTMLElement).click();
         
         // Ждём 100ms для раскрытия
         await new Promise(resolve => setTimeout(resolve, 100));
         
         // Ищем input в раскрытой панели
-        const panel = button.parentElement;
+        const panel = (button as any).parentElement;
         const content = panel?.querySelector('.v-expansion-panel-content');
+        // @ts-expect-error - DOM types available in browser context
         const input = content?.querySelector('input[type="text"], input[type="number"]') as HTMLInputElement;
         
         if (input && input.value) {

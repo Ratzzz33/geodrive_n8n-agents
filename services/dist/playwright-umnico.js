@@ -348,7 +348,7 @@ class UmnicoPlaywrightService {
                 let, allMessages: any[] = [],
                 let, previousCount = 0,
                 let, scrollAttempts = 0,
-                const: maxScrollAttempts = options?.all ? 200 : 1,
+                const: maxScrollAttempts = options?.all ? 500 : 1, // Увеличено с 200 до 500 для более надежной прокрутки
                 const: targetDate = options?.since || (options?.all ? new Date('2024-09-01') : undefined),
                 const: extractMessages = async () => {
                     return await page.$$eval('.im-stack__messages-item-wrap', wraps => wraps.map((wrap, index) => {
@@ -378,7 +378,9 @@ class UmnicoPlaywrightService {
         {
             console.log(`📜 Loading all messages for conversation ${conversationId}...`);
             let noChangeCount = 0; // Счетчик попыток без изменений
-            const maxNoChange = 3; // Максимум попыток без изменений подряд
+            const maxNoChange = 10; // Увеличено до 10 попыток без изменений (было 3)
+            let exactly30Attempts = 0; // Счетчик попыток когда ровно 30 сообщений
+            const maxExactly30Attempts = 5; // Максимум попыток при 30 сообщениях
             while (scrollAttempts < maxScrollAttempts) {
                 const messagesContainer = await page.$('.im-stack__messages').catch(() => null);
                 if (!messagesContainer) {
@@ -409,22 +411,45 @@ class UmnicoPlaywrightService {
                         container.scrollTop = 0; // Скроллим в самый верх
                     }
                 });
-                // Ждем загрузки новых сообщений
-                await page.waitForTimeout(2000);
-                // Дополнительная проверка: ждем появления новых элементов (с коротким таймаутом)
+                // Ждем загрузки новых сообщений (увеличено с 2000 до 4000ms)
+                await page.waitForTimeout(4000);
+                // Дополнительная проверка: ждем появления новых элементов (увеличено с 2000 до 5000ms)
                 try {
                     await page.waitForFunction((prevCount) => {
                         const currentCount = document.querySelectorAll('.im-stack__messages-item-wrap').length;
                         return currentCount > prevCount;
-                    }, { timeout: 2000 }, beforeScroll).catch(() => {
+                    }, { timeout: 5000 }, beforeScroll).catch(() => {
                         // Если не появились новые - это нормально, возможно достигли начала
                     });
                 }
                 catch (e) {
                     // Продолжаем
                 }
+                // Дополнительная пауза для медленных соединений
+                await page.waitForTimeout(1000);
                 // Извлекаем сообщения после скролла
                 allMessages = await extractMessages();
+                // КРИТИЧНО: Если получили ровно 30 сообщений - это лимит страницы Umnico
+                // Продолжаем прокрутку пока не получим x/y где x < y (не ровно 30)
+                const isExactly30 = allMessages.length === 30;
+                if (isExactly30) {
+                    exactly30Attempts++;
+                    console.log(`   ⚠️  Получено ровно 30 сообщений (попытка ${exactly30Attempts}/${maxExactly30Attempts}) - это лимит страницы! Продолжаю прокрутку...`);
+                    // Если слишком много попыток с 30 сообщениями - прекращаем
+                    if (exactly30Attempts >= maxExactly30Attempts) {
+                        console.log(`   ⚠️  После ${maxExactly30Attempts} попыток все еще 30 сообщений - возможно это действительно все сообщения или требуется ручная обработка`);
+                        // Возвращаем что есть, но помечаем что возможно не все загружено
+                        break;
+                    }
+                    // Продолжаем прокрутку
+                    noChangeCount = 0; // Сбрасываем счетчик
+                    scrollAttempts++;
+                    continue;
+                }
+                else {
+                    // Если не 30 - сбрасываем счетчик
+                    exactly30Attempts = 0;
+                }
                 // Проверяем, изменилось ли количество
                 if (allMessages.length === beforeScroll) {
                     noChangeCount++;
@@ -442,13 +467,14 @@ class UmnicoPlaywrightService {
                         // Даем еще одну попытку
                         if (noChangeCount < maxNoChange) {
                             console.log(`   ⏳ Waiting for more messages to load (attempt ${noChangeCount + 1}/${maxNoChange})...`);
-                            await page.waitForTimeout(2000);
+                            await page.waitForTimeout(4000); // Увеличено с 2000 до 4000ms
                             allMessages = await extractMessages();
                             if (allMessages.length === beforeScroll) {
                                 noChangeCount++;
                             }
                             else {
                                 noChangeCount = 0; // Сбрасываем счетчик при изменении
+                                console.log(`   ✅ Found ${allMessages.length - beforeScroll} new messages, continuing...`);
                             }
                         }
                     }
@@ -456,7 +482,12 @@ class UmnicoPlaywrightService {
                 else {
                     // Количество изменилось - сбрасываем счетчик
                     noChangeCount = 0;
+                    const newMessages = allMessages.length - beforeScroll;
+                    if (newMessages > 0) {
+                        console.log(`   📥 Loaded ${newMessages} new messages (total: ${allMessages.length})`);
+                    }
                 }
+                scrollAttempts++;
                 if (targetDate) {
                     const oldestMessage = allMessages
                         .filter(m => m.datetime)
@@ -495,6 +526,7 @@ class UmnicoPlaywrightService {
                     }
                 }
                 scrollAttempts++;
+                // Логируем прогресс
                 if (scrollAttempts % 10 === 0) {
                     console.log(`   📜 Scrolled ${scrollAttempts} times, found ${allMessages.length} messages so far...`);
                 }
@@ -508,6 +540,7 @@ class UmnicoPlaywrightService {
             allMessages = allMessages.slice(-50);
         }
         console.log(`💬 Found ${allMessages.length} messages in conversation ${conversationId}`);
+        // Возвращаем массив сообщений (для совместимости)
         return allMessages.map(m => ({
             ...m,
             conversationId,
@@ -579,13 +612,21 @@ Promise < void  > {
             'button:has-text("Send")'
         ],
         // Проверяем, отправилось ли сообщение (если Enter не сработал)
-        const: lastMessage = await page.$$eval('.im-stack__messages-item-wrap', wraps => {
-            if (wraps.length === 0)
-                return null;
-            const last = wraps[wraps.length - 1];
-            const textEl = last.querySelector('.im-message__text');
-            return textEl?.textContent?.trim() || null;
-        }).catch(() => null),
+        let, lastMessage: string | null, null: ,
+        try: {
+            lastMessage = await page.$$eval('.im-stack__messages-item-wrap', wraps => {
+                if (wraps.length === 0)
+                    return null;
+                const last = wraps[wraps.length - 1];
+                const textEl = last.querySelector('.im-message__text');
+                return textEl?.textContent?.trim() || null;
+            })
+        }, catch(e) {
+            // Игнорируем ошибки
+            lastMessage = null;
+        }
+        // Если сообщение не появилось, пробуем кнопку
+        ,
         // Если сообщение не появилось, пробуем кнопку
         if(, lastMessage) { }
     } || !lastMessage.includes(text.substring(0, 20))
@@ -731,7 +772,18 @@ app.get('/api/conversations/:id/messages', async (req, res) => {
         }
         // Иначе используем getMessages с опциями
         const messages = await service.getMessages(id, { all, since });
-        res.json({ ok: true, conversationId: id, count: messages.length, data: messages });
+        // КРИТИЧНО: Если ровно 30 сообщений - это может быть лимит страницы
+        // Добавляем флаг в ответ для скрипта синхронизации
+        const isExactly30 = messages.length === 30;
+        const needsManualProcessing = isExactly30; // Если ровно 30 - требуется ручная обработка
+        res.json({
+            ok: true,
+            conversationId: id,
+            count: messages.length,
+            data: messages,
+            needsManualProcessing: needsManualProcessing, // Флаг что требуется ручная обработка через MCP Chrome
+            isExactly30: isExactly30 // Дополнительный флаг для информации
+        });
     }
     catch (error) {
         res.status(500).json({ ok: false, error: error.message });

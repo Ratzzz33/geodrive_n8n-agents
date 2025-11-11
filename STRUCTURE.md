@@ -120,14 +120,35 @@
 - Используется для дедупликации нестандартных источников (Umnico и др.)
 
 **event_processing_log** - дедупликация UI событий
-- `id` (UUID PK)
-- `hash` (TEXT UNIQUE) - SHA256(branch + ts + description)
-- `event_data` (JSONB) - полные данные спарсенного события
-- `event_type` (TEXT) - тип: `cash_operation`, `maintenance`, `mileage`, `booking_status`
-- `processed_at` (TIMESTAMPTZ)
-- `processing_result` (JSONB) - результат обработки
-- Индексы: на `hash`, `event_type`, `processed_at`
-- Автоочистка: старше 30 дней
+- `id UUID PK`
+- `hash TEXT UNIQUE NOT NULL` — SHA256(branch + ts + description)
+- `event_data JSONB NOT NULL` — полные данные события
+- `event_type TEXT` — cash_operation, maintenance, mileage, booking_status
+- `processed_at TIMESTAMPTZ DEFAULT NOW()`
+- `processing_result JSONB`
+
+**history** - все операции из RentProg History API
+- `id BIGSERIAL PK`
+- `branch TEXT NOT NULL`
+- `operation_type TEXT` — тип операции из history
+- `raw_data JSONB` — полные данные операции
+- `description TEXT` — текстовое описание
+- `created_at TIMESTAMPTZ` — время операции в RentProg
+- `processed BOOLEAN DEFAULT FALSE` — обработано ли
+- `matched BOOLEAN DEFAULT FALSE` — сопоставлено ли с вебхуком
+- `notes TEXT` — ошибки/результаты обработки
+
+**history_operation_mappings** - маппинг типов операций на стратегии обработки
+- `id BIGSERIAL PK`
+- `operation_type TEXT UNIQUE` — тип операции из history
+- `matched_event_type TEXT` — вебхук (если есть)
+- `is_webhook_event BOOLEAN` — TRUE = skip processing
+- `target_table TEXT` — payments/cars/bookings/skip
+- `processing_strategy TEXT` — extract_payment, update_employee_cash, add_maintenance_note и т.д.
+- `field_mappings JSONB` — JSONPath правила извлечения полей
+- `priority INTEGER` — 100=skip, 90=critical, 70=normal, 50=low
+- `enabled BOOLEAN DEFAULT TRUE`
+- `notes TEXT`
 
 #### Подсистема Entity Timeline & Event Links
 
@@ -254,9 +275,9 @@
 - Напоминания: по `due_at` и `snooze_until` (агент задач выполняет пинги)
 - Эскалация: если просрочка > SLA, копия в группу руководителя филиала
 
-## Подсистема диалогов (AmoCRM)
+## Подсистема диалогов (Umnico & AmoCRM)
 
-Используется ночным агентом для RAG и аналитики конверсий.
+Используется ночным агентом для RAG и аналитики конверсий. Сбор данных через Playwright Services.
 
 ### Схема БД (Neon + pgvector)
 
@@ -264,22 +285,31 @@
 -- Диалоги (сессии)
 CREATE TABLE conversations (
   id UUID PRIMARY KEY,
-  system TEXT NOT NULL DEFAULT 'amocrm',
-  external_id TEXT NOT NULL,              -- Amo conversation id
-  deal_external_id TEXT,                  -- Amo deal id (связка через external_refs)
-  contact_external_id TEXT,
+  client_id UUID REFERENCES clients(id),
+  umnico_conversation_id TEXT,            -- ID диалога в Umnico
+  amocrm_scope_id TEXT,                   -- ID диалога в AmoCRM (связь с Umnico)
+  channel TEXT,                           -- 'whatsapp' | 'telegram' | 'amocrm'
+  status TEXT,                            -- 'active' | 'closed' | 'archived'
+  client_name TEXT,
+  car_info TEXT,
+  booking_dates TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
   last_message_at TIMESTAMPTZ,
-  UNIQUE (system, external_id)
+  UNIQUE (umnico_conversation_id) WHERE umnico_conversation_id IS NOT NULL
 );
 
 -- Сообщения
 CREATE TABLE messages (
   id UUID PRIMARY KEY,
   conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  client_id UUID REFERENCES clients(id),
+  channel TEXT NOT NULL,                  -- 'whatsapp' | 'amocrm_note'
   ts TIMESTAMPTZ NOT NULL,
   direction TEXT CHECK (direction IN ('in','out')) NOT NULL,
   author TEXT,
-  text TEXT
+  text TEXT,
+  external_id TEXT,                       -- ID сообщения в Umnico/AmoCRM
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Чанки для эмбеддингов
@@ -305,10 +335,53 @@ CREATE TABLE dialog_labels (
   reason TEXT,
   stage_path TEXT
 );
+
+-- Сделки AmoCRM
+CREATE TABLE amocrm_deals (
+  id UUID PRIMARY KEY,
+  client_id UUID REFERENCES clients(id),
+  conversation_id UUID REFERENCES conversations(id),
+  amocrm_deal_id TEXT UNIQUE NOT NULL,
+  pipeline_id TEXT,
+  status_id TEXT,
+  status_label TEXT,                      -- 'successful' | 'unsuccessful' | 'in_progress'
+  price NUMERIC,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ,
+  closed_at TIMESTAMPTZ,
+  custom_fields JSONB,                    -- Все кастомные поля (rentprog_booking_id, rentprog_car_id и т.д.)
+  metadata JSONB                          -- Связи с bookings, cars через UUID
+);
+
+-- Контакты AmoCRM
+CREATE TABLE amocrm_contacts (
+  id UUID PRIMARY KEY,
+  client_id UUID REFERENCES clients(id),
+  amocrm_contact_id TEXT UNIQUE NOT NULL,
+  name TEXT,
+  phone TEXT,
+  email TEXT,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+);
+
+-- Статус синхронизации
+CREATE TABLE sync_state (
+  id BIGSERIAL PRIMARY KEY,
+  workflow_name TEXT NOT NULL,
+  system TEXT NOT NULL,                   -- 'umnico' | 'amocrm' | 'rentprog'
+  last_sync_at TIMESTAMPTZ,
+  status TEXT,                            -- 'success' | 'error' | 'running'
+  items_processed INT DEFAULT 0,
+  items_added INT DEFAULT 0,
+  error_message TEXT,
+  UNIQUE (workflow_name, system)
+);
 ```
 
 Связи с сущностями:
-- Через `external_refs` линкуем `deal_external_id`/`contact_external_id` к нашим `deals/clients` (entity_type='deal'|'client', system='amocrm').
+- Через `external_refs` линкуем `amocrm_deal_id`/`amocrm_contact_id` к нашим `clients`/`bookings`/`cars` (entity_type='client'|'booking'|'car', system='amocrm').
+- Umnico conversations связываются с clients по телефону через `external_refs` (system='umnico').
 - Сырые сообщения храним в `messages`, векторный поиск — по `message_chunks/message_embeddings`.
 
 ## Объектное хранилище

@@ -1,0 +1,346 @@
+{
+  "name": "Обработка вебхуков AmoCRM",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "amocrm",
+        "responseMode": "responseNode",
+        "options": {
+          "productionUrl": "https://webhook.rentflow.rentals"
+        },
+        "onError": "continueRegularOutput"
+      },
+      "id": "webhook-node",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        400
+      ],
+      "webhookId": "amocrm-webhook-monitor"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Парсинг и валидация вебхука от AmoCRM\nconst crypto = require('crypto');\n\ntry {\n  const body = $input.item.json.body || {};\n  const headers = $input.item.json.headers || {};\n  \n  // Генерация request_id и event_hash\n  const requestId = headers['x-request-id'] || headers['x-webhook-id'] || \n                    (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString());\n  \n  let amocrmEntityId = null;\n  let entityType = 'unknown';\n  let eventType = 'unknown';\n  let isKnownFormat = false;\n  let validationErrors = [];\n  let parsedPayload = {};\n  let parseError = false;\n  let errorMessage = '';\n  let eventHash = '';\n  \n  // ========== ШАГ 0: Генерация event_hash для дедупликации ==========\n  try {\n    const hashData = JSON.stringify({\n      'x-request-id': headers['x-request-id'] || '',\n      'x-webhook-id': headers['x-webhook-id'] || '',\n      timestamp: headers['x-timestamp'] || Date.now().toString(),\n      payload: JSON.stringify(body)\n    });\n    eventHash = crypto.createHash('sha256').update(hashData).digest('hex');\n  } catch (e) {\n    eventHash = crypto.createHash('sha256')\n      .update((JSON.stringify(body) || '') + Date.now())\n      .digest('hex');\n  }\n  \n  // ========== ШАГ 1: Определение типа события ==========\n  // AmoCRM отправляет события в формате: { account: {...}, leads: [...], contacts: [...] }\n  // Тип события определяется по наличию полей в payload\n  \n  const knownEventTypes = [\n    'lead.add',           // Сделка добавлена\n    'lead.update',        // Сделка изменена\n    'lead.status',        // Статус сделки изменен\n    'lead.delete',        // Сделка удалена\n    'contact.add',        // Контакт добавлен\n    'contact.update',     // Контакт изменен\n    'contact.delete',     // Контакт удален\n    'company.add',        // Компания добавлена\n    'company.update',     // Компания изменена\n    'company.delete',     // Компания удалена\n    'customer.add',       // Покупатель добавлен\n    'customer.update',    // Покупатель изменен\n    'task.add',           // Задача добавлена\n    'task.update',        // Задача изменена\n    'unsorted.add',       // Неразобранное добавлено\n    'unsorted.delete',    // Неразобранное удалено\n    'note.add',           // Примечание добавлено\n    'message.add',        // Входящее сообщение добавлено\n    'conversation.add'    // Беседа добавлена\n  ];\n  \n  // Определяем тип события по структуре payload\n  if (body.leads && body.leads.length > 0) {\n    const lead = body.leads[0];\n    amocrmEntityId = lead.id ? String(lead.id) : null;\n    \n    // Проверяем статус изменения\n    if (lead.status_id !== undefined) {\n      eventType = 'lead.status';\n      entityType = 'lead';\n    } else if (lead.is_deleted) {\n      eventType = 'lead.delete';\n      entityType = 'lead';\n    } else {\n      // Проверяем, это создание или обновление (по timestamp или другим признакам)\n      // Если есть updated_at и created_at близки - это создание\n      const createdAt = lead.created_at || 0;\n      const updatedAt = lead.updated_at || 0;\n      if (updatedAt - createdAt < 5) {\n        eventType = 'lead.add';\n      } else {\n        eventType = 'lead.update';\n      }\n      entityType = 'lead';\n    }\n    parsedPayload = lead;\n  } else if (body.contacts && body.contacts.length > 0) {\n    const contact = body.contacts[0];\n    amocrmEntityId = contact.id ? String(contact.id) : null;\n    \n    if (contact.is_deleted) {\n      eventType = 'contact.delete';\n      entityType = 'contact';\n    } else {\n      const createdAt = contact.created_at || 0;\n      const updatedAt = contact.updated_at || 0;\n      if (updatedAt - createdAt < 5) {\n        eventType = 'contact.add';\n      } else {\n        eventType = 'contact.update';\n      }\n      entityType = 'contact';\n    }\n    parsedPayload = contact;\n  } else if (body.companies && body.companies.length > 0) {\n    const company = body.companies[0];\n    amocrmEntityId = company.id ? String(company.id) : null;\n    \n    if (company.is_deleted) {\n      eventType = 'company.delete';\n      entityType = 'company';\n    } else {\n      const createdAt = company.created_at || 0;\n      const updatedAt = company.updated_at || 0;\n      if (updatedAt - createdAt < 5) {\n        eventType = 'company.add';\n      } else {\n        eventType = 'company.update';\n      }\n      entityType = 'company';\n    }\n    parsedPayload = company;\n  } else if (body.customers && body.customers.length > 0) {\n    const customer = body.customers[0];\n    amocrmEntityId = customer.id ? String(customer.id) : null;\n    \n    const createdAt = customer.created_at || 0;\n    const updatedAt = customer.updated_at || 0;\n    if (updatedAt - createdAt < 5) {\n      eventType = 'customer.add';\n    } else {\n      eventType = 'customer.update';\n    }\n    entityType = 'customer';\n    parsedPayload = customer;\n  } else if (body.tasks && body.tasks.length > 0) {\n    const task = body.tasks[0];\n    amocrmEntityId = task.id ? String(task.id) : null;\n    \n    const createdAt = task.created_at || 0;\n    const updatedAt = task.updated_at || 0;\n    if (updatedAt - createdAt < 5) {\n      eventType = 'task.add';\n    } else {\n      eventType = 'task.update';\n    }\n    entityType = 'task';\n    parsedPayload = task;\n  } else if (body.unsorted && body.unsorted.length > 0) {\n    const unsorted = body.unsorted[0];\n    amocrmEntityId = unsorted.uid ? String(unsorted.uid) : null;\n    \n    if (unsorted.is_deleted) {\n      eventType = 'unsorted.delete';\n    } else {\n      eventType = 'unsorted.add';\n    }\n    entityType = 'unsorted';\n    parsedPayload = unsorted;\n  } else if (body.notes && body.notes.length > 0) {\n    const note = body.notes[0];\n    amocrmEntityId = note.id ? String(note.id) : null;\n    eventType = 'note.add';\n    entityType = 'note';\n    parsedPayload = note;\n  } else if (body.messages && body.messages.length > 0) {\n    const message = body.messages[0];\n    amocrmEntityId = message.id ? String(message.id) : null;\n    eventType = 'message.add';\n    entityType = 'message';\n    parsedPayload = message;\n  } else if (body.conversations && body.conversations.length > 0) {\n    const conversation = body.conversations[0];\n    amocrmEntityId = conversation.id ? String(conversation.id) : null;\n    eventType = 'conversation.add';\n    entityType = 'conversation';\n    parsedPayload = conversation;\n  } else {\n    validationErrors.push('Неизвестная структура payload: нет известных сущностей (leads, contacts, companies, etc.)');\n  }\n  \n  // ========== ШАГ 2: Валидация обязательных полей ==========\n  if (entityType !== 'unknown' && !amocrmEntityId) {\n    validationErrors.push(`Отсутствует обязательное поле id для ${entityType}`);\n  }\n  \n  // ========== ИТОГОВАЯ ПРОВЕРКА ==========\n  if (\n    Object.keys(parsedPayload).length > 0 &&\n    amocrmEntityId !== null &&\n    eventType !== 'unknown' &&\n    entityType !== 'unknown' &&\n    validationErrors.length === 0\n  ) {\n    isKnownFormat = true;\n  } else {\n    isKnownFormat = false;\n  }\n  \n  return {\n    json: {\n      ...$input.item.json,\n      requestId: requestId,\n      eventHash: eventHash,\n      amocrmEntityId: amocrmEntityId,\n      eventType: eventType,\n      entityType: entityType,\n      isKnownFormat: isKnownFormat,\n      parsedPayload: parsedPayload,\n      validationErrors: validationErrors,\n      parseError: parseError,\n      errorMessage: errorMessage,\n      account: body.account || null\n    }\n  };\n} catch (error) {\n  // Критическая ошибка парсинга\n  const body = $input.item.json.body || {};\n  const headers = $input.item.json.headers || {};\n  \n  let eventHash = '';\n  try {\n    const hashData = JSON.stringify({\n      'x-request-id': headers['x-request-id'] || '',\n      timestamp: Date.now().toString(),\n      payload: JSON.stringify(body)\n    });\n    eventHash = crypto.createHash('sha256').update(hashData).digest('hex');\n  } catch {\n    eventHash = crypto.createHash('sha256')\n      .update((JSON.stringify(body) || '') + Date.now())\n      .digest('hex');\n  }\n  \n  return {\n    json: {\n      ...$input.item.json,\n      requestId: headers['x-request-id'] || Date.now().toString(),\n      eventHash: eventHash,\n      amocrmEntityId: null,\n      eventType: 'unknown',\n      entityType: 'unknown',\n      isKnownFormat: false,\n      parsedPayload: {},\n      validationErrors: ['Критическая ошибка парсинга: ' + (error.message || String(error))],\n      parseError: true,\n      errorMessage: error.message || String(error),\n      errorStack: error.stack || ''\n    }\n  };\n}"
+      },
+      "id": "parse-validate-node",
+      "name": "Parse & Validate Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        450,
+        400
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "known-format-check",
+              "leftValue": "={{ $json.isKnownFormat === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-known-format-node",
+      "name": "If Known Format",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        650,
+        400
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO amocrm_webhook_events (ts, event_type, entity_type, amocrm_entity_id, event_hash, payload, account_id, processed)\nVALUES (NOW(), $1, $2, $3, $4, $5::jsonb, $6, FALSE)\nON CONFLICT (event_hash) DO NOTHING\nRETURNING id",
+        "options": {
+          "queryReplacement": "={{ $json.eventType }},={{ $json.entityType }},={{ $json.amocrmEntityId }},={{ $json.eventHash }},={{ JSON.stringify($json.parsedPayload) }},={{ $json.account ? $json.account.id : null }}"
+        }
+      },
+      "id": "save-event-node",
+      "name": "Save Event to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        850,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://geodrive.amocrm.ru/api/v4/{{ $json.entityType === 'lead' ? 'leads' : ($json.entityType === 'contact' ? 'contacts' : 'leads') }}/{{ $json.amocrmEntityId }}?with=contacts,companies",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.AMOCRM_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "fetch-details-node",
+      "name": "Fetch Details via AmoCRM API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1050,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:3000/amocrm/process-webhook",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ { \"event_type\": $json.eventType, \"entity_type\": $json.entityType, \"amocrm_entity_id\": $json.amocrmEntityId, \"payload\": $json.parsedPayload, \"details\": $('Fetch Details via AmoCRM API').item.json } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "process-webhook-node",
+      "name": "Process via Jarvis API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1250,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE amocrm_webhook_events SET processed = TRUE WHERE id = $1",
+        "options": {
+          "queryReplacement": "={{ $('Save Event to DB').item.json.id }}"
+        }
+      },
+      "id": "mark-processed-node",
+      "name": "Mark as Processed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1450,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"event_id\": $('Save Event to DB').item.json.id, \"processed\": true } }}"
+      },
+      "id": "respond-node",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "=<b>Неизвестный формат вебхука от AmoCRM</b>\n\n<b>Тип события:</b> {{ $json.eventType }}\n<b>Тип сущности:</b> {{ $json.entityType }}\n<b>AmoCRM ID:</b> {{ $json.amocrmEntityId || 'не найден' }}\n\n<b>Ошибки валидации:</b>\n{{ $json.validationErrors && $json.validationErrors.length > 0 ? $json.validationErrors.join(', ') : 'Неизвестная структура' }}\n\n<b>Payload:</b>\n<pre>{{ JSON.stringify($json.body, null, 2) }}</pre>",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "debug-unknown-node",
+      "name": "Debug: Unknown Format",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        850,
+        500
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1tKryXxL5Gq395nN",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "=🚨 КРИТИЧЕСКАЯ ОШИБКА парсинга вебхука от AmoCRM\n\nВремя: {{ $now }}\nТип события: {{ $json.eventType }}\nТип сущности: {{ $json.entityType }}\nAmoCRM ID: {{ $json.amocrmEntityId || 'не найден' }}\n\nОшибка: {{ $json.errorMessage || 'Unknown error' }}\n\nОшибки валидации:\n{{ $json.validationErrors && $json.validationErrors.length > 0 ? $json.validationErrors.join('\\n') : 'Нет деталей' }}\n\nStack trace:\n{{ $json.errorStack || 'Нет stack trace' }}",
+        "additionalFields": {}
+      },
+      "id": "alert-parse-error-node",
+      "name": "Alert: Parse Error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        650,
+        600
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1tKryXxL5Gq395nN",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse & Validate Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Validate Format": {
+      "main": [
+        [
+          {
+            "node": "If Known Format",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Alert: Parse Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Known Format": {
+      "main": [
+        [
+          {
+            "node": "Save Event to DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Debug: Unknown Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Event to DB": {
+      "main": [
+        [
+          {
+            "node": "Fetch Details via AmoCRM API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Details via AmoCRM API": {
+      "main": [
+        [
+          {
+            "node": "Process via Jarvis API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process via Jarvis API": {
+      "main": [
+        [
+          {
+            "node": "Mark as Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark as Processed": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-11-11T04:00:00.000Z",
+  "versionId": "1"
+}
+

@@ -5,6 +5,9 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
+    "deploy:playwright": "python setup/deploy_playwright_service.py",
+    "logs:playwright": "python setup/view_playwright_logs.py",
+    "parse:amocrm:server": "python setup/run_amocrm_parse_on_server.py",
     "dev": "tsx watch src/index.ts",
     "dev:api": "tsx watch src/api-only.ts",
     "dev:playwright": "tsx watch src/services/playwrightService.ts",
@@ -50,6 +53,7 @@
     "postgres": "^3.4.4",
     "telegraf": "^4.16.3",
     "tough-cookie": "^5.0.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.25.76"
   },
   "devDependencies": {

@@ -1,64 +1,48 @@
-import https from 'https';
+#!/usr/bin/env node
+/**
+ * Активация нового workflow
+ */
 
-const N8N_HOST = 'https://n8n.rentflow.rentals/api/v1';
 const N8N_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZDYyYjM3My0yMDFiLTQ3ZjMtODU5YS1jZGM2OWRkZWE0NGEiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYyMDg0MjY4LCJleHAiOjE3NjQ2NTE2MDB9.gsdxltowlQShNi9mil074-cMhnuJJLI5lN6MP7FQEcI';
+const N8N_HOST = 'https://n8n.rentflow.rentals/api/v1';
+const WORKFLOW_ID = '3IPHDdFvtZlo4vWO';
 
-const NEW_WF_ID = 'fijJpRlLjgpxSJE7';
-
-function request(method, path, body = null) {
-  return new Promise((resolve, reject) => {
-    const url = new URL(`${N8N_HOST}${path}`);
-    const bodyStr = body ? JSON.stringify(body) : null;
-    
-    const options = {
-      hostname: url.hostname,
-      port: url.port || 443,
-      path: url.pathname,
-      method,
-      headers: {
-        'X-N8N-API-KEY': N8N_API_KEY,
-        'Content-Type': 'application/json'
-      },
-      rejectUnauthorized: false
-    };
-
-    const req = https.request(options, (res) => {
-      let responseData = '';
-      res.on('data', chunk => responseData += chunk);
-      res.on('end', () => {
-        try {
-          const result = JSON.parse(responseData);
-          resolve(result);
-        } catch (e) {
-          reject(new Error(`JSON parse error: ${e.message}`));
-        }
-      });
-    });
-
-    req.on('error', reject);
-    if (bodyStr) {
-      req.write(bodyStr);
-    }
-    req.end();
+async function activateWorkflow(workflowId) {
+  const response = await fetch(`${N8N_HOST}/workflows/${workflowId}/activate`, {
+    method: 'POST',
+    headers: {
+      'X-N8N-API-KEY': N8N_API_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: '{}'
   });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`${response.status} ${response.statusText}: ${error.substring(0, 300)}`);
+  }
+
+  return await response.json();
 }
 
 async function main() {
-  console.log(`🔄 Активация workflow ${NEW_WF_ID}...\n`);
+  console.log(`🚀 Активация workflow: ${WORKFLOW_ID}\n`);
 
-  const activated = await request('PATCH', `/workflows/${NEW_WF_ID}`, { active: true });
-  console.log(`✅ Активирован!\n`);
-
-  console.log('═'.repeat(70));
-  console.log('\n✅ Fixed workflow активирован!');
-  console.log(`\n📌 Workflow: ${activated.name}`);
-  console.log(`   ID: ${NEW_WF_ID}`);
-  console.log(`   Активен: ${activated.active}`);
-  console.log(`   URL: https://n8n.rentflow.rentals/workflow/${NEW_WF_ID}`);
-  console.log(`   Webhook: https://n8n.rentflow.rentals/webhook/upsert-processor`);
+  try {
+    const result = await activateWorkflow(WORKFLOW_ID);
+    const workflow = result.data || result;
+    console.log('✅ Workflow активирован успешно!');
+    console.log(`   Active: ${workflow.active}`);
+    console.log(`   Name: ${workflow.name}`);
+    console.log(`   URL: https://n8n.rentflow.rentals/workflow/${WORKFLOW_ID}\n`);
+  } catch (error) {
+    console.error(`❌ Ошибка активации: ${error.message}`);
+    console.log('\n💡 Попробуйте активировать вручную через UI n8n');
+    process.exit(1);
+  }
 }
 
 main().catch(err => {
-  console.error('❌ Ошибка:', err.message);
+  console.error('\n❌ Критическая ошибка:', err.message);
+  process.exit(1);
 });
-

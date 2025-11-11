@@ -66,7 +66,11 @@ router.post('/', async (req: Request, res: Response) => {
     });
     
     // 1. Получить маппинги
-    const mappings = await db.execute<OperationMapping>(sql`
+    if (!db) {
+      return res.status(500).json({ ok: false, error: 'Database not initialized' });
+    }
+    
+    const mappings = await db.execute(sql`
       SELECT 
         id, operation_type, matched_event_type, is_webhook_event,
         target_table, processing_strategy, field_mappings,
@@ -74,9 +78,9 @@ router.post('/', async (req: Request, res: Response) => {
       FROM history_operation_mappings
       WHERE enabled = TRUE
       ORDER BY priority DESC
-    `);
+    `) as unknown as OperationMapping[];
     
-    if (mappings.rows.length === 0) {
+    if (mappings.length === 0) {
       return res.status(400).json({
         ok: false,
         error: 'No enabled mappings found. Please seed history_operation_mappings table.'
@@ -84,7 +88,7 @@ router.post('/', async (req: Request, res: Response) => {
     }
     
     const mappingsMap = new Map<string, OperationMapping>();
-    for (const mapping of mappings.rows) {
+    for (const mapping of mappings) {
       mappingsMap.set(mapping.operation_type, mapping);
     }
     
@@ -118,9 +122,9 @@ router.post('/', async (req: Request, res: Response) => {
       LIMIT ${limit}
     `;
     
-    const historyItems = await db.execute<HistoryItem>(query);
+    const historyItems = await db.execute(query) as unknown as HistoryItem[];
     
-    if (historyItems.rows.length === 0) {
+    if (historyItems.length === 0) {
       console.log(`[Process History] No pending operations found`);
       return res.json({
         ok: true,
@@ -131,7 +135,7 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
     
-    console.log(`[Process History] Found ${historyItems.rows.length} pending operations`);
+    console.log(`[Process History] Found ${historyItems.length} pending operations`);
     
     // 3. Обработка каждой операции
     const results: ProcessHistoryBatchResponse['results'] = [];
@@ -140,7 +144,7 @@ router.post('/', async (req: Request, res: Response) => {
     let failedCount = 0;
     const errors: string[] = [];
     
-    for (const item of historyItems.rows) {
+    for (const item of historyItems) {
       const mapping = mappingsMap.get(item.operation_type);
       
       if (!mapping) {
@@ -242,12 +246,16 @@ router.post('/', async (req: Request, res: Response) => {
  */
 router.get('/stats', async (req: Request, res: Response) => {
   try {
+    if (!db) {
+      return res.status(500).json({ ok: false, error: 'Database not initialized' });
+    }
+    
     // Статистика из view
     const stats = await db.execute(sql`
       SELECT * FROM history_processing_stats
       ORDER BY pending_count DESC, total_operations DESC
       LIMIT 50
-    `);
+    `) as unknown as Record<string, unknown>[];
     
     // Общая статистика
     const summary = await db.execute(sql`
@@ -260,12 +268,12 @@ router.get('/stats', async (req: Request, res: Response) => {
         MIN(created_at) as oldest_operation,
         MAX(created_at) as newest_operation
       FROM history
-    `);
+    `) as unknown as Record<string, unknown>[];
     
     res.json({
       ok: true,
-      summary: summary.rows[0],
-      by_operation_type: stats.rows
+      summary: summary[0],
+      by_operation_type: stats
     });
     
   } catch (error: any) {
@@ -286,16 +294,20 @@ router.get('/stats', async (req: Request, res: Response) => {
  */
 router.get('/unknown', async (req: Request, res: Response) => {
   try {
+    if (!db) {
+      return res.status(500).json({ ok: false, error: 'Database not initialized' });
+    }
+    
     const unknown = await db.execute(sql`
       SELECT * FROM unknown_operations
       ORDER BY frequency DESC
       LIMIT 20
-    `);
+    `) as unknown as Record<string, unknown>[];
     
     res.json({
       ok: true,
-      unknown_operations: unknown.rows,
-      count: unknown.rows.length
+      unknown_operations: unknown,
+      count: unknown.length
     });
     
   } catch (error: any) {
@@ -340,6 +352,10 @@ router.post('/learn', async (req: Request, res: Response) => {
         ok: false,
         error: 'Missing required fields: operation_type, target_table, processing_strategy'
       });
+    }
+    
+    if (!db) {
+      return res.status(500).json({ ok: false, error: 'Database not initialized' });
     }
     
     // Создать новый маппинг

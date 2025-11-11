@@ -18,7 +18,7 @@ import {
   externalRefs 
 } from '../db/schema';
 import { eq, and, sql } from 'drizzle-orm';
-import type { Branch } from '../types/common';
+import type { Branch } from '../db/schema';
 
 // =====================================================
 // Типы
@@ -114,6 +114,10 @@ async function findEntityByRpId(
   rpId: string,
   branch?: string
 ): Promise<string | null> {
+  if (!db) {
+    return null;
+  }
+  
   const query = db.select({ entity_id: externalRefs.entity_id })
     .from(externalRefs)
     .where(
@@ -169,6 +173,14 @@ export async function extractPayment(
       }
     }
     
+    if (!db) {
+      return {
+        ok: false,
+        action: 'database_error',
+        error: 'Database not initialized'
+      };
+    }
+    
     // Upsert платежа
     const result = await db.insert(payments)
       .values(paymentData)
@@ -211,6 +223,10 @@ export async function extractPayment(
     // Записать в timeline (для всех платежей, проверяем дубликаты)
     try {
       const { addPaymentToTimeline } = await import('../db/entityTimeline');
+      
+      if (!db) {
+        throw new Error('Database not initialized');
+      }
       
       // Проверить, есть ли уже в timeline
       const existingTimeline = await db.execute(sql`
@@ -301,23 +317,29 @@ export async function updateEmployeeCash(
       };
     }
     
-    // Определить поле для обновления
+    if (!db) {
+      return {
+        ok: false,
+        action: 'database_error',
+        error: 'Database not initialized'
+      };
+    }
+    
+    // Обновляем через SQL (поля могут отсутствовать в схеме drizzle)
     const cashField = currency === 'USD' ? 'cash_usd' 
                     : currency === 'EUR' ? 'cash_eur' 
                     : 'cash_gel';
     
-    // Обновить баланс
-    const updateSql = operation === 'collect'
-      ? sql`${employees[cashField]} - ${amount}` // Инкассация - уменьшение
-      : sql`${amount}`; // Корректировка - установка значения
+    const updateValue = operation === 'collect'
+      ? sql`COALESCE(${sql.identifier(cashField)}, 0) - ${amount}`
+      : sql`${amount}`;
     
-    await db.update(employees)
-      .set({
-        [cashField]: updateSql,
-        cash_last_updated: new Date(),
-        // Добавить в history_log
-        history_log: sql`
-          COALESCE(history_log, '[]'::jsonb) || 
+    await db.execute(sql`
+      UPDATE employees
+      SET 
+        ${sql.identifier(cashField)} = ${updateValue},
+        cash_last_updated = NOW(),
+        history_log = COALESCE(history_log, '[]'::jsonb) || 
           ${JSON.stringify([{
             ts: new Date().toISOString(),
             source: 'history',
@@ -327,10 +349,10 @@ export async function updateEmployeeCash(
             currency,
             description: item.description,
             history_id: item.id
-          }])}::jsonb
-        `
-      })
-      .where(eq(employees.id, employeeId));
+          }])}::jsonb,
+        updated_at = NOW()
+      WHERE id = ${employeeId}
+    `);
     
     return {
       ok: true,
@@ -385,16 +407,23 @@ export async function addMaintenanceNote(
       history_id: item.id
     };
     
-    // Добавить в history_log
-    await db.update(cars)
-      .set({
-        history_log: sql`
-          COALESCE(history_log, '[]'::jsonb) || 
-          ${JSON.stringify([logEntry])}::jsonb
-        `,
-        updated_at: new Date()
-      })
-      .where(eq(cars.id, carId));
+    // Добавить в history_log через SQL
+    if (!db) {
+      return {
+        ok: false,
+        action: 'database_error',
+        error: 'Database not initialized'
+      };
+    }
+    
+    await db.execute(sql`
+      UPDATE cars
+      SET 
+        history_log = COALESCE(history_log, '[]'::jsonb) || 
+          ${JSON.stringify([logEntry])}::jsonb,
+        updated_at = NOW()
+      WHERE id = ${carId}
+    `);
     
     return {
       ok: true,
@@ -438,18 +467,24 @@ export async function updateCarStatus(
       };
     }
     
-    // Обновить статус и добавить в history_log
-    await db.update(cars)
-      .set({
-        data: sql`
-          jsonb_set(
-            COALESCE(data, '{}'::jsonb),
-            '{status}',
-            ${JSON.stringify(status)}::jsonb
-          )
-        `,
-        history_log: sql`
-          COALESCE(history_log, '[]'::jsonb) || 
+    // Обновить статус и добавить в history_log через SQL
+    if (!db) {
+      return {
+        ok: false,
+        action: 'database_error',
+        error: 'Database not initialized'
+      };
+    }
+    
+    await db.execute(sql`
+      UPDATE cars
+      SET 
+        data = jsonb_set(
+          COALESCE(data, '{}'::jsonb),
+          '{status}',
+          ${JSON.stringify(status)}::jsonb
+        ),
+        history_log = COALESCE(history_log, '[]'::jsonb) || 
           ${JSON.stringify([{
             ts: new Date().toISOString(),
             source: 'history',
@@ -457,11 +492,10 @@ export async function updateCarStatus(
             status,
             reason: extracted.reason || item.description,
             history_id: item.id
-          }])}::jsonb
-        `,
-        updated_at: new Date()
-      })
-      .where(eq(cars.id, carId));
+          }])}::jsonb,
+        updated_at = NOW()
+      WHERE id = ${carId}
+    `);
     
     return {
       ok: true,
@@ -504,43 +538,62 @@ export async function updateBookingStatus(
       };
     }
     
-    // Подготовить обновления
-    const updates: any = {
-      status: extracted.status as string,
+    if (!db) {
+      return {
+        ok: false,
+        action: 'database_error',
+        error: 'Database not initialized'
+      };
+    }
+    
+    // Обновить через SQL (history_log может отсутствовать в схеме)
+    const statusValue = extracted.status as string;
+    const logEntry = {
+      ts: new Date().toISOString(),
+      source: 'history',
+      operation_type: item.operation_type,
+      ...extracted,
+      history_id: item.id
+    };
+    
+    // Строим динамический SQL
+    const bookingUpdates: any = {
+      status: statusValue,
       updated_at: new Date()
     };
     
-    // Дополнительные поля в зависимости от операции
-    if (extracted.issue_planned_at) updates.issue_planned = new Date(extracted.issue_planned_at as string);
-    if (extracted.issue_actual_at) updates.issue_actual = new Date(extracted.issue_actual_at as string);
-    if (extracted.return_planned_at) updates.return_planned = new Date(extracted.return_planned_at as string);
-    if (extracted.return_actual_at) updates.return_actual = new Date(extracted.return_actual_at as string);
-    if (extracted.mileage_start) updates.mileage_start = Number(extracted.mileage_start);
-    if (extracted.mileage_end) updates.mileage_end = Number(extracted.mileage_end);
-    if (extracted.fuel_start) updates.fuel_start = Number(extracted.fuel_start);
-    if (extracted.fuel_end) updates.fuel_end = Number(extracted.fuel_end);
+    if (extracted.issue_planned_at) bookingUpdates.issue_planned = new Date(extracted.issue_planned_at as string);
+    if (extracted.issue_actual_at) bookingUpdates.issue_actual = new Date(extracted.issue_actual_at as string);
+    if (extracted.return_planned_at) bookingUpdates.return_planned = new Date(extracted.return_planned_at as string);
+    if (extracted.return_actual_at) bookingUpdates.return_actual = new Date(extracted.return_actual_at as string);
+    if (extracted.mileage_start) bookingUpdates.mileage_start = Number(extracted.mileage_start);
+    if (extracted.mileage_end) bookingUpdates.mileage_end = Number(extracted.mileage_end);
+    if (extracted.fuel_start) bookingUpdates.fuel_start = Number(extracted.fuel_start);
+    if (extracted.fuel_end) bookingUpdates.fuel_end = Number(extracted.fuel_end);
     
-    // Добавить в history_log
-    updates.history_log = sql`
-      COALESCE(history_log, '[]'::jsonb) || 
-      ${JSON.stringify([{
-        ts: new Date().toISOString(),
-        source: 'history',
-        operation_type: item.operation_type,
-        ...extracted,
-        history_id: item.id
-      }])}::jsonb
-    `;
-    
+    // Обновляем основные поля через drizzle
     await db.update(bookings)
-      .set(updates)
+      .set(bookingUpdates)
       .where(eq(bookings.id, bookingId));
+    
+    // Обновляем history_log отдельным запросом (если поле существует в БД)
+    try {
+      const logEntryJson = JSON.stringify([logEntry]).replace(/'/g, "''");
+      await db.execute(sql.raw(`
+        UPDATE bookings
+        SET history_log = COALESCE(history_log, '[]'::jsonb) || '${logEntryJson}'::jsonb
+        WHERE id = '${bookingId}'
+      `));
+    } catch (e) {
+      // Игнорируем ошибку если поле history_log не существует
+      console.warn('history_log field may not exist in bookings table');
+    }
     
     return {
       ok: true,
       action: 'booking_status_updated',
       entityId: bookingId,
-      details: { status: updates.status }
+      details: { status: bookingUpdates.status }
     };
     
   } catch (error: any) {
@@ -608,6 +661,10 @@ export async function markHistoryProcessed(
   result: ProcessingResult,
   matched: boolean = false
 ): Promise<void> {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+  
   const notes = result.ok
     ? `✅ ${result.action}: ${JSON.stringify(result.details || {})}`
     : `❌ ${result.action}: ${result.error}`;

@@ -1,0 +1,34 @@
+{
+  "name": "geodrive-bookings-migrations",
+  "version": "1.0.0",
+  "description": "Миграции для нормализации данных броней в таблице bookings",
+  "type": "module",
+  "scripts": {
+    "check": "node check-status.mjs",
+    "migrate": "node apply-migrations.mjs",
+    "migrate:dry-run": "node apply-migrations.mjs --dry-run",
+    "migrate:001": "node apply-migrations.mjs --single=001",
+    "migrate:002": "node apply-migrations.mjs --single=002",
+    "migrate:003": "node apply-migrations.mjs --single=003",
+    "migrate:004": "node apply-migrations.mjs --single=004",
+    "migrate:005": "node apply-migrations.mjs --single=005",
+    "migrate:from-002": "node apply-migrations.mjs --from=002",
+    "migrate:to-004": "node apply-migrations.mjs --to=004"
+  },
+  "keywords": [
+    "migrations",
+    "database",
+    "bookings",
+    "normalization",
+    "geodrive"
+  ],
+  "author": "GeoDrive Team",
+  "license": "ISC",
+  "dependencies": {
+    "postgres": "^3.4.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+

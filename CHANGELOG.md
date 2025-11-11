@@ -13,8 +13,8 @@
   - `/event-links/stats` — OK
   - `/event-links/unlinked` — 100 несвязанных платежей (исторические данные до внедрения связей)
 - ✅ Обновлена документация roadmap:
-  - `NEXT_STEPS.md`: добавлены пост‑деплой задачи и улучшения для Entity Timeline/Event Links; зафиксирован статус “что сделано”
-  - `ARCHITECTURE.md`: добавлен раздел “Entity Timeline & Event Links”, расширен список эндпоинтов Jarvis API
+  - `NEXT_STEPS.md`: добавлены пост‑деплой задачи и улучшения для Entity Timeline/Event Links; зафиксирован статус "что сделано"
+  - `ARCHITECTURE.md`: добавлен раздел "Entity Timeline & Event Links", расширен список эндпоинтов Jarvis API
   - `AGENTS.md`: обновлён статус разработки (готовность таймлайна/связей для агентов)
 - ✅ CI зелёный, сборка и проверка эндпоинтов прошли успешно
 
@@ -22,6 +22,34 @@
 - Бэкфилл связей для исторических платежей
 - Метрики/дашборд и ретеншн‑политика
 - Расширенные правила связывания и автоэскалации
+
+---
+
+## 2025-11-09: Реализация систем сбора данных и обработки истории
+
+**Выполнено:**
+- ✅ **Playwright Services (Umnico & AmoCRM):**
+  - Umnico Service (`:3001`): постоянно работающий браузер с сохраненной сессией, автологин, HTTP API
+  - AmoCRM Service (`:3002`): постоянно работающий браузер с сохраненной сессией, автологин, HTTP API + REST API
+  - Автозапуск при рестарте сервера (Docker Compose)
+- ✅ **Data Collection Workflows:**
+  - `Umnico Chat Scraper` (сбор диалогов каждые 5 минут)
+  - `AmoCRM Deals Scraper` (сбор сделок каждые 30 минут)
+  - `AmoCRM All Deals Parser` (полный парсинг всех сделок каждые 6 часов)
+  - Таблицы: `conversations`, `messages`, `amocrm_deals`, `amocrm_contacts`, `sync_state`
+- ✅ **History Processing System:**
+  - Таблицы: `history`, `history_operation_mappings`
+  - API endpoints: `/process-history`, `/process-history/stats`, `/process-history/unknown`, `/process-history/learn`
+  - n8n workflow: `History Matcher & Processor` (каждые 5 минут)
+  - Автоматическая обработка: платежи, кассовые операции, техобслуживание, статусы броней
+  - Incremental Learning — автосоздание маппингов для новых типов операций
+- ✅ Обновлена документация:
+  - `ARCHITECTURE.md`: добавлены Playwright Services, History Processing System, обновлён список workflows и endpoints
+  - `STRUCTURE.md`: добавлены схемы таблиц для диалогов (Umnico & AmoCRM), AmoCRM deals, history processing
+  - `NEXT_STEPS.md`: отмечены выполненные системы
+  - `docs/WORKFLOWS_README.md`, `docs/AMOCRM_ALL_DEALS_PARSER.md`, `docs/HISTORY_PROCESSING.md` — полная документация
+
+**Статус:** ✅ Готово к использованию
 
 ---
 

@@ -1,0 +1,15 @@
+# Node modules (если будут установлены локально)
+node_modules/
+
+# Логи
+*.log
+npm-debug.log*
+
+# Временные файлы
+*.tmp
+*.temp
+
+# OS
+.DS_Store
+Thumbs.db
+
