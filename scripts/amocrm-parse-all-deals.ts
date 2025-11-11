@@ -418,12 +418,15 @@ async function upsertDeal(extracted: ReturnType<typeof extractDealData>) {
     const param = params[i];
     let value: string;
     
+    // Параметры: 15 = custom_fields, 18 = deal_full_data, 19 = contact_custom_fields (все JSONB)
+    const jsonbParams = [15, 18, 19];
+    
     if (param === null || param === undefined) {
       value = 'NULL';
     } else if (typeof param === 'string') {
-      // Для JSONB полей (customFields) - это уже JSON строка
-      if (i === 15 && param.startsWith('{')) {
-        // customFields - это JSONB, нужно экранировать как JSON
+      // Для JSONB полей - это уже JSON строка
+      if (jsonbParams.includes(i) && param.startsWith('{')) {
+        // JSONB поле - экранируем одинарные кавычки и добавляем ::jsonb
         value = `'${param.replace(/'/g, "''")}'::jsonb`;
       } else {
         // Обычные строки
