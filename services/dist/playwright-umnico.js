@@ -321,9 +321,8 @@ class UmnicoPlaywrightService {
                 throw error;
             }
         }
-        finally {
-        }
-        async getMessages(conversationId, options) {
+    }
+    async getMessages(conversationId, options) {
             try: {
                 const: url = `https://umnico.com/app/inbox/deals/inbox/details/${conversationId}`,
                 await: page.goto(url, {
