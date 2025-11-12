@@ -123,7 +123,7 @@ export class StarlineMonitorService {
       WHERE sd.matched = TRUE
         AND sd.active = TRUE
     ` as Array<{
-      device_id: number;
+      device_id: number | string; // Может быть bigint (строка) из PostgreSQL
       alias: string;
       car_id: string;
       matched: boolean;
@@ -139,7 +139,8 @@ export class StarlineMonitorService {
     // Сопоставляем каждое устройство из Starline с сопоставлениями из БД по device_id
     for (const device of devices) {
       // Ищем устройство в starline_devices по device_id (не по alias!)
-      const mapping = deviceMappings.find(m => m.device_id === device.device_id);
+      // Приводим к числу для корректного сравнения (PostgreSQL bigint может быть строкой)
+      const mapping = deviceMappings.find(m => Number(m.device_id) === Number(device.device_id));
 
       if (mapping && mapping.matched && mapping.car_id) {
         matches.push({
@@ -157,8 +158,9 @@ export class StarlineMonitorService {
     }
 
     // Проверяем, какие устройства из starline_devices не найдены в списке от Starline
-    const deviceIdsFromStarline = new Set(devices.map(d => d.device_id));
-    const missingDevices = deviceMappings.filter(m => !deviceIdsFromStarline.has(m.device_id));
+    // Приводим к числу для корректного сравнения
+    const deviceIdsFromStarline = new Set(devices.map(d => Number(d.device_id)));
+    const missingDevices = deviceMappings.filter(m => !deviceIdsFromStarline.has(Number(m.device_id)));
     if (missingDevices.length > 0) {
       console.log(`⚠️ ВНИМАНИЕ: ${missingDevices.length} устройств из starline_devices не найдены в списке от Starline:`);
       for (const missing of missingDevices) {
