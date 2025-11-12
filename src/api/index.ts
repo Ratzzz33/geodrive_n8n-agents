@@ -47,11 +47,11 @@ export function initApiServer(port: number = 3000): void {
     return;
   }
 
-  // Подключаем роутеры
-  // app.use('/api/cars', carSearchRouter); // Временно закомментировано
-  // app.use('/process-history', processHistoryRouter); // Временно отключено
-  app.use('/event-links', eventLinksRouter);
-  app.use('/entity-timeline', entityTimelineRouter);
+// Подключаем роутеры
+// app.use('/api/cars', carSearchRouter); // Временно закомментировано
+// app.use('/process-history', processHistoryRouter); // Временно отключено
+// app.use('/event-links', eventLinksRouter); // Временно отключено (проблема с импортом)
+// app.use('/entity-timeline', entityTimelineRouter); // Временно отключено (проблема с импортом)
   app.use('/', syncEmployeeCashRouter); // POST /sync-employee-cash
   app.use('/', syncBookingsRouter); // POST /sync-bookings
   app.use('/api/umnico', umnicoSendRouter); // POST /api/umnico/send
