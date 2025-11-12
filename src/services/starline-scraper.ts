@@ -418,11 +418,16 @@ export class StarlineScraperService {
       return await this._getDeviceDetailsInternal(deviceId);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorString = String(error);
+      
+      // Логируем ВСЕ ошибки для диагностики
+      logger.warn(`StarlineScraperService: Error caught in getDeviceDetails for device ${deviceId}: ${errorMessage.substring(0, 200)}`);
+      logger.warn(`StarlineScraperService: Full error string: ${errorString.substring(0, 300)}`);
       
       // Если ошибка содержит "page.evaluate" и "Unexpected token" - это истекшая сессия
-      if (errorMessage.includes('page.evaluate') && errorMessage.includes('Unexpected token')) {
+      if ((errorMessage.includes('page.evaluate') || errorString.includes('page.evaluate')) && 
+          (errorMessage.includes('Unexpected token') || errorString.includes('Unexpected token'))) {
         logger.warn(`StarlineScraperService: page.evaluate error with Unexpected token detected, restarting browser...`);
-        logger.warn(`StarlineScraperService: Error details: ${errorMessage.substring(0, 300)}`);
         
         try {
           await this.restartBrowser();
