@@ -20,9 +20,9 @@ import {
   type BookingInsert,
   type ExternalRefInsert,
 } from './schema.js';
-import { logger } from '../utils/logger';
-import type { BranchName } from '../integrations/rentprog';
-import { apiFetch } from '../integrations/rentprog';
+import { logger } from '../utils/logger.js';
+import type { BranchName } from '../integrations/rentprog.js';
+import { apiFetch } from '../integrations/rentprog.js';
 // import { extractCarFields, extractClientFields } from './carsAndClients'; // Временно закомментировано
 
 // Временные заглушки
