@@ -321,6 +321,7 @@ export class StarlineScraperService {
       await this.page.goto(`${this.BASE_URL}/site/map`, { waitUntil: 'networkidle', timeout: 30000 });
       
       // Проверяем что мы залогинены (без прокси)
+      // @ts-ignore - document и window доступны в page.evaluate()
       const isLoggedInCheck = await this.page.evaluate(() => {
         return !document.querySelector('a[href="#login"]') && window.location.pathname.includes('/site/map');
       });
