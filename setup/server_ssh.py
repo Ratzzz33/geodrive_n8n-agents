@@ -27,7 +27,7 @@ except ImportError:
 
 SERVER_PASSWORD = os.getenv(
     "SERVER_PASSWORD",
-    "WNHeg7U7aiKw"  # Новый пароль после инцидента безопасности (08.11.2025)
+    "WNHeg7U7aiKw"  # Пароль (12.11.2025)
 )
 
 # Установка кодировки для Windows (отключено - может блокировать вывод в Cursor)

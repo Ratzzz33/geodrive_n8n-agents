@@ -1,0 +1,861 @@
+{
+  "dbFields": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false
+    },
+    {
+      "name": "branch_id",
+      "type": "uuid",
+      "nullable": true
+    },
+    {
+      "name": "car_id",
+      "type": "uuid",
+      "nullable": true
+    },
+    {
+      "name": "client_id",
+      "type": "uuid",
+      "nullable": true
+    },
+    {
+      "name": "start_at",
+      "type": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "name": "end_at",
+      "type": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "name": "data",
+      "type": "jsonb",
+      "nullable": true
+    },
+    {
+      "name": "car",
+      "type": "jsonb",
+      "nullable": true
+    },
+    {
+      "name": "fio",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "gas",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "grm",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "mp3",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "days",
+      "type": "numeric",
+      "nullable": true
+    },
+    {
+      "name": "demo",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "fine",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "ride",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "sale",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "chair",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "kasko",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "osago",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "other",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "price",
+      "type": "numeric",
+      "nullable": true
+    },
+    {
+      "name": "state",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "theft",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "total",
+      "type": "numeric",
+      "nullable": true
+    },
+    {
+      "name": "active",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "client",
+      "type": "jsonb",
+      "nullable": true
+    },
+    {
+      "name": "counts",
+      "type": "jsonb",
+      "nullable": true
+    },
+    {
+      "name": "damage",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "entity",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "grm_km",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "hourly",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "number",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "repair",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "source",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "weekly",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "archive",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "booster",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "charger",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "deposit",
+      "type": "numeric",
+      "nullable": true
+    },
+    {
+      "name": "failure",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "gas_end",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "in_rent",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "monthly",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "sign_id",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "updater",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "user_id",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "accepted",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "agent_id",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "car_code",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "car_name",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "delivery",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "end_date",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "price_id",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "prolongs",
+      "type": "jsonb",
+      "nullable": true
+    },
+    {
+      "name": "aggr_paid",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "amocrm_id",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "car_state",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "clean_end",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "equipment",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "gas_start",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "insurance",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "last_name",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "navigator",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "other_end",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "sale_cash",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "tariff_id",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "technical",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "company_id",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "first_name",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "hours_cost",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "oil_engine",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "price_hour",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "start_date",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "add_drivers",
+      "type": "jsonb",
+      "nullable": true
+    },
+    {
+      "name": "clean_start",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "end_mileage",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "entity_name",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "middle_name",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "rental_cost",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "responsible",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "start_price",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "super_kasko",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "wifi_router",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "delivery_end",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "fast_booking",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "from_partner",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "gas_end_full",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "hourly_hours",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "localrent_id",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "location_end",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "mileage_cost",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "no_franchise",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "weekly_weeks",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "archived_date",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "auto_archived",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "clean_payment",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "client_debtor",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "decision_date",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "end_worker_id",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "oil_engine_km",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "payments_type",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "price_no_sale",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "serial_number",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "start_mileage",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "state_updater",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "vseprokaty_id",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "client_decline",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "custom_field_1",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "custom_field_2",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "custom_field_3",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "failure_reason",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "gas_start_full",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "hourly_deposit",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "hours_cost_end",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "location_start",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "manual_editing",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "monthly_months",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "weekly_deposit",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "aggr_commission",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "booking_mileage",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "chairs_quantity",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "client_category",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "end_location_id",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "location_end_id",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "main_company_id",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "monthly_deposit",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "other_equipment",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "payments_period",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "start_worker_id",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "add_drivers_cost",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "additional_hours",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "created_from_api",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "last_balanced_at",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "rental_cost_sale",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "updated_from_api",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "boosters_quantity",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "chair_less_1_year",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "location_start_id",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "payment_job_count",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "send_accept_email",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "send_cancel_email",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "send_custom_email",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "start_location_id",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "taxi_booking_data",
+      "type": "jsonb",
+      "nullable": true
+    },
+    {
+      "name": "amocrm_last_update",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "commission_percent",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "end_date_formatted",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "taxi_payment_model",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "booking_photos_data",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "only_manual_editing",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "part_return_deposit",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "technical_check_end",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "apply_current_prices",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "job_start_first_time",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "start_date_formatted",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "booking_message_state",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "rental_cost_sale_cash",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "technical_check_start",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "technical_check_end_comment",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "technical_check_start_comment",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "responsible_id",
+      "type": "uuid",
+      "nullable": true
+    },
+    {
+      "name": "history_log",
+      "type": "jsonb",
+      "nullable": true
+    },
+    {
+      "name": "test_field",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "payload_json",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "test_marker",
+      "type": "text",
+      "nullable": true
+    }
+  ],
+  "parseResult": {
+    "branch": "tbilisi",
+    "active": [],
+    "inactive": [],
+    "total": 0,
+    "error": "Не найдено ни одного input поля на странице логина"
+  }
+}
