@@ -1,4 +1,4 @@
-import { chromium, Browser, Page } from 'playwright';
+import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import { logger } from '../utils/logger.js';
 
 interface StarlineDeviceOverview {
@@ -97,6 +97,48 @@ export class StarlineScraperService {
   /**
    * Инициализация: запуск браузера и логин (вызывается один раз при старте API)
    */
+  /**
+   * Генерация случайного fingerprint браузера для обхода защиты от DDoS
+   */
+  private generateBrowserFingerprint() {
+    // Базовый fingerprint из реального браузера (MCP Chrome)
+    const baseFingerprint = {
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
+      viewport: { width: 1440, height: 900 },
+      locale: 'ru-RU',
+      timezoneId: 'Asia/Tbilisi',
+      platform: 'Win32',
+      hardwareConcurrency: 8,
+      deviceMemory: 8,
+      colorDepth: 24,
+    };
+
+    // Добавляем небольшие случайные вариации для уникальности
+    const viewportVariations = [
+      { width: 1920, height: 1080 },
+      { width: 1440, height: 900 },
+      { width: 1366, height: 768 },
+      { width: 1536, height: 864 },
+    ];
+    
+    const randomViewport = viewportVariations[Math.floor(Math.random() * viewportVariations.length)];
+    
+    // Случайные версии Chrome (реалистичные)
+    const chromeVersions = ['142.0.0.0', '141.0.0.0', '140.0.0.0', '139.0.0.0'];
+    const randomVersion = chromeVersions[Math.floor(Math.random() * chromeVersions.length)];
+    
+    return {
+      userAgent: baseFingerprint.userAgent.replace('142.0.0.0', randomVersion),
+      viewport: randomViewport,
+      locale: baseFingerprint.locale,
+      timezoneId: baseFingerprint.timezoneId,
+      platform: baseFingerprint.platform,
+      hardwareConcurrency: baseFingerprint.hardwareConcurrency,
+      deviceMemory: baseFingerprint.deviceMemory,
+      colorDepth: baseFingerprint.colorDepth,
+    };
+  }
+
   async initialize(): Promise<void> {
     if (this.isInitializing) {
       logger.info('StarlineScraperService: Already initializing, waiting...');
@@ -116,14 +158,68 @@ export class StarlineScraperService {
     logger.info('StarlineScraperService: Initializing persistent browser session...');
 
     try {
+      // Генерируем новый fingerprint для этого сеанса
+      const fingerprint = this.generateBrowserFingerprint();
+      logger.info(`StarlineScraperService: Using fingerprint: ${fingerprint.userAgent.substring(0, 50)}... ${fingerprint.viewport.width}x${fingerprint.viewport.height}`);
+
       // Запускаем браузер
       this.browser = await chromium.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-blink-features=AutomationControlled', // Скрываем автоматизацию
+          '--disable-dev-shm-usage',
+        ],
       });
 
-      this.page = await this.browser.newPage();
-      await this.page.setViewportSize({ width: 1920, height: 1080 });
+      // Создаем контекст с уникальным fingerprint
+      this.context = await this.browser.newContext({
+        userAgent: fingerprint.userAgent,
+        viewport: fingerprint.viewport,
+        locale: fingerprint.locale,
+        timezoneId: fingerprint.timezoneId,
+        // Дополнительные заголовки для реалистичности
+        extraHTTPHeaders: {
+          'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+        },
+        // Переопределяем navigator свойства через CDP
+        permissions: ['geolocation'],
+      });
+
+      // Переопределяем navigator свойства через CDP для более реалистичного fingerprint
+      await this.context.addInitScript(() => {
+        // Переопределяем navigator.platform
+        Object.defineProperty(navigator, 'platform', {
+          get: () => 'Win32',
+        });
+        
+        // Переопределяем navigator.hardwareConcurrency
+        Object.defineProperty(navigator, 'hardwareConcurrency', {
+          get: () => 8,
+        });
+        
+        // Переопределяем navigator.deviceMemory
+        Object.defineProperty(navigator, 'deviceMemory', {
+          get: () => 8,
+        });
+        
+        // Скрываем webdriver
+        Object.defineProperty(navigator, 'webdriver', {
+          get: () => false,
+        });
+        
+        // Переопределяем chrome
+        (window as any).chrome = {
+          runtime: {},
+        };
+      });
+
+      this.page = await this.context.newPage();
 
       // Логинимся
       await this.login();
@@ -798,12 +894,12 @@ export class StarlineScraperService {
    * Это проще и надежнее, чем попытки перелогина - новая сессия гарантированно работает
    */
   private async restartBrowser(): Promise<void> {
-    logger.info('StarlineScraperService: 🔄 Restarting browser (session expired)...');
+    logger.info('StarlineScraperService: 🔄 Restarting browser with NEW fingerprint (session expired)...');
     
     // Сбрасываем флаг инициализации, чтобы разрешить повторную инициализацию
     this.isInitializing = false;
     
-    // Закрываем текущий браузер
+    // Закрываем текущий контекст и страницу
     if (this.page) {
       try {
         await this.page.close().catch(() => {});
@@ -813,6 +909,16 @@ export class StarlineScraperService {
       this.page = null;
     }
     
+    if (this.context) {
+      try {
+        await this.context.close().catch(() => {});
+      } catch (error) {
+        logger.warn('StarlineScraperService: Error closing context during restart:', error);
+      }
+      this.context = null;
+    }
+    
+    // Закрываем браузер полностью для создания нового профиля
     if (this.browser) {
       try {
         await this.browser.close().catch(() => {});
@@ -825,10 +931,10 @@ export class StarlineScraperService {
     // Сбрасываем состояние
     this.isLoggedIn = false;
     
-    // Инициализируем заново (откроет браузер и залогинится)
+    // Инициализируем заново с НОВЫМ fingerprint (откроет браузер и залогинится)
     await this.initialize();
     
-    logger.info('StarlineScraperService: ✅ Browser restarted successfully');
+    logger.info('StarlineScraperService: ✅ Browser restarted successfully with new fingerprint');
   }
 
   /**
