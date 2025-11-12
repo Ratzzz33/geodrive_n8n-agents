@@ -401,6 +401,28 @@ export class StarlineMonitorService {
         last_sync = NOW()
     `;
 
+    // Сохраняем историю вольтажа (если вольтаж есть)
+    if (gpsUpdate.batteryVoltage !== null && gpsUpdate.batteryVoltage !== undefined) {
+      await sqlConnection`
+        INSERT INTO battery_voltage_history (
+          car_id, starline_device_id, battery_voltage, timestamp,
+          ignition_on, engine_running, status
+        ) VALUES (
+          ${gpsUpdate.carId}, ${gpsUpdate.starlineDeviceId}, ${gpsUpdate.batteryVoltage}, ${gpsUpdate.currentTimestamp.toISOString()},
+          ${gpsUpdate.ignitionOn}, ${gpsUpdate.engineRunning}, ${gpsUpdate.status}
+        )
+      `;
+
+      // Проверяем на нестандартное падение вольтажа
+      await this.checkBatteryVoltageAnomaly(
+        match,
+        gpsUpdate.batteryVoltage,
+        gpsUpdate.ignitionOn,
+        gpsUpdate.engineRunning,
+        sqlConnection
+      );
+    }
+
     details.push({
       plate: match.plate,
       brand: match.brand,
@@ -448,6 +470,117 @@ export class StarlineMonitorService {
       } catch (timelineError) {
         console.warn(`Failed to add GPS to timeline for ${match.starlineAlias}:`, timelineError);
       }
+    }
+  }
+
+  /**
+   * Проверка на нестандартное падение вольтажа
+   * Сравнивает текущий вольтаж с средним по всем авто за последние 24 часа
+   */
+  private async checkBatteryVoltageAnomaly(
+    match: CarMatch,
+    currentVoltage: number,
+    ignitionOn: boolean,
+    engineRunning: boolean,
+    sqlConnection: any
+  ): Promise<void> {
+    try {
+      // Пропускаем проверку если зажигание включено или двигатель работает
+      // (вольтаж может быть выше из-за генератора)
+      if (ignitionOn || engineRunning) {
+        return;
+      }
+
+      // Получаем средний вольтаж по всем авто за последние 24 часа
+      // Только для авто с выключенным зажиганием (для корректного сравнения)
+      const avgVoltageResult = await sqlConnection`
+        SELECT 
+          AVG(battery_voltage) as avg_voltage,
+          COUNT(*) as sample_count,
+          STDDEV(battery_voltage) as stddev_voltage
+        FROM battery_voltage_history
+        WHERE timestamp >= NOW() - INTERVAL '24 hours'
+          AND ignition_on = FALSE
+          AND engine_running = FALSE
+          AND battery_voltage IS NOT NULL
+          AND battery_voltage > 0
+      `;
+
+      const avgVoltage = avgVoltageResult[0]?.avg_voltage;
+      const sampleCount = avgVoltageResult[0]?.sample_count || 0;
+      const stddevVoltage = avgVoltageResult[0]?.stddev_voltage || 0;
+
+      // Нужно минимум 10 измерений для статистики
+      if (!avgVoltage || sampleCount < 10) {
+        return;
+      }
+
+      // Вычисляем отклонение от среднего
+      const deviation = currentVoltage - Number(avgVoltage);
+      const deviationPercent = (deviation / Number(avgVoltage)) * 100;
+
+      // Пороги для уведомления:
+      // - Абсолютное отклонение > 0.5V ИЛИ
+      // - Относительное отклонение > 10% ИЛИ
+      // - Вольтаж ниже среднего на 2 стандартных отклонения (критично)
+      const criticalThreshold = Number(avgVoltage) - (2 * Number(stddevVoltage));
+      const isCritical = currentVoltage < criticalThreshold;
+      const isAnomaly = Math.abs(deviation) > 0.5 || Math.abs(deviationPercent) > 10 || isCritical;
+
+      if (isAnomaly) {
+        // Проверяем, не отправляли ли уже уведомление за последний час (чтобы не спамить)
+        const recentAlert = await sqlConnection`
+          SELECT COUNT(*) as count
+          FROM battery_voltage_alerts
+          WHERE car_id = ${match.carId}
+            AND created_at >= NOW() - INTERVAL '1 hour'
+        `;
+
+        if (recentAlert[0]?.count > 0) {
+          return; // Уже отправляли уведомление недавно
+        }
+
+        // Формируем сообщение
+        const severity = isCritical ? '🔴 КРИТИЧНО' : '⚠️ ВНИМАНИЕ';
+        const message = `${severity} **Нестандартное падение вольтажа**
+
+🚗 **Машина:** ${match.brand} ${match.model} (${match.plate})
+📱 **Устройство:** ${match.starlineAlias}
+
+📊 **Текущий вольтаж:** ${currentVoltage.toFixed(2)}V
+📈 **Средний по парку:** ${Number(avgVoltage).toFixed(2)}V
+📉 **Отклонение:** ${deviation > 0 ? '+' : ''}${deviation.toFixed(2)}V (${deviationPercent > 0 ? '+' : ''}${deviationPercent.toFixed(1)}%)
+${isCritical ? `🚨 **Критическое отклонение:** ниже среднего на ${((Number(avgVoltage) - currentVoltage) / Number(stddevVoltage)).toFixed(1)} стандартных отклонений` : ''}
+
+📋 **Статистика:**
+• Образцов для сравнения: ${sampleCount}
+• Стандартное отклонение: ${Number(stddevVoltage).toFixed(2)}V
+
+🕐 **Время:** ${new Date().toISOString()}
+
+💡 **Рекомендация:** Проверить состояние АКБ и генератора`;
+
+        await sendTelegramAlert(message);
+        logger.warn(`Battery voltage anomaly detected for ${match.plate}: ${currentVoltage}V (avg: ${Number(avgVoltage).toFixed(2)}V, deviation: ${deviation.toFixed(2)}V)`);
+
+        // Сохраняем запись об уведомлении (если таблица существует)
+        try {
+          await sqlConnection`
+            INSERT INTO battery_voltage_alerts (
+              car_id, starline_device_id, battery_voltage, avg_voltage,
+              deviation, deviation_percent, is_critical, created_at
+            ) VALUES (
+              ${match.carId}, ${match.starlineDeviceId}, ${currentVoltage}, ${Number(avgVoltage)},
+              ${deviation}, ${deviationPercent}, ${isCritical}, NOW()
+            )
+          `;
+        } catch (alertTableError) {
+          // Таблица может не существовать, это не критично
+          logger.debug('battery_voltage_alerts table does not exist, skipping alert log');
+        }
+      }
+    } catch (error) {
+      logger.error(`Failed to check battery voltage anomaly for ${match.plate}:`, error);
     }
   }
 

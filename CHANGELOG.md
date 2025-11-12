@@ -4,6 +4,36 @@
 
 ---
 
+## 2025-11-09: Unit-тесты, линтинг и улучшения архитектуры агентов
+
+**Выполнено:**
+- ✅ **Unit-тесты (Vitest):**
+  - Создано 55 тестов в 7 файлах (все проходят успешно)
+  - Покрытие: `logger`, `config`, `cashRegisterService`, `upsert`, `rentprog`, `orchestrator`, `bot`
+  - Фреймворк: Vitest с моками для изоляции зависимостей
+  - Документация: `docs/TESTS_CREATED.md`
+- ✅ **Рекомендации по линтингу:**
+  - Документация: `docs/LINTING_AND_TESTING.md`
+  - Рекомендации: ESLint для TypeScript, качество кода, безопасность, импорты
+  - План внедрения: базовая настройка → исправление критичных ошибок → интеграция в CI/CD
+  - Статус: ⏳ Требуется настройка ESLint и исправление найденных проблем
+- ✅ **Улучшения архитектуры агентов:**
+  - Документация: `docs/AGENT_PATTERNS_IMPROVEMENTS.md`
+  - Рекомендации: Agent Execution Logging, Agent Memory/Context, Agent Tool Registry, Agent Retry Strategy, ReAct Pattern, Agent Evaluation
+  - Приоритет: начать с Agent Execution Logging и Agent Memory/Context (быстрые победы)
+  - Статус: ⏳ Требуется реализация
+- ✅ Обновлен roadmap (`NEXT_STEPS.md`):
+  - Добавлены задачи по качеству кода и тестированию
+  - Добавлены ссылки на новые документы
+  - Обновлен раздел "Что уже сделано" с информацией о тестах
+
+**План улучшений:**
+- Настройка ESLint и исправление найденных проблем
+- Расширение тестового покрытия (API routes, services, integrations)
+- Реализация Agent Execution Logging и Agent Memory/Context
+
+---
+
 ## 2025-11-09: Деплой Entity Timeline & Event Links и обновление roadmap
 
 **Выполнено:**
