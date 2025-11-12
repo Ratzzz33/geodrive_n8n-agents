@@ -584,61 +584,17 @@ export class StarlineScraperService {
       }
       
       if (isSessionExpired) {
-        logger.warn(`StarlineScraperService: Session expired detected (error: ${errorMessage.substring(0, 100)}), re-logging in for device ${deviceId}...`);
-        this.isLoggedIn = false;
+        logger.warn(`StarlineScraperService: Session expired detected (error: ${errorMessage.substring(0, 100)}), restarting browser for device ${deviceId}...`);
         try {
-          await this.login();
-          // Переходим на страницу карты после логина
-          await this.page!.goto(`${this.BASE_URL}/site/map`, { waitUntil: 'networkidle', timeout: 15000 });
-          await this.page!.waitForTimeout(2000); // Увеличено время ожидания
+          // Просто перезапускаем браузер - это создаст новую сессию
+          await this.restartBrowser();
           
-          // Повторяем запрос после перелогина (только один раз, чтобы избежать бесконечного цикла)
-          logger.info(`StarlineScraperService: Retrying fetch for device ${deviceId} after re-login...`);
-          // Используем прямой вызов без рекурсии, чтобы избежать бесконечного цикла
-          const retryResponse = await Promise.race([
-            this.page!.evaluate(async (id) => {
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 8000);
-              try {
-                const res = await fetch(`/device/${id}?tz=240&_=` + Date.now(), {
-                  headers: {
-                    'Accept': 'application/json, text/javascript, */*; q=0.01',
-                    'X-Requested-With': 'XMLHttpRequest',
-                  },
-                  signal: controller.signal,
-                });
-                clearTimeout(timeoutId);
-                if (!res.ok) {
-                  const errorText = await res.text().catch(() => res.statusText);
-                  throw new Error(`HTTP ${res.status}: ${errorText.substring(0, 200)}`);
-                }
-                const responseText = await res.text();
-                const contentType = res.headers.get('content-type') || '';
-                if (!contentType.includes('application/json') && !contentType.includes('text/javascript')) {
-                  throw new Error(`Expected JSON but got ${contentType}`);
-                }
-                return JSON.parse(responseText);
-              } catch (err) {
-                clearTimeout(timeoutId);
-                if (err instanceof Error) throw err;
-                throw new Error(String(err));
-              }
-            }, deviceId),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error(`Timeout: retry failed for device ${deviceId}`)), 10000)
-            )
-          ]) as any;
-          
-          // Проверяем формат ответа
-          if (retryResponse.result === 1 && retryResponse.answer) {
-            return retryResponse.answer as StarlineDeviceDetails;
-          } else if (retryResponse.device_id && retryResponse.alias) {
-            return retryResponse as StarlineDeviceDetails;
-          }
-          throw new Error(`Invalid response format after re-login`);
-        } catch (reloginError) {
-          logger.error(`StarlineScraperService: Failed to re-login or retry:`, reloginError);
-          throw new Error(`Session expired and re-login failed: ${errorMessage.substring(0, 200)}`);
+          // Повторяем запрос после перезапуска
+          logger.info(`StarlineScraperService: Retrying fetch for device ${deviceId} after browser restart...`);
+          return await this.getDeviceDetails(deviceId);
+        } catch (restartError) {
+          logger.error(`StarlineScraperService: Failed to restart browser:`, restartError);
+          throw new Error(`Session expired and browser restart failed: ${errorMessage.substring(0, 200)}`);
         }
       }
       
@@ -781,6 +737,33 @@ export class StarlineScraperService {
       logger.error(`StarlineScraperService: Error getting routes HTML:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Перезапуск браузера (закрыть и открыть заново)
+   * Используется при истечении сессии
+   */
+  private async restartBrowser(): Promise<void> {
+    logger.info('StarlineScraperService: Restarting browser...');
+    
+    // Закрываем текущий браузер
+    if (this.browser) {
+      try {
+        await this.browser.close();
+      } catch (error) {
+        logger.warn('StarlineScraperService: Error closing browser during restart:', error);
+      }
+    }
+    
+    // Сбрасываем состояние
+    this.browser = null;
+    this.page = null;
+    this.isLoggedIn = false;
+    
+    // Инициализируем заново (откроет браузер и залогинится)
+    await this.initialize();
+    
+    logger.info('StarlineScraperService: ✅ Browser restarted successfully');
   }
 
   /**
