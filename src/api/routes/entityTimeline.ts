@@ -9,7 +9,7 @@ import {
   getTimelineStats,
   type TimelineEntityType,
   type TimelineSourceType,
-} from '../../db/entityTimeline';
+} from '../../db/entityTimeline.js';
 import { logger } from '../../utils/logger';
 
 const router = Router();
