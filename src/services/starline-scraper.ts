@@ -429,8 +429,7 @@ export class StarlineScraperService {
       logger.warn(`StarlineScraperService: Full error text: ${fullErrorText.substring(0, 500)}`);
       
       // Проверяем на наличие "page.evaluate" и "Unexpected token" в любом виде
-      const hasPageEvaluate = fullErrorText.includes('page.evaluate') || 
-                             fullErrorText.includes('page.evaluate') ||
+      const hasPageEvaluate = fullErrorText.includes('page.evaluate') ||
                              errorMessage.includes('page.evaluate');
       const hasUnexpectedToken = fullErrorText.includes('Unexpected token') ||
                                  errorMessage.includes('Unexpected token');
