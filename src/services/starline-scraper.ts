@@ -548,11 +548,16 @@ export class StarlineScraperService {
       
       // Проверяем на наличие признаков истечения сессии
       // Ошибка может содержать кириллицу в экранированном виде (\u041d = 'Н')
-      const hasCyrillicUnicode = /\\u[0-9a-fA-F]{4}/.test(errorString) && 
-                                 (errorString.includes('\\u041d') || // Н
-                                  errorString.includes('\\u043d') || // н
-                                  errorString.includes('\\u043e') || // о
-                                  errorString.includes('\\u0431'));  // б
+      // Проверяем в полном тексте ошибки (message + string + stack)
+      const errorStack = error instanceof Error ? (error.stack || '') : '';
+      const fullErrorText = errorMessage + ' ' + errorString + ' ' + errorStack;
+      
+      // Проверяем на наличие unicode символов кириллицы в экранированном виде
+      const hasCyrillicUnicode = /\\u04[0-9a-fA-F]{2}/.test(fullErrorText);
+      
+      // Если есть "Unexpected token" и любой unicode символ - скорее всего HTML страница
+      const hasUnexpectedTokenWithUnicode = errorMessage.includes('Unexpected token') && 
+                                            (hasCyrillicUnicode || /[А-Яа-яЁё]/.test(fullErrorText));
       
       const isSessionExpired = 
         errorMessage.includes('SESSION_EXPIRED') ||
@@ -561,10 +566,10 @@ export class StarlineScraperService {
         errorMessage.includes('Необходима') ||
         errorMessage.includes('необходима') ||
         errorMessage.includes('authorization') ||
-        (errorMessage.includes('Unexpected token') && (hasCyrillicUnicode || /[А-Яа-яЁё]/.test(errorMessage))) ||
+        hasUnexpectedTokenWithUnicode ||
         // Проверяем на наличие кириллицы в сообщении об ошибке (признак HTML страницы)
         /[А-Яа-яЁё]/.test(errorMessage) ||
-        (errorString.includes('Unexpected token') && /[А-Яа-яЁё]/.test(errorString));
+        /[А-Яа-яЁё]/.test(fullErrorText);
       
       if (isSessionExpired) {
         logger.warn(`StarlineScraperService: Session expired detected (error: ${errorMessage.substring(0, 100)}), re-logging in for device ${deviceId}...`);
