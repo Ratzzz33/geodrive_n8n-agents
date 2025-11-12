@@ -3,7 +3,7 @@
  */
 
 import { Router } from 'express';
-import { linkPayment, linkEvent, getLinksForPayment, getLinksStats } from '../../db/eventLinks';
+import { linkPayment, linkEvent, getLinksForPayment, getLinksStats } from '../../db/eventLinks.js';
 import type { BranchName } from '../../integrations/rentprog';
 
 const router = Router();

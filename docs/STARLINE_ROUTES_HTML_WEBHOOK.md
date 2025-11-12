@@ -19,7 +19,8 @@ POST https://webhook.rentflow.rentals/webhook/starline-routes-html
 {
   "deviceId": 123456,
   "dateFrom": "2025-11-01",
-  "dateTo": "2025-11-11"
+  "dateTo": "2025-11-11",
+  "callbackUrl": "https://your-server.com/webhook/starline-result"  // Опционально
 }
 ```
 
@@ -33,19 +34,64 @@ POST https://webhook.rentflow.rentals/webhook/starline-routes-html
 - `deviceId` (number, обязательный) - ID устройства Starline
 - `dateFrom` (string, обязательный) - Дата начала периода в формате `YYYY-MM-DD`
 - `dateTo` (string, обязательный) - Дата конца периода в формате `YYYY-MM-DD`
+- `callbackUrl` (string, опциональный) - URL для отправки результата (POST запрос с отчетом)
 
 ### Ответ
 
-**Успешный ответ:**
-- Content-Type: `application/octet-stream` или `text/html`
-- Тело: HTML файл с маршрутами
-- Имя файла: `starline-routes-{deviceId}-{dateFrom}-{dateTo}.html`
+**Успешный ответ (синхронный):**
+```json
+{
+  "ok": true,
+  "url": "https://transfer.sh/starline-routes-123456-2025-11-01-2025-11-11.html",
+  "fileName": "starline-routes-123456-2025-11-01-2025-11-11.html",
+  "deviceId": 123456,
+  "dateFrom": "2025-11-01",
+  "dateTo": "2025-11-11",
+  "fileSizeFormatted": "2.5 MB",
+  "durationFormatted": "45.23 сек",
+  "note": "Файл доступен 7 дней",
+  "callbackSent": true
+}
+```
+
+**Успешный ответ (на callback URL, если указан):**
+```json
+{
+  "ok": true,
+  "timestamp": "2025-11-12T15:30:00.000Z",
+  "deviceId": 123456,
+  "dateFrom": "2025-11-01",
+  "dateTo": "2025-11-11",
+  "url": "https://transfer.sh/starline-routes-123456-2025-11-01-2025-11-11.html",
+  "fileName": "starline-routes-123456-2025-11-01-2025-11-11.html",
+  "fileSize": 2621440,
+  "fileSizeFormatted": "2.5 MB",
+  "duration": 45230,
+  "durationFormatted": "45.23 сек",
+  "note": "Файл доступен 7 дней",
+  "steps": [
+    {
+      "step": "Получение HTML страницы",
+      "status": "success",
+      "duration": "~27138 мс"
+    },
+    {
+      "step": "Загрузка на transfer.sh",
+      "status": "success",
+      "duration": "~18092 мс"
+    }
+  ]
+}
+```
 
 **Ошибка:**
 ```json
 {
   "ok": false,
-  "error": "Error message"
+  "error": "Error message",
+  "deviceId": 123456,
+  "dateFrom": "2025-11-01",
+  "dateTo": "2025-11-11"
 }
 ```
 
@@ -53,13 +99,17 @@ POST https://webhook.rentflow.rentals/webhook/starline-routes-html
 
 ### Workflow структура
 
-1. **Webhook** - Принимает POST запрос с параметрами
-2. **Get Routes HTML** - HTTP Request к API `/starline/routes-html`
+1. **Webhook** - Принимает POST запрос с параметрами (`deviceId`, `dateFrom`, `dateTo`, `callbackUrl`)
+2. **Get Routes HTML** - HTTP Request к API `/starline/routes-html` для получения HTML страницы
 3. **Check Success** - Проверяет успешность запроса
-4. **Prepare File Data** - Конвертирует HTML в binary формат
-5. **Save HTML File** - Сохраняет HTML во временный файл
-6. **Respond to Webhook** - Отправляет файл как ответ
-7. **Delete File** - Удаляет временный файл после отправки
+4. **Prepare File Data** - Конвертирует HTML в binary формат, сохраняет размер файла и время начала
+5. **Upload to transfer.sh** - Загружает HTML файл на бесплатный хостинг transfer.sh
+6. **Check Upload Success** - Проверяет успешность загрузки
+7. **Prepare Report** - Формирует подробный отчет о проделанной работе (размер файла, время выполнения, шаги)
+8. **Check Callback URL** - Проверяет наличие callback URL
+9. **Send Callback** - Отправляет результат на callback URL (если указан)
+10. **Respond to Webhook** - Отправляет синхронный ответ на вебхук
+11. **Prepare Error Report** / **Send Error Callback** - Обработка ошибок с отправкой на callback (если указан)
 
 ### API Endpoint
 
@@ -82,14 +132,24 @@ POST https://webhook.rentflow.rentals/webhook/starline-routes-html
 ### cURL
 
 ```bash
+# Базовый запрос
 curl -X POST https://webhook.rentflow.rentals/webhook/starline-routes-html \
   -H "Content-Type: application/json" \
   -d '{
     "deviceId": 123456,
     "dateFrom": "2025-11-01",
     "dateTo": "2025-11-11"
-  }' \
-  --output routes.html
+  }'
+
+# С callback URL (результат будет отправлен на указанный адрес)
+curl -X POST https://webhook.rentflow.rentals/webhook/starline-routes-html \
+  -H "Content-Type: application/json" \
+  -d '{
+    "deviceId": 123456,
+    "dateFrom": "2025-11-01",
+    "dateTo": "2025-11-11",
+    "callbackUrl": "https://your-server.com/webhook/starline-result"
+  }'
 ```
 
 ### JavaScript/Node.js
@@ -142,12 +202,43 @@ else:
     print('Error:', response.json())
 ```
 
+## Callback URL
+
+Если указан `callbackUrl`, workflow отправит результат на указанный адрес **POST запросом** с полным отчетом:
+
+- ✅ **Успешный результат**: содержит URL файла, размер, время выполнения, шаги
+- ❌ **Ошибка**: содержит описание ошибки и детали
+
+**Преимущества callback:**
+- Асинхронная обработка (не нужно ждать ответа)
+- Подробный отчет о работе
+- Автоматическая отправка результата на ваш сервер
+
+**Пример обработки callback на вашем сервере:**
+```javascript
+app.post('/webhook/starline-result', async (req, res) => {
+  const { ok, url, fileName, fileSizeFormatted, durationFormatted, steps } = req.body;
+  
+  if (ok) {
+    console.log(`✅ Файл готов: ${url}`);
+    console.log(`📊 Размер: ${fileSizeFormatted}, Время: ${durationFormatted}`);
+    // Обработка успешного результата
+  } else {
+    console.error(`❌ Ошибка: ${req.body.error}`);
+    // Обработка ошибки
+  }
+  
+  res.json({ received: true });
+});
+```
+
 ## Ограничения
 
 - Таймаут запроса: 120 секунд (2 минуты)
 - Максимальный размер HTML: ограничен памятью n8n
-- Временные файлы автоматически удаляются после отправки
+- Файлы хранятся на transfer.sh 7 дней
 - Одновременные запросы обрабатываются последовательно (ограничение Playwright)
+- Callback URL должен быть доступен из интернета
 
 ## Troubleshooting
 
