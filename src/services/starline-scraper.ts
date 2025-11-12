@@ -306,6 +306,82 @@ export class StarlineScraperService {
   }
 
   /**
+   * Установка куки из реального браузера (MCP Chrome) для обхода защиты от DDoS
+   * Эти куки помогают имитировать реальный браузер
+   */
+  private async setCookiesFromRealBrowser(): Promise<void> {
+    if (!this.context) {
+      throw new Error('Context not initialized');
+    }
+
+    logger.info('StarlineScraperService: Setting cookies from real browser (MCP Chrome)...');
+
+    // Куки из реального браузера (MCP Chrome)
+    // Эти куки помогают обойти защиту от DDoS
+    const realBrowserCookies = [
+      {
+        name: 'map',
+        value: 'yandex%23map',
+        domain: '.starline-online.ru',
+        path: '/',
+        secure: true,
+        httpOnly: false,
+        sameSite: 'Lax' as const,
+      },
+      {
+        name: '_ym_uid',
+        value: `${Date.now()}${Math.floor(Math.random() * 1000)}`,
+        domain: '.starline-online.ru',
+        path: '/',
+        secure: true,
+        httpOnly: false,
+        sameSite: 'Lax' as const,
+      },
+      {
+        name: '_ym_d',
+        value: String(Math.floor(Date.now() / 1000)),
+        domain: '.starline-online.ru',
+        path: '/',
+        secure: true,
+        httpOnly: false,
+        sameSite: 'Lax' as const,
+      },
+      {
+        name: '_ym_isad',
+        value: '1',
+        domain: '.starline-online.ru',
+        path: '/',
+        secure: true,
+        httpOnly: false,
+        sameSite: 'Lax' as const,
+      },
+      {
+        name: 'userAgentId',
+        value: `${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`,
+        domain: '.starline-online.ru',
+        path: '/',
+        secure: true,
+        httpOnly: false,
+        sameSite: 'Lax' as const,
+      },
+      {
+        name: 'lang',
+        value: 'ru',
+        domain: '.starline-online.ru',
+        path: '/',
+        secure: true,
+        httpOnly: false,
+        sameSite: 'Lax' as const,
+      },
+    ];
+
+    // Устанавливаем куки через Playwright API
+    await this.context.addCookies(realBrowserCookies);
+    
+    logger.info(`StarlineScraperService: ✅ Set ${realBrowserCookies.length} cookies from real browser`);
+  }
+
+  /**
    * Проверка здоровья браузера
    */
   async isHealthy(): Promise<boolean> {
