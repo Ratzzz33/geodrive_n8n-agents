@@ -7,7 +7,8 @@ module.exports = {
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
-        PORT: 3000
+        PORT: 3000,
+        DISPLAY: ':99'  // Виртуальный X сервер для Playwright non-headless
       },
       error_file: './logs/jarvis-api-error.log',
       out_file: './logs/jarvis-api-out.log',
