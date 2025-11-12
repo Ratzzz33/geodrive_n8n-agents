@@ -164,7 +164,7 @@ export class StarlineScraperService {
       const realUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
       const viewport = { width: 1920, height: 1080 };
       
-      logger.info(`StarlineScraperService: Using REAL User-Agent with SOCKS5 proxy`);
+      logger.info(`StarlineScraperService: Using REAL User-Agent with HTTP proxy`);
       logger.info(`StarlineScraperService: UA: ${realUserAgent.substring(0, 60)}...`);
       logger.info(`StarlineScraperService: Viewport: ${viewport.width}x${viewport.height}`);
 
@@ -184,7 +184,8 @@ export class StarlineScraperService {
       });
 
       // Создаем ВРЕМЕННЫЙ контекст с HTTP прокси для логина (обход DDoS защиты)
-      logger.info('StarlineScraperService: 🔐 Creating temporary context with proxy for login...');
+      logger.info('StarlineScraperService: 🔐 Creating temporary context with HTTP proxy for login...');
+      logger.info('StarlineScraperService: 🔐 Proxy server: http://j4mqjbmxfz.cn.fxdx.in:16285');
       this.contextWithProxy = await this.browser.newContext({
         // HTTP прокси для обхода блокировок (Playwright поддерживает HTTP с авторизацией)
         proxy: {
@@ -337,8 +338,10 @@ export class StarlineScraperService {
 
     logger.info('StarlineScraperService: Logging in...');
 
-    // Переходим на главную
-    await this.page.goto(this.LOGIN_URL, { waitUntil: 'load', timeout: 15000 });
+    // Переходим на страницу логина (увеличенный таймаут для прокси - 60 секунд)
+    logger.info(`StarlineScraperService: Navigating to ${this.LOGIN_URL} via proxy...`);
+    await this.page.goto(this.LOGIN_URL, { waitUntil: 'load', timeout: 60000 });
+    logger.info('StarlineScraperService: ✅ Page loaded');
 
     // Очищаем localStorage и sessionStorage после загрузки страницы
     try {
@@ -356,17 +359,19 @@ export class StarlineScraperService {
 
     // Кликаем на кнопку "Вход"
     await this.page.click('a[href="#login"]');
-    await this.page.waitForSelector('input[type="text"]', { timeout: 5000 });
+    await this.page.waitForSelector('input[type="text"]', { timeout: 30000 });
 
     // Вводим логин и пароль
     await this.page.fill('input[type="text"]', this.username);
     await this.page.fill('input[type="password"]', this.password);
 
-    // Кликаем "Войти" и ждем навигации
+    // Кликаем "Войти" и ждем навигации (увеличенный таймаут для прокси - 60 секунд)
+    logger.info('StarlineScraperService: Clicking submit button and waiting for navigation...');
     await Promise.all([
       this.page.click('button[type="submit"]'),
-      this.page.waitForNavigation({ waitUntil: 'load', timeout: 15000 }),
+      this.page.waitForNavigation({ waitUntil: 'load', timeout: 60000 }),
     ]);
+    logger.info('StarlineScraperService: ✅ Navigation completed');
 
     // Дополнительно ждем пару секунд чтобы страница стабилизировалась
     await this.page.waitForTimeout(2000);
