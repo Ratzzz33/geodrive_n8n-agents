@@ -19,7 +19,8 @@ try {
       gt.starline_alias,
       c.plate,
       c.car_visual_name,
-      c.model
+      c.model,
+      c.avatar_url
     FROM gps_tracking gt
     JOIN cars c ON c.id = gt.car_id
     WHERE gt.starline_device_id IS NOT NULL
@@ -67,10 +68,11 @@ try {
           alias = ${mapping.starline_alias}, -- ОБНОВЛЯЕМ alias из актуальных данных парсинга
           extracted_model = ${mapping.model}, -- ЗАПОЛНЯЕМ extracted_model из cars.model
           plate = ${mapping.plate}, -- ЗАПОЛНЯЕМ plate из cars.plate для удобного поиска
+          avatar_url = ${mapping.avatar_url}, -- ЗАПОЛНЯЕМ avatar_url из cars.avatar_url
           last_seen = NOW(),
           updated_at = NOW()
         WHERE device_id = ${mapping.device_id}
-        RETURNING id, device_id, alias, extracted_model, plate, car_id, matched
+        RETURNING id, device_id, alias, extracted_model, plate, avatar_url, car_id, matched
       `;
 
       if (result.length > 0) {

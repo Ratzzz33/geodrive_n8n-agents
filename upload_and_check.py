@@ -6,7 +6,7 @@ SERVER_USER = 'root'
 SERVER_PASSWORD = 'WNHeg7U7aiKw'
 
 # Read local file
-with open('test_direct_insert.mjs', 'r', encoding='utf-8') as f:
+with open('check_avatar_ob700ob.mjs', 'r', encoding='utf-8') as f:
     script_content = f.read()
 
 # Connect and upload
@@ -15,14 +15,14 @@ ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.connect(SERVER_HOST, username=SERVER_USER, password=SERVER_PASSWORD)
 
 sftp = ssh.open_sftp()
-with sftp.open('/root/geodrive_n8n-agents/test_direct_insert.mjs', 'w') as f:
+with sftp.open('/root/geodrive_n8n-agents/check_avatar_ob700ob.mjs', 'w') as f:
     f.write(script_content)
 sftp.close()
 
 print('File uploaded. Running...')
 
 # Execute
-stdin, stdout, stderr = ssh.exec_command('cd /root/geodrive_n8n-agents && node test_direct_insert.mjs')
+stdin, stdout, stderr = ssh.exec_command('cd /root/geodrive_n8n-agents && node check_avatar_ob700ob.mjs')
 print(stdout.read().decode('utf-8'))
 error = stderr.read().decode('utf-8')
 if error:
