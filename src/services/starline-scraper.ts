@@ -77,6 +77,7 @@ interface StarlineAPIResponse<T> {
  */
 export class StarlineScraperService {
   private browser: Browser | null = null;
+  private context: BrowserContext | null = null;
   private page: Page | null = null;
   private isLoggedIn: boolean = false;
   private isInitializing: boolean = false;
