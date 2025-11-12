@@ -29,8 +29,8 @@ app.use('/conversations', express.static(webPath));
 // Подключаем роутеры
 // import carSearchRouter from './car-search'; // Временно закомментировано
 // import processHistoryRouter from './routes/processHistory.js'; // Временно отключено
-import eventLinksRouter from './routes/eventLinks.js';
-import entityTimelineRouter from './routes/entityTimeline.js';
+// import eventLinksRouter from './routes/eventLinks.js'; // Временно отключено (проблема с импортом)
+// import entityTimelineRouter from './routes/entityTimeline.js'; // Временно отключено (проблема с импортом)
 import syncEmployeeCashRouter from './routes/syncEmployeeCash.js';
 import syncBookingsRouter from './routes/syncBookings.js';
 import umnicoSendRouter from './routes/umnico-send.js';
