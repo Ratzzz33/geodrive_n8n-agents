@@ -182,8 +182,9 @@ export class StarlineScraperService {
         ],
       });
 
-      // Создаем контекст с РЕАЛЬНЫМ профилем браузера и HTTP прокси
-      this.context = await this.browser.newContext({
+      // Создаем ВРЕМЕННЫЙ контекст с HTTP прокси для логина (обход DDoS защиты)
+      logger.info('StarlineScraperService: 🔐 Creating temporary context with proxy for login...');
+      this.contextWithProxy = await this.browser.newContext({
         // HTTP прокси для обхода блокировок (Playwright поддерживает HTTP с авторизацией)
         proxy: {
           server: 'http://j4mqjbmxfz.cn.fxdx.in:16285',
@@ -214,6 +215,9 @@ export class StarlineScraperService {
         // Полностью чистый профиль - новая сессия
         storageState: undefined,
       });
+
+      // Используем контекст с прокси для логина
+      this.context = this.contextWithProxy;
 
       // Переопределяем navigator свойства через CDP для более реалистичного fingerprint
       await this.context.addInitScript(() => {
