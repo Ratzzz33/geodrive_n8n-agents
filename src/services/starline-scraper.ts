@@ -412,6 +412,44 @@ export class StarlineScraperService {
     }
 
     logger.info(`StarlineScraperService: Fetching details for device ${deviceId}...`);
+    
+    // Обертка для перехвата всех ошибок, включая ошибки из page.evaluate()
+    try {
+      return await this._getDeviceDetailsInternal(deviceId);
+    } catch (error) {
+      // Если ошибка содержит "page.evaluate" - это ошибка из evaluate, пробрасываем дальше
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('page.evaluate')) {
+        // Это ошибка из page.evaluate - обрабатываем как истечение сессии
+        logger.warn(`StarlineScraperService: page.evaluate error detected: ${errorMessage.substring(0, 200)}`);
+        const isSessionExpired = errorMessage.includes('Unexpected token') || 
+                                 errorMessage.includes('Необходима') ||
+                                 /[А-Яа-яЁё]/.test(errorMessage) ||
+                                 /\\u04[0-9a-fA-F]{2}/.test(errorMessage);
+        
+        if (isSessionExpired) {
+          logger.warn(`StarlineScraperService: Session expired detected in page.evaluate, restarting browser...`);
+          try {
+            await this.restartBrowser();
+            // Повторяем запрос после перезапуска
+            logger.info(`StarlineScraperService: Retrying fetch for device ${deviceId} after browser restart...`);
+            return await this._getDeviceDetailsInternal(deviceId);
+          } catch (restartError) {
+            logger.error(`StarlineScraperService: Failed to restart browser:`, restartError);
+            throw new Error(`Session expired and browser restart failed: ${errorMessage.substring(0, 200)}`);
+          }
+        }
+      }
+      throw error;
+    }
+  }
+
+  private async _getDeviceDetailsInternal(deviceId: number): Promise<StarlineDeviceDetails> {
+    await this.ensureHealthy();
+
+    if (!this.page) {
+      throw new Error('Page not initialized');
+    }
 
     try {
       // Проверяем, что страница загружена и доступна
