@@ -167,9 +167,10 @@ export class StarlineScraperService {
       logger.info(`StarlineScraperService: UA: ${realUserAgent.substring(0, 60)}...`);
       logger.info(`StarlineScraperService: Viewport: ${viewport.width}x${viewport.height}`);
 
-      // Запускаем браузер с проксі SOCKS5
+      // Запускаем браузер в НЕ headless режиме для обхода DDoS защиты
+      // На сервере используется Xvfb для виртуального X сервера
       this.browser = await chromium.launch({
-        headless: true,
+        headless: false,  // ⚠️ Не headless - обходит защиту Starline!
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
