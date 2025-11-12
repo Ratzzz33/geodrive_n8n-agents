@@ -249,6 +249,11 @@ export class StarlineScraperService {
 
       // Логинимся
       await this.login();
+      
+      // После успешного логина устанавливаем куки из реального браузера (MCP Chrome)
+      // Это помогает обойти защиту от DDoS, имитируя реальный браузер
+      await this.setCookiesFromRealBrowser();
+      
       this.isLoggedIn = true;
       this.isInitializing = false;
 
