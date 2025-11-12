@@ -260,6 +260,20 @@ export class StarlineScraperService {
     // Переходим на главную
     await this.page.goto(this.LOGIN_URL, { waitUntil: 'load', timeout: 15000 });
 
+    // Очищаем localStorage и sessionStorage после загрузки страницы
+    try {
+      await this.page.evaluate(() => {
+        // Очищаем localStorage
+        localStorage.clear();
+        // Очищаем sessionStorage
+        sessionStorage.clear();
+      });
+      logger.info('StarlineScraperService: ✅ localStorage and sessionStorage cleared');
+    } catch (error) {
+      // Игнорируем ошибки очистки (может быть заблокировано политикой безопасности)
+      logger.warn('StarlineScraperService: Could not clear localStorage/sessionStorage (may be blocked by security policy)');
+    }
+
     // Кликаем на кнопку "Вход"
     await this.page.click('a[href="#login"]');
     await this.page.waitForSelector('input[type="text"]', { timeout: 5000 });
