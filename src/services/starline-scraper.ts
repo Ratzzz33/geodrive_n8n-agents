@@ -419,15 +419,29 @@ export class StarlineScraperService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorString = String(error);
+      const errorStack = error instanceof Error ? (error.stack || '') : '';
+      const fullErrorText = errorMessage + ' ' + errorString + ' ' + errorStack;
       
       // Логируем ВСЕ ошибки для диагностики
-      logger.warn(`StarlineScraperService: Error caught in getDeviceDetails for device ${deviceId}: ${errorMessage.substring(0, 200)}`);
-      logger.warn(`StarlineScraperService: Full error string: ${errorString.substring(0, 300)}`);
+      logger.warn(`StarlineScraperService: Error caught in getDeviceDetails for device ${deviceId}`);
+      logger.warn(`StarlineScraperService: Error message: ${errorMessage.substring(0, 200)}`);
+      logger.warn(`StarlineScraperService: Error string: ${errorString.substring(0, 300)}`);
+      logger.warn(`StarlineScraperService: Full error text: ${fullErrorText.substring(0, 500)}`);
+      
+      // Проверяем на наличие "page.evaluate" и "Unexpected token" в любом виде
+      const hasPageEvaluate = fullErrorText.includes('page.evaluate') || 
+                             fullErrorText.includes('page.evaluate') ||
+                             errorMessage.includes('page.evaluate');
+      const hasUnexpectedToken = fullErrorText.includes('Unexpected token') ||
+                                 errorMessage.includes('Unexpected token');
+      const hasCyrillic = /[А-Яа-яЁё]/.test(fullErrorText) || 
+                         /\\u04[0-9a-fA-F]{2}/.test(fullErrorText);
+      
+      logger.warn(`StarlineScraperService: hasPageEvaluate=${hasPageEvaluate}, hasUnexpectedToken=${hasUnexpectedToken}, hasCyrillic=${hasCyrillic}`);
       
       // Если ошибка содержит "page.evaluate" и "Unexpected token" - это истекшая сессия
-      if ((errorMessage.includes('page.evaluate') || errorString.includes('page.evaluate')) && 
-          (errorMessage.includes('Unexpected token') || errorString.includes('Unexpected token'))) {
-        logger.warn(`StarlineScraperService: page.evaluate error with Unexpected token detected, restarting browser...`);
+      if (hasPageEvaluate && (hasUnexpectedToken || hasCyrillic)) {
+        logger.warn(`StarlineScraperService: Session expired detected, restarting browser...`);
         
         try {
           await this.restartBrowser();
