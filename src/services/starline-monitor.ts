@@ -156,6 +156,16 @@ export class StarlineMonitorService {
       }
     }
 
+    // Проверяем, какие устройства из starline_devices не найдены в списке от Starline
+    const deviceIdsFromStarline = new Set(devices.map(d => d.device_id));
+    const missingDevices = deviceMappings.filter(m => !deviceIdsFromStarline.has(m.device_id));
+    if (missingDevices.length > 0) {
+      console.log(`⚠️ ВНИМАНИЕ: ${missingDevices.length} устройств из starline_devices не найдены в списке от Starline:`);
+      for (const missing of missingDevices) {
+        console.log(`   - Device ID: ${missing.device_id}, Alias: ${missing.alias}, Plate: ${missing.plate}`);
+      }
+    }
+
     console.log(`✅ Всего сопоставлено: ${matches.length} из ${devices.length}`);
     return matches;
   }
@@ -363,8 +373,8 @@ export class StarlineMonitorService {
         ${gpsUpdate.gpsLevel}, ${gpsUpdate.gsmLevel}, ${gpsUpdate.ignitionOn}, ${gpsUpdate.engineRunning}, ${gpsUpdate.parkingBrake},
         ${gpsUpdate.batteryVoltage}, ${gpsUpdate.lastActivity.toISOString()}, NOW()
       )
-      ON CONFLICT (car_id) DO UPDATE SET
-        starline_device_id = EXCLUDED.starline_device_id,
+      ON CONFLICT (starline_device_id) DO UPDATE SET
+        car_id = EXCLUDED.car_id,
         starline_alias = EXCLUDED.starline_alias,
         current_lat = EXCLUDED.current_lat,
         current_lng = EXCLUDED.current_lng,
