@@ -167,10 +167,10 @@ export class StarlineScraperService {
       logger.info(`StarlineScraperService: UA: ${realUserAgent.substring(0, 60)}...`);
       logger.info(`StarlineScraperService: Viewport: ${viewport.width}x${viewport.height}`);
 
-      // Запускаем браузер в НЕ headless режиме для обхода DDoS защиты
-      // На сервере используется Xvfb для виртуального X сервера
+      // Запускаем браузер в headless режиме
+      // HTTP прокси + реальный User-Agent достаточно для обхода защиты Starline
       this.browser = await chromium.launch({
-        headless: false,  // ⚠️ Не headless - обходит защиту Starline!
+        headless: true,  // ✅ Headless режим + прокси + реальный UA = работает!
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
