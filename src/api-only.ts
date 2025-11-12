@@ -71,6 +71,8 @@ async function main(): Promise<void> {
     logger.info('   POST /process-webhook');
     logger.info('   POST /update-entity');
     logger.info('   POST /process-event');
+    logger.info('   POST /starline/update-gps');
+    logger.info('   POST /starline/routes-html');
   } catch (error) {
     logger.error('❌ Failed to start:', error);
     process.exit(1);
