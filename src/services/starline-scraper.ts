@@ -676,6 +676,14 @@ export class StarlineScraperService {
 
     logger.info('StarlineScraperService: Fetching devices list...');
 
+    // Убеждаемся что мы на странице map перед fetch (важно для относительных URL)
+    const currentUrl = this.page.url();
+    if (!currentUrl.includes('/site/map')) {
+      logger.info('StarlineScraperService: Navigating to map page before fetching devices...');
+      await this.page.goto(`${this.BASE_URL}/site/map`, { waitUntil: 'networkidle', timeout: 30000 });
+      await this.page.waitForTimeout(1000); // Даем время странице стабилизироваться
+    }
+
     try {
       const response = await this.page.evaluate(async () => {
         const res = await fetch('/device?tz=240&_=' + Date.now(), {
