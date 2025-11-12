@@ -316,6 +316,21 @@ export class StarlineScraperService {
       this.page = await this.context.newPage();
       logger.info('StarlineScraperService: ✅ New page created in fast context (no proxy)');
       
+      // Переходим на страницу map чтобы убедиться что сессия работает без прокси
+      logger.info('StarlineScraperService: 🔄 Navigating to map page without proxy to verify session...');
+      await this.page.goto(`${this.BASE_URL}/site/map`, { waitUntil: 'networkidle', timeout: 30000 });
+      
+      // Проверяем что мы залогинены (без прокси)
+      const isLoggedInCheck = await this.page.evaluate(() => {
+        return !document.querySelector('a[href="#login"]') && window.location.pathname.includes('/site/map');
+      });
+      
+      if (!isLoggedInCheck) {
+        throw new Error('Session verification failed: not logged in after switching to no-proxy context');
+      }
+      
+      logger.info('StarlineScraperService: ✅ Session verified - logged in without proxy');
+      
       this.isLoggedIn = true;
       this.isInitializing = false;
 
