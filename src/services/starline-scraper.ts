@@ -78,6 +78,7 @@ interface StarlineAPIResponse<T> {
 export class StarlineScraperService {
   private browser: Browser | null = null;
   private context: BrowserContext | null = null;
+  private contextWithProxy: BrowserContext | null = null;  // Временный контекст с прокси для логина
   private page: Page | null = null;
   private isLoggedIn: boolean = false;
   private isInitializing: boolean = false;
