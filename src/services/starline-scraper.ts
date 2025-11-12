@@ -553,12 +553,16 @@ export class StarlineScraperService {
       const fullErrorText = errorMessage + ' ' + errorString + ' ' + errorStack;
       
       // Проверяем на наличие unicode символов кириллицы в экранированном виде
+      // Паттерн для кириллицы в unicode: \u04xx (где xx - hex код символа)
       const hasCyrillicUnicode = /\\u04[0-9a-fA-F]{2}/.test(fullErrorText);
       
-      // Если есть "Unexpected token" и любой unicode символ - скорее всего HTML страница
-      const hasUnexpectedTokenWithUnicode = errorMessage.includes('Unexpected token') && 
-                                            (hasCyrillicUnicode || /[А-Яа-яЁё]/.test(fullErrorText));
+      // Если есть "Unexpected token" - это почти всегда признак HTML страницы вместо JSON
+      // Особенно если есть unicode символы (кириллица в экранированном виде)
+      const hasUnexpectedToken = errorMessage.includes('Unexpected token') || fullErrorText.includes('Unexpected token');
+      const hasUnexpectedTokenWithUnicode = hasUnexpectedToken && hasCyrillicUnicode;
       
+      // УПРОЩЕННАЯ ПРОВЕРКА: если есть "Unexpected token" - считаем сессию истекшей
+      // Это безопасно, т.к. валидный JSON никогда не вызовет "Unexpected token"
       const isSessionExpired = 
         errorMessage.includes('SESSION_EXPIRED') ||
         errorMessage.includes('Expected JSON but got') || 
@@ -566,6 +570,7 @@ export class StarlineScraperService {
         errorMessage.includes('Необходима') ||
         errorMessage.includes('необходима') ||
         errorMessage.includes('authorization') ||
+        hasUnexpectedToken || // УПРОЩЕНО: любая ошибка "Unexpected token" = истекшая сессия
         hasUnexpectedTokenWithUnicode ||
         // Проверяем на наличие кириллицы в сообщении об ошибке (признак HTML страницы)
         /[А-Яа-яЁё]/.test(errorMessage) ||
