@@ -423,6 +423,31 @@ export class StarlineMonitorService {
       );
     }
 
+    // Сохраняем историю скорости (если скорость > 0 или машина в движении)
+    if (gpsUpdate.speed !== null && gpsUpdate.speed !== undefined && (gpsUpdate.speed > 0 || gpsUpdate.isMoving)) {
+      await sqlConnection`
+        INSERT INTO speed_history (
+          car_id, starline_device_id, speed, timestamp,
+          latitude, longitude, ignition_on, engine_running, status, is_moving
+        ) VALUES (
+          ${gpsUpdate.carId}, ${gpsUpdate.starlineDeviceId}, ${gpsUpdate.speed}, ${gpsUpdate.currentTimestamp.toISOString()},
+          ${gpsUpdate.currentLat}, ${gpsUpdate.currentLng}, ${gpsUpdate.ignitionOn}, ${gpsUpdate.engineRunning}, ${gpsUpdate.status}, ${gpsUpdate.isMoving}
+        )
+      `;
+
+      // Проверяем на превышение скорости (125 км/ч)
+      if (gpsUpdate.speed > 125) {
+        await this.checkSpeedViolation(
+          match,
+          gpsUpdate.speed,
+          gpsUpdate.currentLat,
+          gpsUpdate.currentLng,
+          gpsUpdate.googleMapsLink,
+          sqlConnection
+        );
+      }
+    }
+
     details.push({
       plate: match.plate,
       brand: match.brand,
@@ -581,6 +606,74 @@ ${isCritical ? `🚨 **Критическое отклонение:** ниже �
       }
     } catch (error) {
       logger.error(`Failed to check battery voltage anomaly for ${match.plate}:`, error);
+    }
+  }
+
+  /**
+   * Проверка на превышение скорости (125 км/ч)
+   * Отправляет уведомление в Telegram при превышении
+   */
+  private async checkSpeedViolation(
+    match: CarMatch,
+    currentSpeed: number,
+    latitude: number | null,
+    longitude: number | null,
+    googleMapsLink: string,
+    sqlConnection: any
+  ): Promise<void> {
+    try {
+      // Проверяем, не отправляли ли уже уведомление за последние 10 минут (чтобы не спамить)
+      const recentAlert = await sqlConnection`
+        SELECT COUNT(*) as count
+        FROM speed_violations
+        WHERE car_id = ${match.carId}
+          AND created_at >= NOW() - INTERVAL '10 minutes'
+      `;
+
+      if (recentAlert[0]?.count > 0) {
+        return; // Уже отправляли уведомление недавно
+      }
+
+      // Формируем сообщение
+      const locationInfo = latitude && longitude 
+        ? `📍 **Местоположение:** ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\n🗺️ **Карта:** ${googleMapsLink}`
+        : '📍 **Местоположение:** Недоступно';
+
+      const message = `🚨 **Превышение скорости**
+
+🚗 **Машина:** ${match.brand} ${match.model} (${match.plate})
+📱 **Устройство:** ${match.starlineAlias}
+
+⚡ **Скорость:** ${currentSpeed.toFixed(0)} км/ч
+🚫 **Лимит:** 125 км/ч
+📊 **Превышение:** ${(currentSpeed - 125).toFixed(0)} км/ч
+
+${locationInfo}
+
+🕐 **Время:** ${new Date().toISOString()}
+
+⚠️ **Требуется:** Проверить обстоятельства превышения скорости`;
+
+      await sendTelegramAlert(message);
+      logger.warn(`Speed violation detected for ${match.plate}: ${currentSpeed.toFixed(0)} km/h (limit: 125 km/h)`);
+
+      // Сохраняем запись о нарушении (если таблица существует)
+      try {
+        await sqlConnection`
+          INSERT INTO speed_violations (
+            car_id, starline_device_id, speed, speed_limit,
+            latitude, longitude, google_maps_link, created_at
+          ) VALUES (
+            ${match.carId}, ${match.starlineDeviceId}, ${currentSpeed}, 125,
+            ${latitude}, ${longitude}, ${googleMapsLink}, NOW()
+          )
+        `;
+      } catch (violationTableError) {
+        // Таблица может не существовать, это не критично
+        logger.debug('speed_violations table does not exist, skipping violation log');
+      }
+    } catch (error) {
+      logger.error(`Failed to check speed violation for ${match.plate}:`, error);
     }
   }
 

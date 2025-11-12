@@ -1,4 +1,4 @@
-# Мониторинг вольтажа батареи
+# Мониторинг вольтажа батареи и скорости
 
 **Дата создания:** 2025-11-12  
 **Статус:** ✅ Реализовано
@@ -7,7 +7,11 @@
 
 ## 🎯 Назначение
 
-Система автоматического мониторинга вольтажа батареи для контроля нестандартного падения по сравнению с другими авто. При обнаружении аномалии отправляются уведомления сотрудникам компании.
+Система автоматического мониторинга:
+- **Вольтажа батареи** — контроль нестандартного падения по сравнению с другими авто
+- **Скорости** — контроль превышения лимита (125 км/ч) и сохранение истории
+
+При обнаружении аномалий отправляются уведомления сотрудникам компании.
 
 ---
 
@@ -220,6 +224,8 @@ const criticalMultiplier = 2;
 cd /root/geodrive_n8n-agents
 psql $DATABASE_URL -f setup/migrations/0018_create_battery_voltage_history.sql
 psql $DATABASE_URL -f setup/migrations/0019_create_battery_voltage_alerts.sql
+psql $DATABASE_URL -f setup/migrations/0020_create_speed_history.sql
+psql $DATABASE_URL -f setup/migrations/0021_create_speed_violations.sql
 ```
 
 Или через Node.js:
@@ -345,16 +351,21 @@ Battery voltage anomaly detected for OC700OC: 11.8V (avg: 12.5V, deviation: -0.7
 
 ## 📚 Связанные файлы
 
-- **Код:** `src/services/starline-monitor.ts` (метод `checkBatteryVoltageAnomaly`)
+- **Код:** 
+  - `src/services/starline-monitor.ts` (методы `checkBatteryVoltageAnomaly`, `checkSpeedViolation`)
 - **Миграции:**
   - `setup/migrations/0018_create_battery_voltage_history.sql`
   - `setup/migrations/0019_create_battery_voltage_alerts.sql`
+  - `setup/migrations/0020_create_speed_history.sql`
+  - `setup/migrations/0021_create_speed_violations.sql`
 - **Интеграция:** `src/integrations/n8n.ts` (метод `sendTelegramAlert`)
-- **n8n Workflow:** `n8n-workflows/battery-voltage-alerts.json`
+- **n8n Workflow:** `n8n-workflows/battery-voltage-alerts.json` (используется для всех алертов)
 - **Конфигурация:** `.env` (переменная `N8N_ALERTS_URL`)
+- **Документация:** 
+  - [SPEED_MONITORING.md](./SPEED_MONITORING.md) - Документация по мониторингу скорости
 
 ---
 
 **Дата создания:** 2025-11-12  
-**Версия:** 1.0
+**Версия:** 1.1 (добавлен мониторинг скорости)
 

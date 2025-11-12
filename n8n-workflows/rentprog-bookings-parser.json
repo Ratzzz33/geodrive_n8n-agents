@@ -19,22 +19,39 @@
     },
     {
       "parameters": {
-        "jsCode": "// Создаем массив филиалов для параллельной обработки\nconst branches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];\n\nreturn branches.map(branch => ({\n  json: { branch }\n}));"
+        "jsCode": "return [{ json: { branch: 'tbilisi' } }];"
       },
-      "name": "Prepare Branches",
+      "name": "Tbilisi Pages",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [448, 400]
+      "position": [448, 208]
     },
     {
       "parameters": {
-        "batchSize": 4,
-        "options": {}
+        "jsCode": "return [{ json: { branch: 'batumi' } }];"
       },
-      "name": "Split In Batches",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [640, 400]
+      "name": "Batumi Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [448, 352]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { branch: 'kutaisi' } }];"
+      },
+      "name": "Kutaisi Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [448, 512]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { branch: 'service-center' } }];"
+      },
+      "name": "Service Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [448, 656]
     },
     {
       "parameters": {
@@ -45,12 +62,69 @@
         "jsonBody": "={\"branch\":\"{{ $json.branch }}\"}",
         "options": {
           "timeout": 300000
-        },
+        }
       },
-      "name": "Scrape Bookings",
+      "name": "Get Tbilisi",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [832, 400],
+      "position": [640, 208],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://46.224.17.15:3001/scrape-bookings",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"branch\":\"{{ $json.branch }}\"}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "name": "Get Batumi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 352],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://46.224.17.15:3001/scrape-bookings",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"branch\":\"{{ $json.branch }}\"}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "name": "Get Kutaisi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 512],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://46.224.17.15:3001/scrape-bookings",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"branch\":\"{{ $json.branch }}\"}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "name": "Get Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 656],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -124,9 +198,9 @@
         "jsonBody": "={{ JSON.stringify({ branch: $json.branch, booking_id: $json.booking_id }) }}",
         "options": {
           "timeout": 300000
-        },
-        },
-        "name": "Scrape Details",
+        }
+      },
+      "name": "Scrape Details",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [1792, 300],
@@ -322,36 +396,106 @@
       "main": [
         [
           {
-            "node": "Prepare Branches",
+            "node": "Tbilisi Pages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Batumi Pages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Kutaisi Pages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Service Pages",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Prepare Branches": {
+    "Tbilisi Pages": {
       "main": [
         [
           {
-            "node": "Split In Batches",
+            "node": "Get Tbilisi",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Split In Batches": {
+    "Batumi Pages": {
       "main": [
         [
           {
-            "node": "Scrape Bookings",
+            "node": "Get Batumi",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Scrape Bookings": {
+    "Kutaisi Pages": {
+      "main": [
+        [
+          {
+            "node": "Get Kutaisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Service Pages": {
+      "main": [
+        [
+          {
+            "node": "Get Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tbilisi": {
+      "main": [
+        [
+          {
+            "node": "Process Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Batumi": {
+      "main": [
+        [
+          {
+            "node": "Process Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Kutaisi": {
+      "main": [
+        [
+          {
+            "node": "Process Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Service": {
       "main": [
         [
           {
