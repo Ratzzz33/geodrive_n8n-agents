@@ -594,6 +594,45 @@ export class StarlineScraperService {
       logger.error('StarlineScraperService: Failed to get devices. Response:', response);
       throw new Error('Failed to get Starline devices');
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorString = String(error);
+      const fullErrorText = errorMessage + ' ' + errorString;
+      
+      // Проверяем на истечение сессии (такая же логика как в getDeviceDetails)
+      const hasPageEvaluate = fullErrorText.includes('page.evaluate');
+      const hasUnexpectedToken = fullErrorText.includes('Unexpected token');
+      const hasCyrillic = /[А-Яа-яЁё]/.test(fullErrorText) || /\\u04[0-9a-fA-F]{2}/.test(fullErrorText);
+      
+      if (hasPageEvaluate && (hasUnexpectedToken || hasCyrillic)) {
+        logger.warn('StarlineScraperService: Session expired in getDevices, restarting browser...');
+        
+        try {
+          await this.restartBrowser();
+          logger.info('StarlineScraperService: Retrying getDevices after browser restart...');
+          
+          // Повторяем запрос после перезапуска
+          const response = await this.page!.evaluate(async () => {
+            const res = await fetch('/device?tz=240&_=' + Date.now(), {
+              headers: {
+                'Accept': 'application/json, text/javascript, */*; q=0.01',
+                'X-Requested-With': 'XMLHttpRequest',
+              },
+            });
+            return res.json();
+          }) as StarlineAPIResponse<{ devices: StarlineDeviceOverview[] }>;
+          
+          if (response.result === 1 && response.answer && response.answer.devices) {
+            logger.info(`StarlineScraperService: ✅ Fetched ${response.answer.devices.length} devices after restart`);
+            return response.answer.devices;
+          }
+          
+          throw new Error('Failed to get Starline devices after restart');
+        } catch (restartError) {
+          logger.error('StarlineScraperService: Failed to restart browser in getDevices:', restartError);
+          throw new Error(`Session expired and browser restart failed: ${errorMessage.substring(0, 200)}`);
+        }
+      }
+      
       logger.error('StarlineScraperService: Error fetching devices:', error);
       throw error;
     }
