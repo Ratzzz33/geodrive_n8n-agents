@@ -96,86 +96,63 @@ export class StarlineMonitorService {
 
   /**
    * Сопоставить машины из Starline с таблицей cars
-   * По названию модели и последним 3 цифрам номера
+   * Использует таблицу starline_devices по device_id (центральное место сопоставления)
+   * Alias может меняться и не используется для сопоставления
    */
   async matchCars(): Promise<CarMatch[]> {
-    console.log('🔍 Сопоставление машин Starline с таблицей cars...');
+    console.log('🔍 Сопоставление машин Starline с таблицей cars через starline_devices...');
 
-    // Получаем все устройства из Starline через persistent scraper
+    // Получаем все устройства из Starline через persistent scraper (для актуальных данных)
     const scraper = getStarlineScraper();
     const devices = await scraper.getDevices();
     console.log(`📡 Получено ${devices.length} устройств из Starline`);
 
-    // Получаем все машины из нашей БД
+    // Получаем сопоставления из starline_devices по device_id (центральное место)
     const sqlConnection = getSqlConnection();
-    const cars = await sqlConnection`
+    const deviceMappings = await sqlConnection`
       SELECT 
-        c.id,
+        sd.device_id,
+        sd.alias,
+        sd.car_id,
+        sd.matched,
         c.plate,
         c.car_visual_name as brand,
         c.model
-      FROM cars c
-      WHERE c.plate IS NOT NULL
+      FROM starline_devices sd
+      JOIN cars c ON c.id = sd.car_id
+      WHERE sd.matched = TRUE
+        AND sd.active = TRUE
     ` as Array<{
-      id: string;
+      device_id: number;
+      alias: string;
+      car_id: string;
+      matched: boolean;
       plate: string;
-      brand: string;
+      brand: string | null;
       model: string;
     }>;
 
-    console.log(`🚗 Найдено ${cars.length} машин в БД`);
+    console.log(`🔗 Найдено ${deviceMappings.length} сопоставленных устройств в starline_devices`);
 
     const matches: CarMatch[] = [];
 
-    // Сопоставляем каждое устройство с машиной
+    // Сопоставляем каждое устройство из Starline с сопоставлениями из БД по device_id
     for (const device of devices) {
-      if (!device.alias) continue;
+      // Ищем устройство в starline_devices по device_id (не по alias!)
+      const mapping = deviceMappings.find(m => m.device_id === device.device_id);
 
-      const { model: starlineModel, digits: starlineDigits } = this.extractModelFromAlias(device.alias);
-      
-      if (!starlineDigits) {
-        console.log(`⚠️ Не удалось извлечь 3 цифры из "${device.alias}"`);
-        continue;
-      }
-
-      // Ищем совпадение в таблице cars
-      let matchedCar = cars.find(car => {
-        const carDigits = this.extractLast3Digits(car.plate);
-        if (!carDigits || carDigits !== starlineDigits) return false;
-
-        // Проверяем совпадение модели (частичное)
-        // Обрабатываем null для brand (car_visual_name может быть null)
-        const carModel = car.brand 
-          ? `${car.brand} ${car.model}`.toLowerCase() 
-          : car.model.toLowerCase();
-        const starlineModelLower = starlineModel.toLowerCase();
-
-        return carModel.includes(starlineModelLower) || starlineModelLower.includes(carModel);
-      });
-
-      // Если не нашли по модели, пробуем найти только по цифрам (fallback)
-      if (!matchedCar) {
-        matchedCar = cars.find(car => {
-          const carDigits = this.extractLast3Digits(car.plate);
-          return carDigits === starlineDigits;
-        });
-        if (matchedCar) {
-          console.log(`⚠️ Fallback сопоставление по цифрам: ${device.alias} -> ${matchedCar.brand || ''} ${matchedCar.model} (${matchedCar.plate})`);
-        }
-      }
-
-      if (matchedCar) {
+      if (mapping && mapping.matched && mapping.car_id) {
         matches.push({
-          carId: matchedCar.id,
-          plate: matchedCar.plate,
-          brand: matchedCar.brand,
-          model: matchedCar.model,
-          starlineDeviceId: device.device_id,
-          starlineAlias: device.alias
+          carId: mapping.car_id,
+          plate: mapping.plate,
+          brand: mapping.brand || '',
+          model: mapping.model,
+          starlineDeviceId: device.device_id, // Используем device_id (неизменяемый)
+          starlineAlias: device.alias // Только для отображения (может меняться)
         });
-        console.log(`✅ Сопоставлено: ${device.alias} -> ${matchedCar.brand} ${matchedCar.model} (${matchedCar.plate})`);
+        console.log(`✅ Сопоставлено по device_id: ${device.device_id} (${device.alias}) -> ${mapping.brand || ''} ${mapping.model} (${mapping.plate})`);
       } else {
-        console.log(`❌ Не найдено совпадение для: ${device.alias} (${starlineDigits})`);
+        console.log(`⚠️ Устройство ${device.device_id} (${device.alias}) не сопоставлено в starline_devices`);
       }
     }
 
