@@ -438,12 +438,36 @@ export class StarlineScraperService {
             clearTimeout(timeoutId);
             
             if (!res.ok) {
-              throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+              // Пытаемся получить текст ошибки
+              const errorText = await res.text().catch(() => res.statusText);
+              throw new Error(`HTTP ${res.status}: ${errorText.substring(0, 200)}`);
             }
-            return res.json();
+            
+            // Проверяем Content-Type перед парсингом JSON
+            const contentType = res.headers.get('content-type') || '';
+            if (!contentType.includes('application/json') && !contentType.includes('text/javascript')) {
+              const text = await res.text();
+              throw new Error(`Expected JSON but got ${contentType}. Response: ${text.substring(0, 200)}`);
+            }
+            
+            // Пытаемся распарсить JSON
+            try {
+              return await res.json();
+            } catch (jsonError) {
+              // Если не JSON, возвращаем текст ошибки
+              const text = await res.text();
+              throw new Error(`Invalid JSON response: ${text.substring(0, 200)}`);
+            }
           } catch (error) {
             clearTimeout(timeoutId);
-            throw error;
+            // Убеждаемся, что ошибка - это строка или Error объект
+            if (error instanceof Error) {
+              throw error;
+            } else if (typeof error === 'string') {
+              throw new Error(error);
+            } else {
+              throw new Error(`Unknown error: ${JSON.stringify(error)}`);
+            }
           }
         }, deviceId),
         new Promise((_, reject) => 

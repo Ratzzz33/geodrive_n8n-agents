@@ -76,38 +76,84 @@
     },
     {
       "parameters": {
-        "fileName": "={{ $json.fileName }}",
-        "fileContent": "={{ $binary.data.data }}",
-        "options": {}
+        "method": "PUT",
+        "url": "=https://transfer.sh/{{ $json.fileName }}",
+        "sendBody": true,
+        "specifyBody": "raw",
+        "body": "={{ $json.htmlContent }}",
+        "options": {
+          "timeout": 30000,
+          "headers": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html"
+              }
+            ]
+          }
+        },
+        "responseFormat": "text"
       },
-      "id": "save-html-file",
-      "name": "Save HTML File",
-      "type": "n8n-nodes-base.writeBinaryFile",
-      "typeVersion": 1.1,
-      "position": [1040, 200]
+      "id": "upload-to-storage",
+      "name": "Upload to transfer.sh",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1040, 200],
+      "continueOnFail": true
     },
     {
       "parameters": {
-        "respondWith": "file",
-        "responseBody": "={{ $json.fileName }}",
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notExists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
         "options": {}
       },
-      "id": "respond-with-file",
-      "name": "Respond to Webhook",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
+      "id": "check-upload-success",
+      "name": "Check Upload Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
       "position": [1232, 200]
     },
     {
       "parameters": {
-        "jsCode": "// Удаляем временный файл\nconst fs = require('fs');\nconst path = require('path');\n\nconst fileName = $('Save HTML File').item.json.fileName;\nconst filePath = path.join('/tmp', fileName);\n\ntry {\n  if (fs.existsSync(filePath)) {\n    fs.unlinkSync(filePath);\n    console.log(`✅ Файл удален: ${filePath}`);\n  } else {\n    console.log(`⚠️ Файл не найден: ${filePath}`);\n  }\n} catch (error) {\n  console.error(`❌ Ошибка удаления файла: ${error.message}`);\n}\n\nreturn $input.all();"
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"ok\": true,\n  \"url\": ($json.data?.trim() || $json.trim() || $json).replace(/\\s+/g, ''),\n  \"fileName\": $('Prepare File Data').item.json.fileName,\n  \"deviceId\": $('Webhook').item.json.body.deviceId || $('Webhook').item.json.query.deviceId,\n  \"dateFrom\": $('Webhook').item.json.body.dateFrom || $('Webhook').item.json.query.dateFrom,\n  \"dateTo\": $('Webhook').item.json.body.dateTo || $('Webhook').item.json.query.dateTo,\n  \"note\": \"Файл доступен 7 дней\"\n} }}",
+        "options": {}
       },
-      "id": "delete-file",
-      "name": "Delete File",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1424, 200],
-      "continueOnFail": true
+      "id": "respond-with-link",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1424, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"ok\": false,\n  \"error\": \"Failed to upload file to storage\",\n  \"uploadError\": $json.error?.message || $json.error || 'Unknown upload error'\n} }}",
+        "options": {}
+      },
+      "id": "respond-upload-error",
+      "name": "Respond Upload Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1232, 400]
     },
     {
       "parameters": {
@@ -120,17 +166,6 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [848, 400]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Удаляем временный файл при ошибке\nconst fs = require('fs');\nconst path = require('path');\n\nconst fileName = $('Save HTML File').item?.json?.fileName || \n  'starline-routes-' + \n  ($('Webhook').item.json.body.deviceId || $('Webhook').item.json.query.deviceId) + \n  '-' + \n  ($('Webhook').item.json.body.dateFrom || $('Webhook').item.json.query.dateFrom) + \n  '-' + \n  ($('Webhook').item.json.body.dateTo || $('Webhook').item.json.query.dateTo) + \n  '.html';\nconst filePath = path.join('/tmp', fileName);\n\ntry {\n  if (fs.existsSync(filePath)) {\n    fs.unlinkSync(filePath);\n    console.log(`✅ Файл удален: ${filePath}`);\n  } else {\n    console.log(`⚠️ Файл не найден: ${filePath}`);\n  }\n} catch (error) {\n  console.error(`❌ Ошибка удаления файла: ${error.message}`);\n}\n\nreturn $input.all();"
-      },
-      "id": "delete-file-on-error",
-      "name": "Delete File On Error",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1040, 400],
-      "continueOnFail": true
     }
   ],
   "connections": {
@@ -147,21 +182,24 @@
       ]
     },
     "Prepare File Data": {
-      "main": [[{"node": "Save HTML File", "type": "main", "index": 0}]]
+      "main": [[{"node": "Upload to transfer.sh", "type": "main", "index": 0}]]
     },
-    "Save HTML File": {
-      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    "Upload to transfer.sh": {
+      "main": [[{"node": "Check Upload Success", "type": "main", "index": 0}]]
+    },
+    "Check Upload Success": {
+      "main": [
+        [{"node": "Respond to Webhook", "type": "main", "index": 0}],
+        [{"node": "Respond Upload Error", "type": "main", "index": 0}]
+      ]
     },
     "Respond to Webhook": {
-      "main": [[{"node": "Delete File", "type": "main", "index": 0}]]
+      "main": []
     },
-    "Delete File": {
+    "Respond Upload Error": {
       "main": []
     },
     "Respond Error": {
-      "main": [[{"node": "Delete File On Error", "type": "main", "index": 0}]]
-    },
-    "Delete File On Error": {
       "main": []
     }
   },
