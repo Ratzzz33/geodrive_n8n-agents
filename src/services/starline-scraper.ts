@@ -794,22 +794,35 @@ export class StarlineScraperService {
   /**
    * Перезапуск браузера (закрыть и открыть заново)
    * Используется при истечении сессии
+   * 
+   * Это проще и надежнее, чем попытки перелогина - новая сессия гарантированно работает
    */
   private async restartBrowser(): Promise<void> {
-    logger.info('StarlineScraperService: Restarting browser...');
+    logger.info('StarlineScraperService: 🔄 Restarting browser (session expired)...');
+    
+    // Сбрасываем флаг инициализации, чтобы разрешить повторную инициализацию
+    this.isInitializing = false;
     
     // Закрываем текущий браузер
+    if (this.page) {
+      try {
+        await this.page.close().catch(() => {});
+      } catch (error) {
+        logger.warn('StarlineScraperService: Error closing page during restart:', error);
+      }
+      this.page = null;
+    }
+    
     if (this.browser) {
       try {
-        await this.browser.close();
+        await this.browser.close().catch(() => {});
       } catch (error) {
         logger.warn('StarlineScraperService: Error closing browser during restart:', error);
       }
+      this.browser = null;
     }
     
     // Сбрасываем состояние
-    this.browser = null;
-    this.page = null;
     this.isLoggedIn = false;
     
     // Инициализируем заново (откроет браузер и залогинится)
