@@ -19,7 +19,7 @@ import {
   type CarInsert,
   type BookingInsert,
   type ExternalRefInsert,
-} from './schema';
+} from './schema.js';
 import { logger } from '../utils/logger';
 import type { BranchName } from '../integrations/rentprog';
 import { apiFetch } from '../integrations/rentprog';
