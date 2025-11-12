@@ -211,9 +211,9 @@ const criticalMultiplier = 2;
 
 ---
 
-## 🔧 Миграции
+## 🔧 Настройка
 
-### Применение миграций
+### 1. Применение миграций БД
 
 ```bash
 # На сервере
@@ -239,6 +239,56 @@ await sql.unsafe(migration2);
 
 await sql.end();
 ```
+
+### 2. Импорт n8n workflow
+
+**Workflow:** `n8n-workflows/battery-voltage-alerts.json`
+
+**Импорт:**
+```bash
+# Используя скрипт импорта
+node setup/import_workflow_2025.mjs n8n-workflows/battery-voltage-alerts.json
+```
+
+**Или через n8n UI:**
+1. Откройте https://n8n.rentflow.rentals
+2. Workflows → Import from File
+3. Выберите `n8n-workflows/battery-voltage-alerts.json`
+4. Активируйте workflow
+
+**Webhook URL после активации:**
+```
+https://webhook.rentflow.rentals/webhook/battery-voltage-alerts
+```
+
+### 3. Настройка переменной окружения
+
+**В `.env` на сервере:**
+```bash
+N8N_ALERTS_URL=https://webhook.rentflow.rentals/webhook/battery-voltage-alerts
+```
+
+**Проверка:**
+```bash
+# На сервере
+grep N8N_ALERTS_URL .env
+```
+
+**Перезапуск API:**
+```bash
+pm2 restart jarvis-api --update-env
+```
+
+### 4. Проверка Telegram credentials
+
+**В n8n:**
+1. Settings → Credentials
+2. Найдите "Telegram account" (ID: `1tKryXxL5Gq395nN`)
+3. Убедитесь, что токен бота актуален
+
+**Переменная в n8n:**
+- `TELEGRAM_ALERT_CHAT_ID` должна быть установлена в Settings → Variables
+- По умолчанию: `-5004140602`
 
 ---
 
@@ -299,7 +349,9 @@ Battery voltage anomaly detected for OC700OC: 11.8V (avg: 12.5V, deviation: -0.7
 - **Миграции:**
   - `setup/migrations/0018_create_battery_voltage_history.sql`
   - `setup/migrations/0019_create_battery_voltage_alerts.sql`
-- **Интеграция:** `src/integrations/n8n.js` (метод `sendTelegramAlert`)
+- **Интеграция:** `src/integrations/n8n.ts` (метод `sendTelegramAlert`)
+- **n8n Workflow:** `n8n-workflows/battery-voltage-alerts.json`
+- **Конфигурация:** `.env` (переменная `N8N_ALERTS_URL`)
 
 ---
 

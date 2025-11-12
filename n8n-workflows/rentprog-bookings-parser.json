@@ -1,0 +1,567 @@
+{
+  "name": "Парсинг броней RentProg (активные и неактивные) раз в 15 минут",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/15 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Создаем массив филиалов для параллельной обработки\nconst branches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];\n\nreturn branches.map(branch => ({\n  json: { branch }\n}));"
+      },
+      "name": "Prepare Branches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [448, 400]
+    },
+    {
+      "parameters": {
+        "batchSize": 4,
+        "options": {}
+      },
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://46.224.17.15:3001/scrape-bookings",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"branch\":\"{{ $json.branch }}\"}",
+        "options": {
+          "timeout": 300000
+        },
+      },
+      "name": "Scrape Bookings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [832, 400],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обрабатываем данные из Playwright сервиса\nconst input = $input.first().json;\n\nif (!input.success) {\n  return [{\n    json: {\n      error: true,\n      branch: input.branch,\n      message: input.error || 'Unknown error',\n      active_count: 0,\n      inactive_count: 0,\n      total_count: 0\n    }\n  }];\n}\n\nconst branch = input.branch;\nconst activeBookings = input.active || [];\nconst inactiveBookings = input.inactive || [];\nconst allBookings = [...activeBookings, ...inactiveBookings];\n\n// Подготавливаем данные для обработки\nconst processed = allBookings.map(booking => ({\n  json: {\n    branch,\n    booking_id: booking.booking_id,\n    number: booking.number,\n    created_at: booking.created_at,\n    start_at: booking.start_at,\n    end_at: booking.end_at,\n    days: booking.days,\n    car_name: booking.car_name,\n    client_name: booking.client_name,\n    issue_location: booking.issue_location,\n    return_location: booking.return_location,\n    notes: booking.notes,\n    responsible: booking.responsible,\n    is_active: booking.is_active || false,\n    \n    // Новые поля из цветовой логики\n    payment_status: booking.payment_status,\n    payment_balance: booking.payment_balance,\n    payment_color: booking.payment_color,\n    client_category: booking.client_category,\n    client_status_color: booking.client_status_color,\n    booking_status_icon: booking.booking_status_icon,\n    booking_status_color: booking.booking_status_color,\n    responsible_status: booking.responsible_status,\n    responsible_color: booking.responsible_color,\n    \n    // HTML поля (для отладки)\n    status_icon_html: booking.status_icon_html,\n    client_status_html: booking.client_status_html,\n    responsible_html: booking.responsible_html,\n    detail_url: booking.detail_url,\n    \n    // Сырые данные\n    raw_created: booking.created,\n    raw_start_date: booking.start_date,\n    raw_end_date: booking.end_date,\n    raw_payment: booking.payment\n  }\n}));\n\nreturn processed;"
+      },
+      "name": "Process Bookings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1024, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT er.external_id, er.entity_id as booking_id\nFROM external_refs er\nWHERE er.entity_type = 'booking'\n  AND er.system = 'rentprog'\n  AND er.external_id = '{{ $json.booking_id }}'\nLIMIT 1;",
+        "options": {}
+      },
+      "name": "Check Existing",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1216, 400],
+      "credentials": {
+        "postgres": {
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Определяем новые брони (которых нет в БД)\nconst booking = $input.first().json;\nconst existing = $('Check Existing').first().json;\n\nconst isNew = !existing || !existing.external_id || existing.external_id !== booking.booking_id;\nconst existingBookingId = existing?.booking_id || null;\n\nreturn [{\n  json: {\n    ...booking,\n    is_new: isNew,\n    needs_details: isNew, // Новые брони требуют парсинга детальной страницы\n    booking_id_from_db: existingBookingId // ID из БД если существует\n  }\n}];"
+      },
+      "name": "Identify New",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1408, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-new-booking",
+              "leftValue": "={{ $json.is_new }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "If New Booking",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1600, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://46.224.17.15:3001/scrape-booking-details",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ branch: $json.branch, booking_id: $json.booking_id }) }}",
+        "options": {
+          "timeout": 300000
+        },
+        },
+        "name": "Scrape Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1792, 300],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Объединяем данные со списка и детальной страницы\nconst listData = $('Identify New').first().json;\nconst detailsData = $input.first().json;\n\nreturn [{\n  json: {\n    ...listData,\n    details: detailsData.success ? detailsData.details : null,\n    details_error: detailsData.success ? null : detailsData.error\n  }\n}];"
+      },
+      "name": "Merge Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1984, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Подготавливаем данные для upsert в bookings\nconst booking = $input.first().json;\n\n// Формируем data JSONB с дополнительными полями\nconst dataJson = {\n  payment: {\n    status: booking.payment_status,\n    balance: booking.payment_balance,\n    color: booking.payment_color,\n    raw: booking.raw_payment\n  },\n  client: {\n    category: booking.client_category,\n    status_color: booking.client_status_color,\n    status_html: booking.client_status_html\n  },\n  booking: {\n    status_icon: booking.booking_status_icon,\n    status_color: booking.booking_status_color,\n    status_html: booking.status_icon_html\n  },\n  responsible: {\n    status: booking.responsible_status,\n    color: booking.responsible_color,\n    html: booking.responsible_html\n  },\n  detail_url: booking.detail_url,\n  details: booking.details || null\n};\n\n// Определяем статус брони\nlet status = 'planned';\nif (booking.is_active) {\n  status = booking.booking_status_icon === 'car' ? 'active' : 'planned';\n} else {\n  status = 'completed';\n}\n\nreturn [{\n  json: {\n    // Основные поля (только те, что точно есть в БД)\n    booking_number: booking.number,\n    branch_code: booking.branch,\n    status: status,\n    start_at: booking.start_at,\n    end_at: booking.end_at,\n    start_date: booking.raw_start_date,\n    end_date: booking.raw_end_date,\n    days: booking.days,\n    issue_location: booking.issue_location,\n    return_location: booking.return_location,\n    notes: booking.notes,\n    \n    // JSONB данные\n    data: JSON.stringify(dataJson),\n    \n    // Для external_refs\n    external_id: booking.booking_id,\n    system: 'rentprog',\n    \n    // Метаданные\n    is_new: booking.is_new,\n    is_active: booking.is_active\n  }\n}];"
+      },
+      "name": "Prepare Upsert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2176, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Подготавливаем данные для upsert\n// Данные из Identify New уже содержат is_new и booking_id_from_db\nconst booking = $input.first().json;\n\n// Если бронь существует (не новая), используем booking_id_from_db\n// Если новая - booking_id будет null\nconst existingBookingId = booking.is_new ? null : booking.booking_id_from_db;\n\nreturn [{\n  json: {\n    ...booking,\n    existing_booking_id: existingBookingId\n  }\n}];"
+      },
+      "name": "Prepare Upsert Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2176, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-existing-id",
+              "leftValue": "={{ $json.existing_booking_id }}",
+              "rightValue": null,
+              "operator": {
+                "type": "any",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "If Existing",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2368, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE bookings SET\n  booking_number = {{ $json.booking_number ? \"'\" + $json.booking_number.replace(/'/g, \"''\") + \"'\" : 'NULL' }},\n  branch_code = {{ $json.branch_code ? \"'\" + $json.branch_code + \"'\" : 'NULL' }},\n  status = {{ $json.status ? \"'\" + $json.status + \"'\" : 'NULL' }},\n  start_at = {{ $json.start_at ? \"'\" + $json.start_at + \"'::timestamptz\" : 'NULL' }},\n  end_at = {{ $json.end_at ? \"'\" + $json.end_at + \"'::timestamptz\" : 'NULL' }},\n  start_date = {{ $json.start_date ? \"'\" + $json.start_date.replace(/'/g, \"''\") + \"'\" : 'NULL' }},\n  end_date = {{ $json.end_date ? \"'\" + $json.end_date.replace(/'/g, \"''\") + \"'\" : 'NULL' }},\n  days = {{ $json.days !== null && $json.days !== undefined ? $json.days : 'NULL' }},\n  issue_location = {{ $json.issue_location ? \"'\" + $json.issue_location.replace(/'/g, \"''\") + \"'\" : 'NULL' }},\n  return_location = {{ $json.return_location ? \"'\" + $json.return_location.replace(/'/g, \"''\") + \"'\" : 'NULL' }},\n  notes = {{ $json.notes ? \"'\" + $json.notes.replace(/'/g, \"''\") + \"'\" : 'NULL' }},\n  data = {{ $json.data ? \"'\" + $json.data.replace(/'/g, \"''\") + \"'::jsonb\" : \"'{}'::jsonb\" }},\n  updated_at = NOW()\nWHERE id = '{{ $json.existing_booking_id }}'\nRETURNING id, booking_number;",
+        "options": {}
+      },
+      "name": "Update Booking",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2560, 200],
+      "credentials": {
+        "postgres": {
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO bookings (\n  booking_number,\n  branch_code,\n  status,\n  start_at,\n  end_at,\n  start_date,\n  end_date,\n  days,\n  issue_location,\n  return_location,\n  notes,\n  data,\n  created_at,\n  updated_at\n) VALUES (\n  {{ $json.booking_number ? \"'\" + $json.booking_number.replace(/'/g, \"''\") + \"'\" : 'NULL' }},\n  {{ $json.branch_code ? \"'\" + $json.branch_code + \"'\" : 'NULL' }},\n  {{ $json.status ? \"'\" + $json.status + \"'\" : 'NULL' }},\n  {{ $json.start_at ? \"'\" + $json.start_at + \"'::timestamptz\" : 'NULL' }},\n  {{ $json.end_at ? \"'\" + $json.end_at + \"'::timestamptz\" : 'NULL' }},\n  {{ $json.start_date ? \"'\" + $json.start_date.replace(/'/g, \"''\") + \"'\" : 'NULL' }},\n  {{ $json.end_date ? \"'\" + $json.end_date.replace(/'/g, \"''\") + \"'\" : 'NULL' }},\n  {{ $json.days !== null && $json.days !== undefined ? $json.days : 'NULL' }},\n  {{ $json.issue_location ? \"'\" + $json.issue_location.replace(/'/g, \"''\") + \"'\" : 'NULL' }},\n  {{ $json.return_location ? \"'\" + $json.return_location.replace(/'/g, \"''\") + \"'\" : 'NULL' }},\n  {{ $json.notes ? \"'\" + $json.notes.replace(/'/g, \"''\") + \"'\" : 'NULL' }},\n  {{ $json.data ? \"'\" + $json.data.replace(/'/g, \"''\") + \"'::jsonb\" : \"'{}'::jsonb\" }},\n  NOW(),\n  NOW()\n)\nRETURNING id, booking_number;",
+        "options": {}
+      },
+      "name": "Insert Booking",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2560, 400],
+      "credentials": {
+        "postgres": {
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO external_refs (entity_type, entity_id, system, external_id, branch_code, created_at, updated_at)\nVALUES (\n  'booking',\n  '{{ $json.id }}',\n  'rentprog',\n  '{{ $json.external_id }}',\n  '{{ $json.branch_code }}',\n  NOW(),\n  NOW()\n)\nON CONFLICT (system, external_id) DO UPDATE SET\n  entity_id = EXCLUDED.entity_id,\n  branch_code = EXCLUDED.branch_code,\n  updated_at = NOW()\nRETURNING entity_id as booking_id, external_id;",
+        "options": {}
+      },
+      "name": "Upsert External Ref",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2560, 300],
+      "credentials": {
+        "postgres": {
+          "name": "Neon PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Пропускаем существующие брони (не новые)\nconst booking = $input.first().json;\n\nif (!booking.is_new) {\n  // Для существующих броней просто обновляем данные\n  return [{\n    json: {\n      ...booking,\n      action: 'updated',\n      booking_id: booking.booking_id\n    }\n  }];\n}\n\n// Для новых броней возвращаем данные для upsert\nreturn [{\n  json: {\n    ...booking,\n    action: 'created'\n  }\n}];"
+      },
+      "name": "Skip Existing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Формируем итоговое сообщение\nconst allItems = $input.all();\n\nconst stats = {\n  total: allItems.length,\n  created: 0,\n  updated: 0,\n  errors: 0,\n  by_branch: {},\n  new_bookings: []\n};\n\nallItems.forEach(item => {\n  const json = item.json;\n  const branch = json.branch || json.branch_code || 'unknown';\n  \n  if (!stats.by_branch[branch]) {\n    stats.by_branch[branch] = { created: 0, updated: 0, errors: 0, total: 0 };\n  }\n  \n  stats.by_branch[branch].total++;\n  \n  if (json.error) {\n    stats.errors++;\n    stats.by_branch[branch].errors++;\n  } else if (json.action === 'created') {\n    stats.created++;\n    stats.by_branch[branch].created++;\n    if (json.is_new) {\n      stats.new_bookings.push({\n        branch,\n        booking_id: json.booking_id,\n        number: json.booking_number || json.number\n      });\n    }\n  } else if (json.action === 'updated') {\n    stats.updated++;\n    stats.by_branch[branch].updated++;\n  }\n});\n\nlet message = '📋 Парсинг броней RentProg (активные и неактивные) раз в 15 минут:\\n';\n\nObject.keys(stats.by_branch).forEach(branch => {\n  const branchStats = stats.by_branch[branch];\n  message += `${branch.toUpperCase()}: ${branchStats.created} создано / ${branchStats.updated} обновлено`;\n  if (branchStats.errors > 0) {\n    message += ` / ${branchStats.errors} ошибок`;\n  }\n  message += '\\n';\n});\n\nmessage += `\\nВсего: ${stats.total} броней / ${stats.created} создано / ${stats.updated} обновлено`;\n\nif (stats.errors > 0) {\n  message += `\\n\\n🚨 ОШИБОК: ${stats.errors}`;\n  try {\n    const executionId = $execution?.id || '';\n    const workflowId = $workflow?.id || '';\n    if (executionId) {\n      message += `\\n\\n🔗 Execution: https://n8n.rentflow.rentals/workflow/${workflowId}/executions/${executionId}`;\n    }\n  } catch (e) {\n    console.log('Execution ID недоступен:', e.message);\n  }\n}\n\nif (stats.new_bookings.length > 0) {\n  message += `\\n\\n🆕 Новых броней: ${stats.new_bookings.length}`;\n  stats.new_bookings.slice(0, 5).forEach(b => {\n    message += `\\n  - ${b.branch}: #${b.number || b.booking_id}`;\n  });\n  if (stats.new_bookings.length > 5) {\n    message += `\\n  ... и еще ${stats.new_bookings.length - 5}`;\n  }\n}\n\nreturn [{\n  json: {\n    message,\n    success: stats.errors === 0,\n    saved_count: stats.created + stats.updated,\n    error_count: stats.errors,\n    created_count: stats.created,\n    updated_count: stats.updated,\n    by_branch: stats.by_branch,\n    new_bookings: stats.new_bookings\n  }\n}];"
+      },
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2560, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check-error-count",
+              "leftValue": "={{ $json.error_count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "If Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2752, 400]
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ $json.message + '\\n\\n🔗 <a href=\"https://n8n.rentflow.rentals/workflow/' + $workflow.id + '/executions/' + $execution.id + '\">Открыть execution</a>' }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2944, 300],
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram Alert Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Выбрасываем ошибку чтобы execution был помечен как failed\nconst errorData = $input.first().json;\nconst errorMessage = errorData.message || 'Ошибка при парсинге броней';\nthrow new Error(errorMessage);\n// Возвращаем данные для следующей ноды (хотя ошибка прервет выполнение)\nreturn [{ json: { error: true, message: errorMessage } }];"
+      },
+      "name": "Throw Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3136, 300]
+    },
+    {
+      "parameters": {},
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2944, 500]
+    }
+  ],
+  "connections": {
+    "Every 15 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Prepare Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Branches": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Scrape Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Bookings": {
+      "main": [
+        [
+          {
+            "node": "Process Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Bookings": {
+      "main": [
+        [
+          {
+            "node": "Check Existing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing": {
+      "main": [
+        [
+          {
+            "node": "Identify New",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identify New": {
+      "main": [
+        [
+          {
+            "node": "If New Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If New Booking": {
+      "main": [
+        [
+          {
+            "node": "Scrape Details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Existing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Details": {
+      "main": [
+        [
+          {
+            "node": "Merge Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Details": {
+      "main": [
+        [
+          {
+            "node": "Prepare Upsert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Upsert": {
+      "main": [
+        [
+          {
+            "node": "Prepare Upsert Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Upsert Data": {
+      "main": [
+        [
+          {
+            "node": "If Existing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Existing": {
+      "main": [
+        [
+          {
+            "node": "Update Booking",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Insert Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Booking": {
+      "main": [
+        [
+          {
+            "node": "Upsert External Ref",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Booking": {
+      "main": [
+        [
+          {
+            "node": "Upsert External Ref",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert External Ref": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Existing": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "If Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Alert": {
+      "main": [
+        [
+          {
+            "node": "Throw Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+

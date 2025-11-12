@@ -331,6 +331,26 @@ app.post('/scrape-bookings', async (req, res) => {
     // Помечаем активные брони
     activeBookings.forEach((b: any) => { b.is_active = true; });
     
+    // Парсим даты из русского формата
+    const parseRussianDate = (dateStr: string | null): string | null => {
+      if (!dateStr) return null;
+      try {
+        const date = parseDateFromRussian(dateStr);
+        return date.toISOString();
+      } catch {
+        return null;
+      }
+    };
+    
+    // Обрабатываем все брони
+    [...activeBookings, ...inactiveBookings].forEach((booking: any) => {
+      booking.created_at = parseRussianDate(booking.created);
+      booking.start_at = parseRussianDate(booking.start_date);
+      booking.end_at = parseRussianDate(booking.end_date);
+      booking.days = booking.days ? parseFloat(booking.days) : null;
+      booking.branch_code = branch;
+    });
+    
     await browser.close();
     
     res.json({
