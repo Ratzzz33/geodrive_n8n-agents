@@ -159,38 +159,58 @@ export class StarlineScraperService {
     logger.info('StarlineScraperService: Initializing persistent browser session...');
 
     try {
-      // Генерируем новый fingerprint для этого сеанса
-      const fingerprint = this.generateBrowserFingerprint();
-      logger.info(`StarlineScraperService: Using fingerprint: ${fingerprint.userAgent.substring(0, 50)}... ${fingerprint.viewport.width}x${fingerprint.viewport.height}`);
+      // Используем реальный User-Agent из обычного Chrome браузера
+      const realUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+      const viewport = { width: 1920, height: 1080 };
+      
+      logger.info(`StarlineScraperService: Using REAL User-Agent with SOCKS5 proxy`);
+      logger.info(`StarlineScraperService: UA: ${realUserAgent.substring(0, 60)}...`);
+      logger.info(`StarlineScraperService: Viewport: ${viewport.width}x${viewport.height}`);
 
-      // Запускаем браузер
+      // Запускаем браузер с проксі SOCKS5
       this.browser = await chromium.launch({
         headless: true,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
-          '--disable-blink-features=AutomationControlled', // Скрываем автоматизацию
+          '--disable-blink-features=AutomationControlled',
           '--disable-dev-shm-usage',
+          // Дополнительные аргументы для обхода детекции
+          '--disable-web-security',
+          '--disable-features=IsolateOrigins,site-per-process',
         ],
       });
 
-      // Создаем контекст с уникальным fingerprint
+      // Создаем контекст с РЕАЛЬНЫМ профилем браузера и SOCKS5 прокси
       this.context = await this.browser.newContext({
-        userAgent: fingerprint.userAgent,
-        viewport: fingerprint.viewport,
-        locale: fingerprint.locale,
-        timezoneId: fingerprint.timezoneId,
-        // Дополнительные заголовки для реалистичности
+        // SOCKS5 прокси для обхода блокировок
+        proxy: {
+          server: 'socks5://j4mqjbmxfz.cn.fxdx.in:16286',
+          username: '33pokrov33202947',
+          password: 'eSZemNt6zrgu',
+        },
+        // Реальный User-Agent из Chrome
+        userAgent: realUserAgent,
+        viewport: viewport,
+        locale: 'ru-RU',
+        timezoneId: 'Asia/Tbilisi',
+        // Реалистичные заголовки
         extraHTTPHeaders: {
           'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
           'Accept-Encoding': 'gzip, deflate, br',
           'Connection': 'keep-alive',
           'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Sec-Ch-Ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+          'Sec-Ch-Ua-Mobile': '?0',
+          'Sec-Ch-Ua-Platform': '"Windows"',
         },
-        // Переопределяем navigator свойства через CDP
         permissions: ['geolocation'],
-        // Очищаем все куки и историю при создании нового контекста
+        // Полностью чистый профиль - новая сессия
         storageState: undefined,
       });
 
