@@ -571,6 +571,12 @@ export class StarlineScraperService {
         /[А-Яа-яЁё]/.test(errorMessage) ||
         /[А-Яа-яЁё]/.test(fullErrorText);
       
+      // Логируем для отладки
+      if (errorMessage.includes('Unexpected token')) {
+        logger.warn(`StarlineScraperService: Unexpected token error detected. Full error: ${fullErrorText.substring(0, 300)}`);
+        logger.warn(`StarlineScraperService: hasCyrillicUnicode=${hasCyrillicUnicode}, hasUnexpectedTokenWithUnicode=${hasUnexpectedTokenWithUnicode}, isSessionExpired=${isSessionExpired}`);
+      }
+      
       if (isSessionExpired) {
         logger.warn(`StarlineScraperService: Session expired detected (error: ${errorMessage.substring(0, 100)}), re-logging in for device ${deviceId}...`);
         this.isLoggedIn = false;
