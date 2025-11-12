@@ -7,8 +7,7 @@
     "saveDataSuccessExecution": "all",
     "saveManualExecutions": true,
     "saveExecutionProgress": true,
-    "executionTimeout": 3600,
-    "errorWorkflow": "H3UBEp425F5SMyrX"
+    "executionTimeout": 3600
   },
   "notes": {
     "executionOrder": "v1 (recommended) - новый порядок выполнения",
@@ -18,7 +17,7 @@
     "saveManualExecutions": "true - сохранять ручные запуски",
     "saveExecutionProgress": "true - сохранять прогресс выполнения",
     "executionTimeout": "3600 секунд (1 час) - таймаут выполнения",
-    "errorWorkflow": "H3UBEp425F5SMyrX - Error Handler - AI Agent"
+    "errorWorkflow": "⚠️ НЕ ИСПОЛЬЗУЕТСЯ - эта настройка больше не используется (вызывала ошибки 'Could not find workflow')"
   }
 }
 

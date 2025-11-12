@@ -1,0 +1,178 @@
+{
+  "name": "Парсинг активных броней раз в час",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8-23 * * *"
+            }
+          ]
+        },
+        "timezone": "Asia/Tbilisi"
+      },
+      "name": "Каждый час (8-23)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.18.0.1:3000/sync-bookings",
+        "sendBody": false,
+        "options": {
+          "timeout": 3600000
+        }
+      },
+      "name": "Вызов Jarvis API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Форматирование отчета о синхронизации\nconst response = $input.all()[0].json;\n\nconst timestamp = new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Tbilisi' });\n\nlet reportText = `📊 СИНХРОНИЗАЦИЯ БРОНИРОВАНИЙ\\n`;\nreportText += `Время: ${timestamp}\\n\\n`;\n\nif (response && response.success) {\n  const summary = response.summary || {};\n  reportText += `✅ Статус: Успешно\\n`;\n  reportText += `📦 Всего обработано: ${summary.total_bookings || 0} бронирований\\n`;\n  reportText += `➕ Создано новых: ${summary.total_created || 0}\\n`;\n  reportText += `🔄 Обновлено: ${summary.total_updated || 0}\\n`;\n  reportText += `❌ Ошибок: ${summary.total_errors || 0}\\n\\n`;\n  \n  reportText += `📋 По филиалам:\\n`;\n  if (response.per_branch && Array.isArray(response.per_branch)) {\n    response.per_branch.forEach(branch => {\n      const status = (branch.errors || 0) === 0 ? '✅' : '⚠️';\n      reportText += `${status} ${(branch.branch || 'unknown').toUpperCase()}: ${branch.total || 0} (создано: ${branch.created || 0}, обновлено: ${branch.updated || 0}, ошибок: ${branch.errors || 0})\\n`;\n    });\n  }\n  \n  if ((summary.total_errors || 0) > 0) {\n    reportText += `\\n⚠️ Обнаружено ${summary.total_errors} ошибок. Проверьте логи для деталей.`;\n  }\n} else {\n  reportText += `❌ Статус: Ошибка\\n`;\n  reportText += `Ошибка: ${response?.error || 'Неизвестная ошибка'}\\n`;\n}\n\nreturn {\n  json: {\n    reportText,\n    success: response?.success || false,\n    total: response?.summary?.total_bookings || 0,\n    errors: response?.summary?.total_errors || 0\n  }\n};"
+      },
+      "name": "Форматирование отчета",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-errors",
+              "leftValue": "={{ $json.errors }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Проверка ошибок",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID || '-5004140602' }}",
+        "text": "={{ $json.reportText }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Отправить в чат алертов",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1050, 200],
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram Alert Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID || '-5004140602' }}",
+        "text": "={{ $json.reportText }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Отправить отчет",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1050, 400],
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram Alert Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Каждый час (8-23)": {
+      "main": [
+        [
+          {
+            "node": "Вызов Jarvis API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Вызов Jarvis API": {
+      "main": [
+        [
+          {
+            "node": "Форматирование отчета",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Форматирование отчета": {
+      "main": [
+        [
+          {
+            "node": "Проверка ошибок",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Проверка ошибок": {
+      "main": [
+        [
+          {
+            "node": "Отправить в чат алертов",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Отправить отчет",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Отправить в чат алертов": {
+      "main": [
+        [
+          {
+            "node": "Отправить отчет",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi"
+  }
+}
+

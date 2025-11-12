@@ -93,6 +93,15 @@ combined_df['hash'] = combined_df.apply(
 )
 
 before_filter = len(combined_df)
+
+# Сначала удаляем дубликаты ВНУТРИ combined_df
+internal_dups_before = len(combined_df)
+combined_df = combined_df.drop_duplicates(subset=['hash'], keep='first')
+internal_dups_removed = internal_dups_before - len(combined_df)
+if internal_dups_removed > 0:
+    print(f"Удалено внутренних дубликатов из Excel: {internal_dups_removed:,}")
+
+# Потом фильтруем то что уже в БД
 combined_df = combined_df[~combined_df['hash'].isin(existing)]
 after_filter = len(combined_df)
 

@@ -40,17 +40,50 @@
 ### 4. Jarvis API (Express)
 - HTTP шлюз между n8n и бизнес-логикой
 - **Основные эндпоинты:**
-  - RentProg: `/rentprog/health`, `/process-event`, `/process-webhook`, `/upsert-car`, `/upsert-client`
-  - UI Events: `/process-ui-event` (обработка UI событий из Playwright)
-  - History: `/process-history`, `/process-history/stats`, `/process-history/unknown`, `/process-history/learn`
-  - Entity Timeline: `/entity-timeline/*`, `/event-links/*`
-  - Umnico: `/api/umnico/conversations/:id`, `/api/umnico/send`
-  - Starline: `/starline/update-gps`, `/starline/sync-devices`, `/starline/match-devices`
-  - Sync: `/sync-prices/:branch`, `/sync-employee-cash`
-  - Health: `/health`
+  - **RentProg:**
+    - `GET /rentprog/health` — проверка здоровья интеграции по всем филиалам
+    - `POST /process-event` — обработка событий из n8n (upsert processor)
+    - `POST /process-webhook` — быстрая обработка вебхуков (quick update)
+    - `POST /upsert-car` — upsert машины (вызывается из n8n workflow)
+    - `POST /upsert-client` — upsert клиента (вызывается из n8n workflow)
+  - **UI Events:** ⚠️ `/process-ui-event` — роутер создан, но **не подключен** в `index.ts` (требуется подключение)
+  - **History Processing:** ⚠️ `/process-history/*` — роутер создан, но **временно отключен** в `index.ts`
+  - **Entity Timeline:**
+    - `GET /entity-timeline/entity/:entityType/:entityId` — timeline для сущности
+    - `POST /entity-timeline/related` — timeline для связанных сущностей
+    - `GET /entity-timeline/stats` — статистика
+  - **Event Links:**
+    - `POST /event-links/payment/:paymentId` — связать платеж с events/history
+    - `POST /event-links/event/:eventId` — связать событие с payment/history
+    - `GET /event-links/payment/:paymentId` — получить связи для платежа
+    - `GET /event-links/stats` — статистика связей
+    - `GET /event-links/unlinked` — несвязанные платежи
+  - **Umnico:**
+    - `GET /api/umnico/conversations/:id` — история диалога
+    - `POST /api/umnico/send` — отправить сообщение клиенту
+  - **Starline:**
+    - `GET /starline/diagnose` — диагностика Starline scraper
+    - `POST /starline/update-gps` — обновление GPS данных
+    - `POST /starline/sync-devices` — синхронизация устройств в `starline_devices`
+    - `POST /starline/match-devices` — автоматическое сопоставление устройств с cars
+    - `GET /starline/sync-status` — статус синхронизации
+    - `GET /starline/match-cars` — сопоставление машин (legacy)
+  - **Sync:**
+    - `GET /sync-prices/:branch` — синхронизация цен автомобилей
+    - `GET /check-cars-without-prices` — проверка машин без цен (все филиалы)
+    - `GET /check-cars-without-prices/:branch` — проверка машин без цен (конкретный филиал)
+    - `POST /sync-employee-cash` — синхронизация касс сотрудников из RentProg
+    - `POST /sync-bookings` — синхронизация бронирований из всех филиалов
+  - **Utilities:**
+    - `POST /scrape-exchange-rates` — парсинг курсов валют из RentProg через Playwright
+    - `POST /restore-cars` — запуск скрипта восстановления машин из RentProg
+    - `POST /amocrm/process-webhook` — обработка вебхуков от AmoCRM
+  - **Health:**
+    - `GET /health` — health check
+    - `GET /` — root endpoint
 - Выполняет auto-fetch, upsert и архивацию сущностей
-- Обработка UI событий: классификация, парсинг, обновление касс, создание задач
-- Обработка истории операций: автоматическая обработка платежей, кассовых операций, техобслуживания
+- Обработка UI событий: классификация, парсинг, обновление касс, создание задач (⚠️ требует подключения роутера)
+- Обработка истории операций: автоматическая обработка платежей, кассовых операций, техобслуживания (⚠️ временно отключено)
 - Планируется запуск как постоянно работающий сервис (сейчас запускается вручную)
 
 ### 5. Агенты (Microservices/Workers)

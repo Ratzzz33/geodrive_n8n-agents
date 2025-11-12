@@ -279,9 +279,38 @@
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO health (ts, branch, ok, reason) VALUES (NOW(), 'starline', {{ $json.status === 'success' }}, '{{ $json.error_count > 0 ? \"Errors: \" + $json.error_count : \"OK\" }}')",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "ok",
+              "value": "={{ $json.status === 'success' }}",
+              "type": "boolean"
+            },
+            {
+              "id": "a2",
+              "name": "reason",
+              "value": "={{ $json.error_count > 0 ? 'Errors: ' + $json.error_count : 'OK' }}",
+              "type": "string"
+            }
+          ]
+        },
         "options": {}
+      },
+      "id": "prepare-health-data-node",
+      "name": "Prepare Health Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1360, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO health (ts, branch, ok, reason) VALUES (NOW(), 'starline', $1, $2)",
+        "options": {},
+        "additionalFields": {
+          "queryParams": "={{ [$json.ok, $json.reason] }}"
+        }
       },
       "id": "8h9i0j1k-2l3m-4n5o-6p7q-8r9s0t1u2v3w",
       "name": "Log to Health Table",
@@ -322,7 +351,7 @@
       ]
     },
     "Success Log": {
-      "main": [[{"node": "Split Cars Details", "type": "main", "index": 0}, {"node": "Log to Health Table", "type": "main", "index": 0}]]
+      "main": [[{"node": "Split Cars Details", "type": "main", "index": 0}, {"node": "Prepare Health Data", "type": "main", "index": 0}]]
     },
     "Split Cars Details": {
       "main": []
@@ -333,10 +362,13 @@
     "Critical Errors?": {
       "main": [
         [{"node": "Send Telegram Alert", "type": "main", "index": 0}],
-        [{"node": "Log to Health Table", "type": "main", "index": 0}]
+        [{"node": "Prepare Health Data", "type": "main", "index": 0}]
       ]
     },
     "Send Telegram Alert": {
+      "main": [[{"node": "Prepare Health Data", "type": "main", "index": 0}]]
+    },
+    "Prepare Health Data": {
       "main": [[{"node": "Log to Health Table", "type": "main", "index": 0}]]
     }
   },

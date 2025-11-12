@@ -1,0 +1,18 @@
+Connecting...
+Uploading...
+
+Running analysis...
+
+Total messages: 474,768
+Telegram: 161,136
+WhatsApp: 313,632
+
+Date range: 2024-09-04 11:53:03+00:00 to 2025-09-17 14:36:25+00:00
+
+Telegram channel_names:
+  GeoDriveauto: 161,136
+
+WhatsApp channel_names:
+  Geodrive: 313,552
+  NaN: 80
+

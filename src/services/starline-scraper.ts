@@ -190,6 +190,170 @@ export class StarlineScraperService {
   }
 
   /**
+   * Детальная диагностика состояния браузера и страницы
+   */
+  async diagnose(): Promise<{
+    browserConnected: boolean;
+    pageExists: boolean;
+    isLoggedIn: boolean;
+    currentUrl: string | null;
+    pageTitle: string | null;
+    isOnStarlineDomain: boolean;
+    canExecuteJS: boolean;
+    fetchTest: { success: boolean; error?: string; responseTime?: number };
+    loginStatus: 'logged_in' | 'logged_out' | 'unknown' | 'error';
+  }> {
+    const result = {
+      browserConnected: false,
+      pageExists: false,
+      isLoggedIn: this.isLoggedIn,
+      currentUrl: null as string | null,
+      pageTitle: null as string | null,
+      isOnStarlineDomain: false,
+      canExecuteJS: false,
+      fetchTest: { success: false } as { success: boolean; error?: string; responseTime?: number },
+      loginStatus: 'unknown' as 'logged_in' | 'logged_out' | 'unknown' | 'error',
+    };
+
+    try {
+      // Проверка браузера
+      result.browserConnected = this.browser?.isConnected() ?? false;
+      
+      if (!this.page) {
+        return { ...result, loginStatus: 'error' };
+      }
+      
+      result.pageExists = true;
+
+      // Проверка URL и заголовка
+      try {
+        result.currentUrl = this.page.url();
+        result.isOnStarlineDomain = result.currentUrl.includes('starline-online.ru');
+        
+        result.pageTitle = await this.page.title().catch(() => null);
+      } catch (error) {
+        logger.warn('StarlineScraperService: Cannot get page URL/title:', error);
+      }
+
+      // Проверка выполнения JavaScript
+      try {
+        const testResult = await Promise.race([
+          this.page.evaluate(() => {
+            // @ts-ignore - код выполняется в браузере
+            // @ts-ignore
+            return {
+              canExecute: true,
+              // @ts-ignore
+              userAgent: navigator.userAgent,
+              // @ts-ignore
+              location: window.location.href,
+            };
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('JS timeout')), 3000))
+        ]);
+        result.canExecuteJS = true;
+      } catch (error) {
+        logger.warn('StarlineScraperService: Cannot execute JS:', error);
+        result.canExecuteJS = false;
+      }
+
+      // Тест fetch запроса
+      try {
+        const startTime = Date.now();
+        const fetchResult = await Promise.race([
+          this.page.evaluate(async () => {
+            try {
+              const res = await fetch('/api/devices?limit=1', {
+                headers: {
+                  'Accept': 'application/json',
+                  'X-Requested-With': 'XMLHttpRequest',
+                },
+              });
+              return {
+                ok: res.ok,
+                status: res.status,
+                statusText: res.statusText,
+              };
+            } catch (error) {
+              return {
+                ok: false,
+                error: error instanceof Error ? error.message : 'Unknown error',
+              };
+            }
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Fetch timeout')), 5000))
+        ]);
+        const responseTime = Date.now() - startTime;
+        
+        if (typeof fetchResult === 'object' && fetchResult !== null) {
+          const fetchData = fetchResult as any;
+          result.fetchTest = {
+            success: fetchData.ok === true,
+            responseTime,
+            error: fetchData.error as string | undefined,
+          };
+        }
+      } catch (error) {
+        result.fetchTest = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+
+      // Проверка статуса логина (по наличию элементов или cookies)
+      try {
+        const loginCheck = await Promise.race([
+          this.page.evaluate(() => {
+            // @ts-ignore - код выполняется в браузере, где есть document и window
+            // Проверяем наличие элементов, которые видны только после логина
+            // @ts-ignore
+            const hasLoginButton = !!document.querySelector('a[href="#login"]');
+            // @ts-ignore
+            const hasDevicesList = !!document.querySelector('[data-device-id]') || 
+                                  // @ts-ignore
+                                  !!document.querySelector('.device-item') ||
+                                  // @ts-ignore
+                                  window.location.pathname.includes('/site/map');
+            
+            // Проверяем cookies
+            // @ts-ignore
+            const cookies = document.cookie;
+            const hasSessionCookie = cookies.includes('PHPSESSID') || cookies.includes('session');
+            
+            return {
+              hasLoginButton,
+              hasDevicesList,
+              hasSessionCookie,
+              // @ts-ignore
+              path: window.location.pathname,
+            };
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Login check timeout')), 3000))
+        ]);
+
+        if (typeof loginCheck === 'object' && loginCheck !== null) {
+          const check = loginCheck as any;
+          if (check.hasDevicesList || check.hasSessionCookie) {
+            result.loginStatus = 'logged_in';
+          } else if (check.hasLoginButton && !check.hasDevicesList) {
+            result.loginStatus = 'logged_out';
+          } else {
+            result.loginStatus = 'unknown';
+          }
+        }
+      } catch (error) {
+        logger.warn('StarlineScraperService: Cannot check login status:', error);
+        result.loginStatus = 'error';
+      }
+
+    } catch (error) {
+      logger.error('StarlineScraperService: Diagnose error:', error);
+    }
+
+    return result;
+  }
+
+  /**
    * Перезапуск браузера при необходимости
    */
   private async ensureHealthy(): Promise<void> {
@@ -250,15 +414,42 @@ export class StarlineScraperService {
     logger.info(`StarlineScraperService: Fetching details for device ${deviceId}...`);
 
     try {
-      const response = await this.page.evaluate(async (id) => {
-        const res = await fetch(`/device/${id}?tz=240&_=` + Date.now(), {
-          headers: {
-            'Accept': 'application/json, text/javascript, */*; q=0.01',
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-        });
-        return res.json();
-      }, deviceId);
+      // Проверяем, что страница загружена и доступна
+      const currentUrl = this.page.url();
+      if (!currentUrl.includes('starline-online.ru')) {
+        logger.warn(`StarlineScraperService: Page is not on Starline domain (${currentUrl}), navigating...`);
+        await this.page.goto(`${this.BASE_URL}/site/map`, { waitUntil: 'networkidle', timeout: 15000 });
+      }
+
+      // Выполняем fetch с таймаутом через Promise.race
+      const response = await Promise.race([
+        this.page.evaluate(async (id) => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 секунд таймаут для fetch
+          
+          try {
+            const res = await fetch(`/device/${id}?tz=240&_=` + Date.now(), {
+              headers: {
+                'Accept': 'application/json, text/javascript, */*; q=0.01',
+                'X-Requested-With': 'XMLHttpRequest',
+              },
+              signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
+            return res.json();
+          } catch (error) {
+            clearTimeout(timeoutId);
+            throw error;
+          }
+        }, deviceId),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error(`Timeout: page.evaluate() не ответил за 10 секунд для device ${deviceId}`)), 10000)
+        )
+      ]) as any;
 
       // Проверяем формат ответа: может быть {result: 1, answer: {...}} или напрямую {...}
       const typedResponse = response as any;
@@ -273,6 +464,136 @@ export class StarlineScraperService {
       throw new Error(`Failed to get Starline device details for ${deviceId}`);
     } catch (error) {
       logger.error(`StarlineScraperService: Error fetching device details for ${deviceId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Получение HTML страницы с маршрутами за указанный период
+   * @param deviceId ID устройства Starline
+   * @param dateFrom Дата начала периода (YYYY-MM-DD)
+   * @param dateTo Дата конца периода (YYYY-MM-DD)
+   * @returns HTML содержимое страницы с маршрутами
+   */
+  async getRoutesHTML(deviceId: number, dateFrom: string, dateTo: string): Promise<string> {
+    await this.ensureHealthy();
+
+    if (!this.page) {
+      throw new Error('Page not initialized');
+    }
+
+    logger.info(`StarlineScraperService: Getting routes HTML for device ${deviceId} from ${dateFrom} to ${dateTo}...`);
+
+    try {
+      // Переходим на страницу карты
+      const currentUrl = this.page.url();
+      if (!currentUrl.includes('/site/map')) {
+        logger.info('StarlineScraperService: Navigating to map page...');
+        await this.page.goto(`${this.BASE_URL}/site/map`, { waitUntil: 'networkidle', timeout: 15000 });
+        await this.page.waitForTimeout(2000); // Ждем загрузки интерфейса
+      }
+
+      // Выбираем устройство через JavaScript (клик по радио-кнопке устройства)
+      await this.page.evaluate(async (id) => {
+        // @ts-ignore - код выполняется в браузере
+        // Пробуем разные селекторы для поиска устройства
+        let deviceRadio = document.querySelector(`input[type="radio"][data-device-id="${id}"]`) as HTMLInputElement;
+        
+        if (!deviceRadio) {
+          // Пробуем найти по value
+          deviceRadio = document.querySelector(`input[type="radio"][value="${id}"]`) as HTMLInputElement;
+        }
+        
+        if (!deviceRadio) {
+          // Пробуем найти все радио-кнопки и выбрать нужную
+          const allRadios = Array.from(document.querySelectorAll('input[type="radio"]')) as HTMLInputElement[];
+          deviceRadio = allRadios.find(radio => {
+            const parent = radio.closest('label, div, li');
+            return parent && parent.textContent?.includes(id.toString());
+          }) || null;
+        }
+        
+        if (deviceRadio) {
+          deviceRadio.click();
+          // Ждем немного для обновления интерфейса
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } else {
+          throw new Error(`Device ${id} not found in device list`);
+        }
+      }, deviceId);
+
+      // Устанавливаем период через JavaScript
+      await this.page.evaluate(async (from, to) => {
+        // @ts-ignore - код выполняется в браузере
+        // Ищем кнопку "Период" и кликаем
+        const periodButton = Array.from(document.querySelectorAll('button')).find(
+          btn => btn.textContent?.trim().includes('Период') || btn.textContent?.trim() === 'Период'
+        ) as HTMLButtonElement;
+        
+        if (periodButton) {
+          periodButton.click();
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        // Устанавливаем даты в календаре
+        // @ts-ignore
+        const dateInputs = Array.from(document.querySelectorAll('input[type="date"]')) as HTMLInputElement[];
+        if (dateInputs.length >= 2) {
+          // @ts-ignore
+          dateInputs[0].value = from; // Дата начала
+          // @ts-ignore
+          dateInputs[1].value = to; // Дата конца
+          
+          // Триггерим события для обновления UI
+          // @ts-ignore
+          dateInputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+          // @ts-ignore
+          dateInputs[0].dispatchEvent(new Event('change', { bubbles: true }));
+          // @ts-ignore
+          dateInputs[1].dispatchEvent(new Event('input', { bubbles: true }));
+          // @ts-ignore
+          dateInputs[1].dispatchEvent(new Event('change', { bubbles: true }));
+          
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        // Ищем и кликаем кнопку "Показать отчет за период" или "Показать отчет"
+        // @ts-ignore
+        const showButton = Array.from(document.querySelectorAll('button')).find(
+          btn => btn.textContent?.includes('Показать отчет') || 
+                 btn.textContent?.includes('Показать') ||
+                 btn.getAttribute('class')?.includes('show') ||
+                 btn.getAttribute('id')?.includes('show')
+        ) as HTMLButtonElement;
+        
+        if (showButton) {
+          showButton.click();
+          // Ждем загрузки маршрутов (увеличено время ожидания)
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        } else {
+          console.warn('Кнопка "Показать отчет" не найдена');
+        }
+      }, dateFrom, dateTo);
+
+      // Ждем загрузки маршрутов на странице (увеличено время)
+      await this.page.waitForTimeout(5000);
+      
+      // Дополнительно ждем появления элементов маршрута на карте или в списке
+      try {
+        await this.page.waitForSelector('.route, .trip, [class*="route"], [class*="trip"], .map, canvas', { 
+          timeout: 10000 
+        });
+      } catch (e) {
+        logger.warn('StarlineScraperService: Элементы маршрута не найдены, продолжаем...');
+      }
+
+      // Получаем HTML содержимое страницы
+      const html = await this.page.content();
+
+      logger.info(`StarlineScraperService: ✅ Routes HTML retrieved (${html.length} bytes)`);
+      return html;
+    } catch (error) {
+      logger.error(`StarlineScraperService: Error getting routes HTML:`, error);
       throw error;
     }
   }

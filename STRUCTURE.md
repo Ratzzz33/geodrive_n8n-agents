@@ -67,32 +67,88 @@
 - `name` (text)
 - `created_at`, `updated_at`
 
-**employees** - Сотрудники
+**employees** - Сотрудники (основная система Jarvis)
 - `id` (UUID PK)
 - `name`, `role`, `tg_user_id`
-- `cash_gel`, `cash_usd`, `cash_eur` (NUMERIC) - касса сотрудника по валютам
-- `cash_last_updated`, `cash_last_synced` (TIMESTAMPTZ) - последнее обновление и сверка
-- `task_chat_id` (TEXT) - ID группы "Tasks | <ФИО>" в Telegram
+- `cash_gel`, `cash_usd`, `cash_eur` (NUMERIC) - касса сотрудника по валютам (добавлены через миграции)
+- `cash_last_updated`, `cash_last_synced` (TIMESTAMPTZ) - последнее обновление и сверка (добавлены через миграции)
+- `task_chat_id` (TEXT) - ID группы "Tasks | <ФИО>" в Telegram (добавлено через миграции)
 - `created_at`, `updated_at`
+
+**rentprog_employees** - Сотрудники из RentProg
+- `id` (UUID PK)
+- `rentprog_id` (TEXT UNIQUE) - ID в RentProg (14714, 16003, ...)
+- `name`, `first_name`, `last_name`
+- `company_id` (INTEGER) - ID компании/филиала
+- `employee_id` (UUID FK → employees) - необязательная связь с Jarvis employees
+- `data` (JSONB) - дополнительные данные
+- `created_at`, `updated_at`
+- Индексы: `rentprog_id`, `company_id`
 
 **clients** - Клиенты
 - `id` (UUID PK)
 - `name`, `phone`, `email`
+- `data` (JSONB) — временное поле для raw данных (очищается после извлечения)
 - `created_at`, `updated_at`
 
 **cars** - Автомобили
 - `id` (UUID PK)
 - `branch_id` (UUID FK → branches)
 - `plate`, `vin`, `model`, `starline_id`
+- `data` (JSONB) — временное поле для raw данных (очищается после извлечения)
 - `created_at`, `updated_at`
+- Индексы: `branch_id`, `plate`
 
 **bookings** - Бронирования
 - `id` (UUID PK)
 - `branch_id` (UUID FK → branches)
 - `car_id` (UUID FK → cars)
 - `client_id` (UUID FK → clients)
+- `responsible_id` (UUID FK → rentprog_employees) — ответственный сотрудник из RentProg
 - `start_at`, `end_at`, `status`
+- `data` (JSONB) — временное поле для raw данных
 - `created_at`, `updated_at`
+- Индексы: `branch_id`, `car_id`, `client_id`, `responsible_id`, `status`
+
+**payments** - Платежи и кассовые операции
+- `id` (UUID PK)
+- `branch_id` (UUID FK → branches)
+- `branch` (TEXT) — код филиала: 'tbilisi', 'batumi', 'kutaisi', 'service-center'
+- `booking_id` (UUID FK → bookings)
+- `employee_id` (UUID FK → employees)
+- **Основные данные:**
+  - `payment_date` (TIMESTAMPTZ NOT NULL)
+  - `payment_type` (TEXT NOT NULL) — группа платежа
+  - `payment_method` (TEXT NOT NULL) — 'cash', 'cashless', 'card'
+  - `amount` (TEXT NOT NULL) — сумма (Numeric as text для точности)
+  - `currency` (TEXT NOT NULL DEFAULT 'GEL') — 'GEL', 'USD', 'EUR'
+  - `description` (TEXT)
+- **RentProg IDs:**
+  - `rp_payment_id` (INTEGER) — ID платежа в RentProg
+  - `rp_car_id`, `rp_user_id`, `rp_client_id`, `rp_company_id`
+  - `rp_cashbox_id`, `rp_category_id`, `rp_subcategory_id`
+- **Коды и названия:**
+  - `car_code` (TEXT) — код автомобиля
+  - `payment_subgroup` (TEXT) — подгруппа платежа
+- **Финансовые данные:**
+  - `exchange_rate`, `rated_amount`, `last_balance`
+- **Статусы:**
+  - `has_check`, `is_completed`, `is_operation`, `is_tinkoff_paid`, `is_client_balance`
+- **Дополнительные связи:**
+  - `debt_id`, `agent_id`, `investor_id`, `contractor_id`
+- **Даты:**
+  - `completed_at`, `completed_by`
+- **Alias-колонки для совместимости с workflow:**
+  - `payment_id` (INTEGER) — alias для rp_payment_id
+  - `sum` (TEXT) — alias для amount
+  - `cash`, `cashless` (TEXT) — части payment_method
+  - `group` (TEXT) — alias для payment_type
+  - `subgroup` (TEXT) — alias для payment_subgroup
+  - `car_id`, `client_id`, `user_id` (INTEGER) — aliases для rp_*_id
+- `raw_data` (JSONB) — будет NULL после разноски
+- `created_at`, `updated_at`
+- **Индексы:** множество индексов на branch, booking_id, payment_date, rp_payment_id, payment_type, car_code и alias-колонки
+- **UNIQUE constraints:** `(branch, rp_payment_id)`, `(branch, payment_id)` (для alias)
 
 #### Таблицы мониторинга событий
 
@@ -149,6 +205,41 @@
 - `priority INTEGER` — 100=skip, 90=critical, 70=normal, 50=low
 - `enabled BOOLEAN DEFAULT TRUE`
 - `notes TEXT`
+
+**entity_timeline** - денормализованный лог всех событий по сущностям
+- `id BIGSERIAL PK`
+- `ts TIMESTAMPTZ DEFAULT NOW()`
+- `entity_type TEXT NOT NULL` — 'car' | 'booking' | 'client' | 'employee' | 'payment' | 'branch'
+- `entity_id UUID NOT NULL` — UUID из базовых таблиц
+- `source_type TEXT NOT NULL` — 'rentprog_webhook' | 'rentprog_history' | 'starline' | 'telegram' | 'manual' | 'system'
+- `source_id TEXT` — ID из исходной таблицы
+- `event_type TEXT NOT NULL` — 'booking.created' | 'car.gps_updated' | 'payment.received'
+- `operation TEXT` — 'create' | 'update' | 'delete' | 'move' | 'status_change'
+- `summary TEXT` — краткое описание
+- `details JSONB` — детали события
+- `branch_code TEXT` — код филиала
+- `user_name TEXT` — кто выполнил операцию
+- `confidence TEXT` — 'high' | 'medium' | 'low'
+- `related_entities JSONB` — [{"type": "booking", "id": "uuid"}, ...]
+- `created_at TIMESTAMPTZ DEFAULT NOW()`
+- **Индексы:** множество индексов на entity_type/entity_id, source_type, event_type, branch_code, ts
+
+**event_links** - связи между events, payments и history
+- `id UUID PK`
+- `entity_type TEXT NOT NULL` — 'car' | 'booking' | 'client' | 'payment' | 'employee'
+- `entity_id UUID` — UUID из базовых таблиц
+- `event_id INTEGER` — событие из вебхука (BIGINT в БД)
+- `payment_id UUID FK → payments` — платеж
+- `history_id INTEGER` — запись из истории (BIGINT в БД)
+- `rp_entity_id TEXT` — ID сущности в RentProg
+- `rp_company_id INTEGER` — ID филиала в RentProg
+- `link_type TEXT` — 'webhook_to_payment' | 'history_to_payment' | 'webhook_to_history' | 'all'
+- `confidence TEXT` — 'high' | 'medium' | 'low'
+- `matched_at TIMESTAMPTZ` — время связывания
+- `matched_by TEXT` — 'auto' | 'manual' | 'workflow'
+- `metadata JSONB` — дополнительные данные
+- `created_at`, `updated_at`
+- **Индексы:** множество индексов на entity_type/entity_id, event_id, payment_id, history_id, rp_entity_id, link_type, confidence
 
 #### Подсистема Entity Timeline & Event Links
 

@@ -17,7 +17,6 @@
         },
         "timezone": "Asia/Tbilisi"
       },
-      "id": "cron-hourly",
       "name": "Every hour (8-23)",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -32,13 +31,10 @@
         "options": {
           "timeout": 3600000,
           "response": {
-            "response": {
-              "responseFormat": "json"
-            }
+            "responseFormat": "json"
           }
         }
       },
-      "id": "call-jarvis-api",
       "name": "Call Jarvis API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -50,7 +46,6 @@
         "mode": "runOnceForAllItems",
         "jsCode": "// Форматирование отчета о синхронизации\nconst response = $input.all()[0].json;\n\nconst timestamp = new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Tbilisi' });\n\nlet reportText = `📊 СИНХРОНИЗАЦИЯ БРОНИРОВАНИЙ\\n`;\nreportText += `Время: ${timestamp}\\n\\n`;\n\nif (response.success) {\n  reportText += `✅ Статус: Успешно\\n`;\n  reportText += `📦 Всего обработано: ${response.summary.total_bookings} бронирований\\n`;\n  reportText += `➕ Создано новых: ${response.summary.total_created}\\n`;\n  reportText += `🔄 Обновлено: ${response.summary.total_updated}\\n`;\n  reportText += `❌ Ошибок: ${response.summary.total_errors}\\n\\n`;\n  \n  reportText += `📋 По филиалам:\\n`;\n  if (response.per_branch) {\n    response.per_branch.forEach(branch => {\n      const status = branch.errors === 0 ? '✅' : '⚠️';\n      reportText += `${status} ${branch.branch.toUpperCase()}: ${branch.total} (создано: ${branch.created}, обновлено: ${branch.updated}, ошибок: ${branch.errors})\\n`;\n    });\n  }\n  \n  if (response.summary.total_errors > 0) {\n    reportText += `\\n⚠️ Обнаружено ${response.summary.total_errors} ошибок. Проверьте логи для деталей.`;\n  }\n} else {\n  reportText += `❌ Статус: Ошибка\\n`;\n  reportText += `Ошибка: ${response.error || 'Неизвестная ошибка'}\\n`;\n}\n\nreturn {\n  json: {\n    reportText,\n    success: response.success,\n    total: response.summary?.total_bookings || 0,\n    errors: response.summary?.total_errors || 0\n  }\n};"
       },
-      "id": "format-report",
       "name": "Format Report",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -65,7 +60,6 @@
           "parse_mode": "Markdown"
         }
       },
-      "id": "send-telegram",
       "name": "Send Telegram Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,

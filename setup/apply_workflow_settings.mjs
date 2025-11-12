@@ -9,6 +9,7 @@ const headers = {
 };
 
 // Стандартные настройки для всех workflows
+// ⚠️ НЕ используем errorWorkflow - эта настройка больше не используется (вызывала ошибки)
 const STANDARD_SETTINGS = {
   executionOrder: "v1",
   timezone: "Asia/Tbilisi",
@@ -16,8 +17,7 @@ const STANDARD_SETTINGS = {
   saveDataSuccessExecution: "all",
   saveManualExecutions: true,
   saveExecutionProgress: true,
-  executionTimeout: 3600, // 1 hour in seconds
-  errorWorkflow: "H3UBEp425F5SMyrX" // Error Handler - AI Agent
+  executionTimeout: 3600 // 1 hour in seconds
 };
 
 async function main() {

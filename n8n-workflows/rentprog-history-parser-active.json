@@ -168,7 +168,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Собираем ВСЕ responses со всех 4 филиалов и распаковываем operations\nconst processed = [];\n\n// Функция для обработки одного филиала\nfunction processItems(items, branchName) {\n  items.forEach(item => {\n    const operations = item.json?.operations?.data || item.json?.data || [];\n    \n    if (operations.length === 0) {\n      processed.push({ json: { branch: branchName, status: 'no_data' } });\n      return;\n    }\n    \n    operations.forEach(op_item => {\n      const op = op_item.attributes || op_item;\n      processed.push({\n        json: {\n          branch: branchName,\n          operation_type: op.operation_type || op.type || 'unknown',\n          operation_id: op.id ? String(op.id) : null,\n          description: op.description || '',\n          entity_type: op.entity_type || null,\n          entity_id: op.entity_id ? String(op.entity_id) : null,\n          user_name: op.user_name || null,\n          created_at: op.created_at || new Date().toISOString(),\n          raw_data: JSON.stringify(op)\n        }\n      });\n    });\n  });\n}\n\n// Обрабатываем все 4 филиала\nprocessItems($('Get Tbilisi').all(), 'tbilisi');\nprocessItems($('Get Batumi').all(), 'batumi');\nprocessItems($('Get Kutaisi').all(), 'kutaisi');\nprocessItems($('Get Service').all(), 'service-center');\n\nreturn processed;"
+        "jsCode": "// Собираем ВСЕ responses со всех 4 филиалов и распаковываем operations\nconst processed = [];\n\n// Функция для обработки одного филиала с проверкой ошибок\nfunction processItems(items, branchName) {\n  if (!items || items.length === 0) {\n    processed.push({ json: { branch: branchName, error: true, error_reason: 'no_response', error_message: 'Нет ответа от API' } });\n    return;\n  }\n  \n  items.forEach(item => {\n    // Проверка на ошибку HTTP запроса\n    if (item.error) {\n      processed.push({ json: { branch: branchName, error: true, error_reason: 'http_error', error_message: item.error.message || 'HTTP ошибка' } });\n      return;\n    }\n    \n    // Проверка на ошибку в JSON\n    if (item.json?.error) {\n      processed.push({ json: { branch: branchName, error: true, error_reason: 'api_error', error_message: item.json.error.message || JSON.stringify(item.json.error) } });\n      return;\n    }\n    \n    // Проверка на таймаут (пустой ответ или статус ошибки)\n    if (!item.json || (item.json.statusCode && item.json.statusCode >= 400)) {\n      processed.push({ json: { branch: branchName, error: true, error_reason: 'timeout_or_error', error_message: `HTTP ${item.json?.statusCode || 'timeout'}` } });\n      return;\n    }\n    \n    const operations = item.json?.operations?.data || item.json?.data || [];\n    \n    // Если нет операций - это не ошибка, просто пустой ответ\n    if (operations.length === 0) {\n      processed.push({ json: { branch: branchName, status: 'no_data' } });\n      return;\n    }\n    \n    // Обрабатываем операции\n    operations.forEach(op_item => {\n      const op = op_item.attributes || op_item;\n      processed.push({\n        json: {\n          branch: branchName,\n          operation_type: op.operation_type || op.type || 'unknown',\n          operation_id: op.id ? String(op.id) : null,\n          description: op.description || '',\n          entity_type: op.entity_type || null,\n          entity_id: op.entity_id ? String(op.entity_id) : null,\n          user_name: op.user_name || null,\n          created_at: op.created_at || new Date().toISOString(),\n          raw_data: JSON.stringify(op)\n        }\n      });\n    });\n  });\n}\n\n// Обрабатываем все 4 филиала\nprocessItems($('Get Tbilisi').all(), 'tbilisi');\nprocessItems($('Get Batumi').all(), 'batumi');\nprocessItems($('Get Kutaisi').all(), 'kutaisi');\nprocessItems($('Get Service').all(), 'service-center');\n\nreturn processed;"
       },
       "id": "merge-and-process",
       "name": "Merge & Process",
@@ -192,7 +192,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Postgres node возвращает только {success: true}\n// Возвращаем исходные данные из Merge & Process для Format Result\nconst originalData = $('Merge & Process').all();\nreturn originalData;"
+        "jsCode": "// Проверяем ошибки сохранения в БД и объединяем с исходными данными\nconst originalData = $('Merge & Process').all();\nconst saveResults = $input.all();\n\n// Создаем мапу для быстрого поиска ошибок сохранения\nconst saveErrors = {};\n\n// Проверяем результаты сохранения\nsaveResults.forEach((result, index) => {\n  // Проверяем различные форматы ошибок от Postgres node с continueOnFail\n  const hasError = result.error || \n                   (result.json && result.json.error) ||\n                   (result.json && result.json.message && result.json.message.includes('error')) ||\n                   (result.json && !result.json.success && result.json.success !== undefined);\n  \n  if (hasError) {\n    // Пытаемся найти соответствующий элемент из исходных данных\n    const originalItem = originalData[index];\n    let branch = null;\n    \n    if (originalItem && originalItem.json && originalItem.json.branch) {\n      branch = originalItem.json.branch;\n    } else {\n      // Если не можем найти branch из исходных данных, пробуем из всех\n      const allBranches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];\n      branch = allBranches[index % allBranches.length];\n    }\n    \n    if (branch) {\n      if (!saveErrors[branch]) saveErrors[branch] = [];\n      saveErrors[branch].push({\n        error: true,\n        error_reason: 'db_save_error',\n        error_message: result.error?.message || result.json?.error?.message || result.json?.message || 'Ошибка сохранения в БД'\n      });\n    }\n  }\n});\n\n// Объединяем исходные данные с ошибками сохранения\nconst combined = [...originalData];\n\n// Добавляем ошибки сохранения для каждого филиала\nObject.keys(saveErrors).forEach(branch => {\n  saveErrors[branch].forEach(err => {\n    combined.push({ json: { branch, ...err } });\n  });\n});\n\nreturn combined;"
       },
       "id": "pass-through-data",
       "name": "Pass Through Data",
@@ -202,7 +202,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const saved = $input.all();\nconst successCount = saved.filter(s => !s.json.error).length;\nconst errorCount = saved.filter(s => s.json.error).length;\n\nconst byBranch = {};\nsaved.forEach(item => {\n  if (item.json.branch) {\n    if (!byBranch[item.json.branch]) byBranch[item.json.branch] = { success: 0, error: 0 };\n    if (item.json.error) byBranch[item.json.branch].error++;\n    else byBranch[item.json.branch].success++;\n  }\n});\n\nlet message = '📜 HISTORY PARSER\\n';\nObject.keys(byBranch).forEach(branch => {\n  const stats = byBranch[branch];\n  message += `${branch.toUpperCase()}: ${stats.success} ✓`;\n  if (stats.error > 0) message += ` / ${stats.error} ✗`;\n  message += '\\n';\n});\nmessage += `\\nВсего: ${successCount} / ${saved.length}`;\n\nreturn [{ json: { message, success: errorCount === 0, saved_count: successCount, error_count: errorCount, by_branch: byBranch } }];"
+        "jsCode": "const saved = $input.all();\nconst successCount = saved.filter(s => !s.json.error && s.json.operation_id).length;\nconst errorCount = saved.filter(s => s.json.error).length;\n\nconst byBranch = {};\nconst errorDetails = {};\n\nsaved.forEach(item => {\n  if (item.json.branch) {\n    const branch = item.json.branch;\n    if (!byBranch[branch]) byBranch[branch] = { success: 0, error: 0 };\n    \n    if (item.json.error) {\n      byBranch[branch].error++;\n      if (!errorDetails[branch]) errorDetails[branch] = [];\n      errorDetails[branch].push({\n        reason: item.json.error_reason || 'unknown',\n        message: item.json.error_message || 'Неизвестная ошибка'\n      });\n    } else if (item.json.operation_id) {\n      byBranch[branch].success++;\n    }\n  }\n});\n\nlet message = '📜 HISTORY PARSER\\n';\nObject.keys(byBranch).forEach(branch => {\n  const stats = byBranch[branch];\n  message += `${branch.toUpperCase()}: ${stats.success} ✓`;\n  if (stats.error > 0) {\n    message += ` / ${stats.error} ✗`;\n    if (errorDetails[branch]) {\n      const uniqueErrors = [...new Set(errorDetails[branch].map(e => e.message))];\n      uniqueErrors.forEach(errMsg => {\n        message += `\\n  ❌ ${errMsg}`;\n      });\n    }\n  }\n  message += '\\n';\n});\nmessage += `\\nВсего: ${successCount} операций / ${saved.length} записей`;\nif (errorCount > 0) {\n  message += `\\n\\n🚨 ОШИБОК: ${errorCount}`;\n}\n\nreturn [{ json: { message, success: errorCount === 0, saved_count: successCount, error_count: errorCount, by_branch: byBranch, error_details: errorDetails } }];"
       },
       "id": "format-result",
       "name": "Format Result",
@@ -238,12 +238,14 @@
       "continueOnFail": true
     },
     {
-      "parameters": {},
-      "id": "success",
-      "name": "Success",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [2240, 304]
+      "parameters": {
+        "jsCode": "// Помечаем workflow как ошибочный ТОЛЬКО если были ошибки\n// Проверяем данные из Format Result напрямую (независимо от Send Alert)\nlet errorData = null;\n\ntry {\n  // Получаем данные из Format Result напрямую\n  const formatResult = $('Format Result').first();\n  if (formatResult && formatResult.json) {\n    errorData = formatResult.json;\n  }\n} catch (e) {\n  // Если не получилось, пробуем из входа (от Send Alert)\n  try {\n    const input = $input.first();\n    if (input && input.json) {\n      errorData = input.json;\n    }\n  } catch (e2) {\n    // Если и это не получилось, используем дефолтное сообщение\n  }\n}\n\n// Выбрасываем ошибку ТОЛЬКО если были ошибки (success === false)\nif (errorData && errorData.success === false) {\n  const errorMessage = errorData.message || 'Ошибка парсинга истории операций';\n  throw new Error(errorMessage);\n}\n\n// Если ошибок не было, просто возвращаем данные (workflow завершится успешно)\nreturn $input.all();"
+      },
+      "id": "throw-error",
+      "name": "Throw Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2440, 512]
     }
   ],
   "connections": {
@@ -269,10 +271,11 @@
     "Format Result": {"main": [[{"node": "If Error", "type": "main", "index": 0}]]},
     "If Error": {
       "main": [
-        [{"node": "Success", "type": "main", "index": 0}],
+        [{"node": "Throw Error", "type": "main", "index": 0}],
         [{"node": "Send Alert", "type": "main", "index": 0}]
       ]
-    }
+    },
+    "Send Alert": {"main": [[{"node": "Throw Error", "type": "main", "index": 0}]]}
   },
   "settings": {
     "executionOrder": "v1",

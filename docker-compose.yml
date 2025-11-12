@@ -118,7 +118,7 @@ services:
       - EXECUTIONS_TIMEOUT_MAX=7200  # Максимальный таймаут 2 часа
       
       # Оптимизация памяти Node.js для работы с большим количеством вебхуков
-      - NODE_OPTIONS=--max-old-space-size=3584  # 3.5GB heap для Node.js (из 4GB доступной памяти)
+      - NODE_OPTIONS=--max-old-space-size=6144  # 6GB heap для Node.js (из 8GB доступной памяти)
       
       # Настройки производительности и мониторинга
       - N8N_METRICS=true
@@ -156,7 +156,7 @@ services:
       - RENTPROG_HEALTH_URL=http://46.224.17.15:3000/rentprog/health
       - TELEGRAM_ALERT_CHAT_ID=-5004140602
       - API_BASE_URL=${API_BASE_URL:-https://api.rentflow.rentals}
-      - ORCHESTRATOR_URL=${ORCHESTRATOR_URL:-http://46.224.17.15:3000}
+      - ORCHESTRATOR_URL=${ORCHESTRATOR_URL:-http://host.docker.internal:3000}
       - SYNC_STATUS_URL=${SYNC_STATUS_URL:-http://46.224.17.15:3000/sync/status}
       # Примеры дополнительных переменных (раскомментируйте при необходимости):
       # - RENTPROG_BASE_URL=https://api.rentprog.example
@@ -168,13 +168,15 @@ services:
       - n8n_data:/home/node/.n8n
     networks:
       - n8n-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # Ресурсы для бесперебойной параллельной работы вебхуков
     deploy:
       resources:
         limits:
-          memory: 4G  # Увеличено с 2G до 4G для параллельной обработки вебхуков
+          memory: 8G  # Увеличено для обработки больших ответов от синхронизации
         reservations:
-          memory: 1G  # Увеличено с 512M до 1G
+          memory: 2G  # Увеличено для стабильной работы
 
 volumes:
   n8n_data:

@@ -1,0 +1,25 @@
+telegram_6553217554_2025_11_11_08_39_08.xlsx:
+  Total: 71,568
+  Telegram: 71,568
+  WhatsApp: 0
+
+whatsapp_995599001665_2025_11_11_08_40_00_0.xlsx:
+  Total: 200,000
+  Telegram: 0
+  WhatsApp: 200,000
+
+whatsapp_995599001665_2025_11_11_08_40_00_1.xlsx:
+  Total: 200,000
+  Telegram: 0
+  WhatsApp: 200,000
+
+whatsapp_995599001665_2025_11_11_08_40_00_2.xlsx:
+  Total: 23,889
+  Telegram: 0
+  WhatsApp: 23,889
+
+
+ИТОГО:
+  Total: 495,457
+  Telegram: 71,568
+  WhatsApp: 423,889

@@ -1,0 +1,178 @@
+{
+  "name": "Starline Routes HTML Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "starline-routes-html",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [240, 300],
+      "webhookId": "starline-routes-html-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.17.0.1:3000/starline/routes-html",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"deviceId\": $json.body.deviceId || $json.query.deviceId,\n  \"dateFrom\": $json.body.dateFrom || $json.query.dateFrom,\n  \"dateTo\": $json.body.dateTo || $json.query.dateTo\n} }}",
+        "options": {
+          "timeout": 120000
+        },
+        "responseFormat": "text"
+      },
+      "id": "get-routes-html",
+      "name": "Get Routes HTML",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [464, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notExists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-success",
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [656, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем HTML из ответа\nconst htmlContent = $input.item.json.data || $input.item.json || '';\n\n// Конвертируем строку в Buffer для binary формата\nconst buffer = Buffer.from(htmlContent, 'utf8');\n\n// Получаем параметры из Webhook\nconst deviceId = $('Webhook').item.json.body.deviceId || $('Webhook').item.json.query.deviceId;\nconst dateFrom = $('Webhook').item.json.body.dateFrom || $('Webhook').item.json.query.dateFrom;\nconst dateTo = $('Webhook').item.json.body.dateTo || $('Webhook').item.json.query.dateTo;\n\nconst fileName = `starline-routes-${deviceId}-${dateFrom}-${dateTo}.html`;\n\nreturn [{\n  json: {\n    fileName: fileName,\n    htmlContent: htmlContent\n  },\n  binary: {\n    data: {\n      data: buffer.toString('base64'),\n      mimeType: 'text/html',\n      fileName: fileName\n    }\n  }\n}];"
+      },
+      "id": "prepare-file-data",
+      "name": "Prepare File Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [848, 200]
+    },
+    {
+      "parameters": {
+        "fileName": "={{ $json.fileName }}",
+        "fileContent": "={{ $binary.data.data }}",
+        "options": {}
+      },
+      "id": "save-html-file",
+      "name": "Save HTML File",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1.1,
+      "position": [1040, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "file",
+        "responseBody": "={{ $json.fileName }}",
+        "options": {}
+      },
+      "id": "respond-with-file",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1232, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Удаляем временный файл\nconst fs = require('fs');\nconst path = require('path');\n\nconst fileName = $('Save HTML File').item.json.fileName;\nconst filePath = path.join('/tmp', fileName);\n\ntry {\n  if (fs.existsSync(filePath)) {\n    fs.unlinkSync(filePath);\n    console.log(`✅ Файл удален: ${filePath}`);\n  } else {\n    console.log(`⚠️ Файл не найден: ${filePath}`);\n  }\n} catch (error) {\n  console.error(`❌ Ошибка удаления файла: ${error.message}`);\n}\n\nreturn $input.all();"
+      },
+      "id": "delete-file",
+      "name": "Delete File",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1424, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"ok\": false,\n  \"error\": $('Get Routes HTML').item.json.error?.message || $('Get Routes HTML').item.json.error || 'Unknown error'\n} }}",
+        "options": {}
+      },
+      "id": "respond-error",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [848, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Удаляем временный файл при ошибке\nconst fs = require('fs');\nconst path = require('path');\n\nconst fileName = $('Save HTML File').item?.json?.fileName || \n  'starline-routes-' + \n  ($('Webhook').item.json.body.deviceId || $('Webhook').item.json.query.deviceId) + \n  '-' + \n  ($('Webhook').item.json.body.dateFrom || $('Webhook').item.json.query.dateFrom) + \n  '-' + \n  ($('Webhook').item.json.body.dateTo || $('Webhook').item.json.query.dateTo) + \n  '.html';\nconst filePath = path.join('/tmp', fileName);\n\ntry {\n  if (fs.existsSync(filePath)) {\n    fs.unlinkSync(filePath);\n    console.log(`✅ Файл удален: ${filePath}`);\n  } else {\n    console.log(`⚠️ Файл не найден: ${filePath}`);\n  }\n} catch (error) {\n  console.error(`❌ Ошибка удаления файла: ${error.message}`);\n}\n\nreturn $input.all();"
+      },
+      "id": "delete-file-on-error",
+      "name": "Delete File On Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 400],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Get Routes HTML", "type": "main", "index": 0}]]
+    },
+    "Get Routes HTML": {
+      "main": [[{"node": "Check Success", "type": "main", "index": 0}]]
+    },
+    "Check Success": {
+      "main": [
+        [{"node": "Prepare File Data", "type": "main", "index": 0}],
+        [{"node": "Respond Error", "type": "main", "index": 0}]
+      ]
+    },
+    "Prepare File Data": {
+      "main": [[{"node": "Save HTML File", "type": "main", "index": 0}]]
+    },
+    "Save HTML File": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    },
+    "Respond to Webhook": {
+      "main": [[{"node": "Delete File", "type": "main", "index": 0}]]
+    },
+    "Delete File": {
+      "main": []
+    },
+    "Respond Error": {
+      "main": [[{"node": "Delete File On Error", "type": "main", "index": 0}]]
+    },
+    "Delete File On Error": {
+      "main": []
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true,
+    "executionTimeout": 3600
+  }
+}
+

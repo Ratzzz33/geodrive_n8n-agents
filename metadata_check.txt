@@ -1,0 +1,25 @@
+
+=== ПРИМЕРЫ МЕТАДАННЫХ ===
+
+1. ID: 60346281
+   Метаданные: "{\"incomplete\":false,\"loaded\":30,\"client_name\":\"Unknown\",\"last_sync\":\"2025-11-12T05:19:17.216Z\",\"client_phone\":null,\"client_telegram\":null,\"channel_account\":null}"
+
+2. ID: 61932865
+   Метаданные: "{\"incomplete\":false,\"loaded\":13,\"client_name\":\"Unknown\",\"last_sync\":\"2025-11-11T20:53:39.687Z\",\"client_phone\":null,\"client_telegram\":null,\"channel_account\":null}"
+
+3. ID: 61989245
+   Метаданные: "{\"incomplete\":false,\"loaded\":3,\"client_name\":\"Unknown\",\"last_sync\":\"2025-11-12T05:46:50.939Z\",\"client_phone\":null,\"client_telegram\":null,\"channel_account\":null}"
+
+4. ID: 62012268
+   Метаданные: "{\"incomplete\":false,\"loaded\":12,\"client_name\":\"Unknown\",\"last_sync\":\"2025-11-12T05:36:51.510Z\",\"client_phone\":null,\"client_telegram\":null,\"channel_account\":null}"
+
+5. ID: 61284112
+   Метаданные: "{\"incomplete\":false,\"loaded\":12,\"client_name\":\"Unknown\",\"last_sync\":\"2025-11-12T05:36:51.509Z\",\"client_phone\":null,\"client_telegram\":null,\"channel_account\":null}"
+
+
+=== СТАТИСТИКА ===
+
+Диалогов с полем 'loaded': 0
+Диалогов с полем 'total': 0
+Диалогов с обоими полями: 0
+Диалогов где x=y: 0

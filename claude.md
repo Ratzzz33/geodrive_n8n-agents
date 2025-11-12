@@ -7,6 +7,11 @@
 
 ## ⚡ Быстрая справка
 
+**⚠️ ВАЖНО:** 
+- **[.cursorrules](./.cursorrules)** - ПРАВИЛА для работы с n8n (ОБЯЗАТЕЛЬНО!)
+- **[.cursorrules-ai-agents](./.cursorrules-ai-agents)** - ПРАВИЛА для AI Agent нод (2025, ОБЯЗАТЕЛЬНО!)
+- [IMPORTANT_MEMORIES.md](./IMPORTANT_MEMORIES.md) - Критически важные заметки (импорт n8n 2025, i2crm, архитектура)
+
 ### Домены
 - **n8n UI:** https://n8n.rentflow.rentals
 - **Вебхуки:** https://webhook.rentflow.rentals
@@ -347,41 +352,57 @@ Write-Host "Workflows: $($response.data.Count)"
 
 **Документация:** [ФИНАЛЬНЫЙ_ОТЧЕТ_MCP_N8N_2025-11-02.md](./ФИНАЛЬНЫЙ_ОТЧЕТ_MCP_N8N_2025-11-02.md)
 
-### Узел AI Agent в n8n — подключение инструментов (Tools Agent)
+### Узел AI Agent в n8n — подключение инструментов (Tools Agent) ⚠️ ОБНОВЛЕНО 2025
+
+**⚠️ ВАЖНО:** См. [.cursorrules-ai-agents](./.cursorrules-ai-agents) для полных правил работы с AI Agent нодами (2025).
 
 - **Что это:** автономный агент, который сам выбирает и вызывает подключённые инструменты (tools) для выполнения задач.
-- **Требование:** должен быть подключён **как минимум один** tool sub-node к порту узла AI Agent, иначе выполнение не начнётся.
+- **Требование:** должен быть подключён **как минимум один** tool sub-node к порту `ai_tool` узла AI Agent, иначе выполнение не начнётся.
 - **Тип агента:** начиная с v1.82.0 все AI Agent работают как **Tools Agent** (настройка выбора типа удалена; старые workflows продолжают работать, если были на Tools Agent).
 
+**Критичные изменения 2025:**
+- Все AI Agent работают ТОЛЬКО как Tools Agent (настройка удалена)
+- Обязательно подключение минимум одного tool через порт `ai_tool`
+- Chat Trigger: используй `responseMode = "Using Response Nodes"` с `Respond to Chat`
+- Output Parser: используй Structured (Auto-fixing deprecated)
+- Memory: настраивай `sessionKey` для изоляции сессий
+
 Практические паттерны:
-- **Чат-UX:** `Chat Trigger` → `AI Agent` → `Respond to Chat`
+- **Чат-UX:** `Chat Trigger` (responseMode="Using Response Nodes") → `AI Agent` → `Respond to Chat`
 - **HTTP-API:** `Webhook` → `AI Agent` → `Respond to Webhook`
-- **Подзадачи:** `Execute Sub-workflow` можно давать как инструмент (агент вызывает вспомогательные флоу по необходимости)
+- **Под-агенты:** `AI Agent` → `AI Agent Tool` → другие tools
+- **RAG:** `AI Agent` → `Vector Store` (как tool) → поиск в векторной базе
 
 Подключение инструментов (tools):
-- Поддерживаемые узлы с портом инструмента можно соединять с `AI Agent` (например, `HTTP Request` для API-вызовов, `Data Table` для табличных данных, другие AI-capable узлы).
-- В `AI Agent` укажи LLM-провайдера (OpenAI/Anthropic) и креденшелы.
-- Режим выбора инструмента обычно оставляй `auto` (если доступен), чтобы агент сам решал, что вызывать.
-
-Полезные ссылки: [AI Agent node — официальная документация](https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.agent/)
+- Поддерживаемые узлы с портом `ai_tool` можно соединять с `AI Agent` (например, `HTTP Request` для API-вызовов, `Data Table` для табличных данных, `Code`, `Calculator`, `Wikipedia`, `Vector Store`, другие AI-capable узлы).
+- В `AI Agent` укажи LLM-провайдера (OpenAI/Anthropic/Ollama) и креденшелы через подключение LLM ноды к порту `ai_languageModel`.
+- Агент автоматически видит доступные инструменты и выбирает нужный.
 
 #### Связанные ноды для AI Agent (рекомендуемые связки)
 
-- **Chat Trigger** → старт чат-сессии; типовая цепочка: `Chat Trigger → AI Agent → Respond to Chat`.
+- **Chat Trigger** → старт чат-сессии; типовая цепочка: `Chat Trigger` (responseMode="Using Response Nodes") → `AI Agent` → `Respond to Chat`.
 - **Respond to Chat** → формирует ответ в чат из данных `AI Agent` (поддерживает потоковую выдачу в новых версиях).
-- **Webhook** → приём HTTP-запросов; связка: `Webhook → AI Agent → Respond to Webhook`.
+- **Webhook** → приём HTTP-запросов; связка: `Webhook` → `AI Agent` → `Respond to Webhook`.
 - **Respond to Webhook** → формирует HTTP-ответ (status/body/headers) из результата `AI Agent`.
-- **MCP Server Trigger** → триггер от MCP‑сервера (подходит для интеграции внешних инструментов/событий в AI‑флоу).
-- **HTTP Request** (как tool) → доступ к внешним API по выбору агента.
-- **Execute Sub-workflow** (как tool) → вызов вспомогательных под‑воркфлоу (разбиение задач).
-- **Data Table** (как tool/источник) → доступ к табличным данным как инструменту агента.
-- **Guardrails** → валидация/ограничения вывода модели перед отправкой пользователю.
-- **AI Transform / Summarize** → пост‑обработка ответа модели (сжатие, нормализация, обезличивание и т.д.).
+- **HTTP Request** (как tool через `ai_tool`) → доступ к внешним API по выбору агента.
+- **AI Agent Tool** → другой агент как инструмент (создание под-агентов).
+- **Call n8n Sub-Workflow Tool** → вызов другого workflow как инструмента.
+- **Vector Store** (как tool) → RAG - поиск в векторной базе данных.
+- **Simple Memory / Redis Chat Memory** → хранение истории диалога.
+- **Structured Output Parser** → структурированный вывод (JSON/список).
+- **Fallback Model** → резервная модель при ошибке основной.
 
 Замечания:
 - Минимум один tool обязателен для `AI Agent`, иначе узел не стартует.
-- Передавай в агент структурированный контекст (system/instructions) и ограничивай доступные инструменты только необходимыми.
+- Подключай инструменты через порт `ai_tool`, НЕ `main`!
+- Передавай в агент структурированный контекст через `systemMessage` и ограничивай доступные инструменты только необходимыми.
 - Для чатов держи цепочку компактной: Agent отвечает за выбор tools; финальный рендер делай в `Respond to Chat`/`Respond to Webhook`.
+- Настраивай `sessionKey` для памяти чтобы изолировать сессии разных пользователей.
+
+Полезные ссылки: 
+- [AI Agent node — официальная документация](https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.agent/)
+- [Tutorial по AI Agent](https://docs.n8n.io/advanced-ai/intro-tutorial/)
+- [.cursorrules-ai-agents](./.cursorrules-ai-agents) - Полные правила для AI Agent (2025)
 
 ### Узел GitHub в n8n — креденшелы, операции, триггер
 
@@ -423,7 +444,48 @@ Write-Host "Workflows: $($response.data.Count)"
 
 ### Импорт нового workflow - РАБОТАЮЩИЙ СПОСОБ ✅
 
+**⚠️ ВАЖНО (2025):** Используйте обновленный скрипт `setup/import_workflow_2025.mjs` для совместимости с последними изменениями n8n API. См. [N8N_IMPORT_2025_FIX.md](./N8N_IMPORT_2025_FIX.md) для деталей.
+
 **Ключевой момент:** n8n API требует минимальный набор полей при создании workflow.
+
+**⚠️ КРИТИЧНО: Структура специфичных нод (2025)**
+
+Ошибка `"propertyValues[itemName] is not iterable"` возникает при неправильной структуре параметров нод:
+
+1. **Schedule Trigger (typeVersion 1.2):**
+   - ❌ НЕ использовать: `hours: { start: 8, end: 23 }` с `hoursInterval`
+   - ✅ Использовать: `cronExpression: "0 8-23 * * *"` (каждый час с 8 до 23)
+   ```json
+   "rule": {
+     "interval": [{
+       "field": "cronExpression",
+       "expression": "0 8-23 * * *"
+     }]
+   }
+   ```
+
+2. **HTTP Request (typeVersion 4.2):**
+   - ❌ НЕ использовать: `options.response.response.responseFormat` (вложенная структура)
+   - ✅ Использовать: только `options.timeout` или убрать `response` полностью
+   ```json
+   "options": {
+     "timeout": 3600000
+   }
+   ```
+
+3. **IF нода (typeVersion 2):**
+   - ✅ ОБЯЗАТЕЛЬНО добавлять `id` к каждому условию в массиве `conditions`
+   - Без `id` возникает ошибка: "propertyValues[itemName] is not iterable"
+   ```json
+   "conditions": [{
+     "id": "check-errors",
+     "leftValue": "={{ $json.errors }}",
+     "rightValue": 0,
+     "operator": { "type": "number", "operation": "gt" }
+   }]
+   ```
+
+**Скрипт `import_workflow_2025.mjs` автоматически исправляет эти проблемы при импорте.**
 
 #### Шаг 1: Подготовка данных
 
@@ -694,8 +756,8 @@ powershell -ExecutionPolicy Bypass -File setup/import_workflow_working.ps1
 
 Для workflow `Service Center Processor` (`#PbDKuU06H7s2Oem8`) запрещено изменять параметры в Settings:
 - `Execution Order` — оставить `v0 (legacy)`
-- `Error Workflow` — `No Workflow`
 - `Timezone` — `Asia/Tbilisi`
+- ⚠️ **НЕ использовать `Error Workflow`** — эта настройка больше не используется (вызывала ошибки "Could not find workflow")
 - `Save failed/successful production executions`, `Save manual executions`, `Save execution progress` — значение `Save`
 - `Timeout Workflow` — включён
 - `Timeout After` — `1 hour`
@@ -1492,6 +1554,9 @@ python setup/server_ssh.py "curl -s http://localhost:3000/health"
 - **[ФИНАЛЬНЫЙ_ОТЧЕТ_MCP_N8N_2025-11-02.md](./ФИНАЛЬНЫЙ_ОТЧЕТ_MCP_N8N_2025-11-02.md)** - MCP серверы
 - **[SESSION_REPORT_NGINX_NETLIFY_MIGRATION.md](./SESSION_REPORT_NGINX_NETLIFY_MIGRATION.md)** - Миграция на Nginx
 - **[IMPROVEMENTS_COMPLETE.md](./IMPROVEMENTS_COMPLETE.md)** - Управление переменными
+- **[N8N_IMPORT_2025_FIX.md](./N8N_IMPORT_2025_FIX.md)** - Исправление импорта n8n workflow (2025)
+- **[.cursorrules-ai-agents](./.cursorrules-ai-agents)** - ⚠️ ПРАВИЛА для AI Agent нод (2025)
+- **[IMPORTANT_MEMORIES.md](./IMPORTANT_MEMORIES.md)** - ⚠️ Критически важные заметки для агента
 
 ---
 

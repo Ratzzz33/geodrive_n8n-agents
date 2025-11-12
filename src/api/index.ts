@@ -10,12 +10,17 @@ import { sendHealthToN8n } from '../integrations/n8n.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
 import type { BranchName } from '../integrations/rentprog.js';
+import { apiLoggerMiddleware } from './middleware/apiLogger.js';
+import apiStatsRouter from './routes/apiStats.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
 app.use(express.json());
+
+// Middleware для логирования API запросов (подключаем ПЕРЕД всеми роутерами)
+app.use(apiLoggerMiddleware);
 
 // Статическая раздача веб-интерфейса
 const webPath = join(__dirname, '../../web');
@@ -51,6 +56,7 @@ export function initApiServer(port: number = 3000): void {
   app.use('/', syncBookingsRouter); // POST /sync-bookings
   app.use('/api/umnico', umnicoSendRouter); // POST /api/umnico/send
   app.use('/api/umnico/conversations', umnicoConversationRouter); // GET /api/umnico/conversations/:id
+  app.use('/api-stats', apiStatsRouter); // GET /api-stats/* - статистика использования endpoints
 
   // Health check для RentProg
   app.get('/rentprog/health', async (req, res) => {
@@ -477,6 +483,93 @@ export function initApiServer(port: number = 3000): void {
     } catch (error) {
       logger.error('Upsert client error:', error);
       res.status(500).json({ ok: false, error: 'Internal server error' });
+    }
+  });
+
+  // Endpoint для диагностики Starline scraper
+  app.get('/starline/diagnose', async (req, res) => {
+    try {
+      const { getStarlineScraper } = await import('../services/starline-scraper.js');
+      const scraper = getStarlineScraper();
+      const diagnosis = await scraper.diagnose();
+      
+      res.json({
+        ok: true,
+        diagnosis,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Starline diagnose error:', error);
+      res.status(500).json({ 
+        ok: false, 
+        error: error instanceof Error ? error.message : 'Internal server error' 
+      });
+    }
+  });
+
+  // Endpoint для получения HTML маршрутов Starline
+  app.post('/starline/routes-html', async (req, res) => {
+    const startTime = Date.now();
+    logger.info(`[Routes HTML] Запрос получен: deviceId=${req.body.deviceId}, dateFrom=${req.body.dateFrom}, dateTo=${req.body.dateTo}`);
+    
+    try {
+      const { deviceId, dateFrom, dateTo } = req.body;
+
+      if (!deviceId || !dateFrom || !dateTo) {
+        res.status(400).json({ 
+          ok: false, 
+          error: 'Missing required fields: deviceId, dateFrom, dateTo' 
+        });
+        return;
+      }
+
+      // Валидация формата дат (YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(dateFrom) || !dateRegex.test(dateTo)) {
+        res.status(400).json({ 
+          ok: false, 
+          error: 'Invalid date format. Expected YYYY-MM-DD' 
+        });
+        return;
+      }
+
+      logger.info(`[Routes HTML] Инициализация scraper...`);
+      const { getStarlineScraper } = await import('../services/starline-scraper.js');
+      const scraper = getStarlineScraper();
+      
+      // Инициализируем scraper если еще не инициализирован
+      logger.info(`[Routes HTML] Проверка инициализации scraper...`);
+      await scraper.initialize();
+      logger.info(`[Routes HTML] Scraper инициализирован, получаю HTML...`);
+      
+      // Получаем HTML маршрутов с таймаутом
+      const htmlPromise = scraper.getRoutesHTML(
+        parseInt(deviceId, 10),
+        dateFrom,
+        dateTo
+      );
+      
+      // Добавляем общий таймаут 2 минуты
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout: получение HTML заняло более 2 минут')), 120000)
+      );
+      
+      const html = await Promise.race([htmlPromise, timeoutPromise]) as string;
+      
+      const duration = Date.now() - startTime;
+      logger.info(`[Routes HTML] ✅ HTML получен за ${duration}ms (${html.length} байт)`);
+
+      // Отправляем HTML как текст
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.send(html);
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      logger.error(`[Routes HTML] ❌ Ошибка за ${duration}ms:`, error);
+      res.status(500).json({ 
+        ok: false, 
+        error: error instanceof Error ? error.message : 'Internal server error',
+        duration: duration
+      });
     }
   });
 

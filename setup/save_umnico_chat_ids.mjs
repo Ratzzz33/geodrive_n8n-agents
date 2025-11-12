@@ -13,7 +13,11 @@ import { readFileSync } from 'fs';
 
 config();
 
-const sql = postgres(process.env.NEON_CONNECTION_STRING, {
+// Connection string из документации (fallback если нет в .env)
+const CONNECTION_STRING = process.env.NEON_CONNECTION_STRING || 
+  'postgresql://neondb_owner:npg_cHIT9Kxfk1Am@ep-rough-heart-ahnybmq0-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require';
+
+const sql = postgres(CONNECTION_STRING, {
   max: 1,
   ssl: { rejectUnauthorized: false }
 });
@@ -27,11 +31,45 @@ if (args.length === 0) {
 
 async function saveChatIds(chatIdsData) {
   try {
+    // Сначала убедимся, что таблица существует
+    console.log('📝 Проверка таблицы umnico_chat_ids...');
+    await sql`
+      CREATE TABLE IF NOT EXISTS umnico_chat_ids (
+        id TEXT PRIMARY KEY,
+        discovered_at TIMESTAMPTZ DEFAULT NOW(),
+        source TEXT,
+        processed BOOLEAN DEFAULT FALSE,
+        last_sync_at TIMESTAMPTZ,
+        metadata JSONB
+      )
+    `;
+    
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_umnico_chat_ids_processed 
+      ON umnico_chat_ids(processed) 
+      WHERE processed = FALSE
+    `;
+    
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_umnico_chat_ids_discovered 
+      ON umnico_chat_ids(discovered_at DESC)
+    `;
+    
+    console.log('✅ Таблица готова\n');
+    
     let ids = [];
+    let source = 'manual_collection';
+    let metadata = {};
     
     // Если передан объект с полем ids
     if (chatIdsData.ids && Array.isArray(chatIdsData.ids)) {
       ids = chatIdsData.ids;
+      source = chatIdsData.source || source;
+      metadata = {
+        total: chatIdsData.total || ids.length,
+        collected_at: chatIdsData.collected_at,
+        source: chatIdsData.source
+      };
     } 
     // Если передан просто массив
     else if (Array.isArray(chatIdsData)) {
@@ -47,30 +85,38 @@ async function saveChatIds(chatIdsData) {
       return;
     }
     
-    console.log(`📝 Сохранение ${ids.length} ID чатов...\n`);
+    console.log(`📝 Сохранение ${ids.length} ID чатов...`);
+    console.log(`   Источник: ${source}\n`);
     
     let saved = 0;
     let skipped = 0;
     
-    for (const id of ids) {
-      try {
-        await sql`
-          INSERT INTO umnico_chat_ids (id, source, metadata)
-          VALUES (${id}, 'manual_collection', ${JSON.stringify({ total: ids.length })})
-          ON CONFLICT (id) DO NOTHING
-        `;
-        
-        const result = await sql`SELECT id FROM umnico_chat_ids WHERE id = ${id}`;
-        if (result.length > 0) {
-          saved++;
-          if (saved % 10 === 0) {
-            console.log(`✅ Сохранено: ${saved}/${ids.length}`);
+    // Используем batch insert для ускорения
+    const batchSize = 100;
+    for (let i = 0; i < ids.length; i += batchSize) {
+      const batch = ids.slice(i, i + batchSize);
+      
+      for (const id of batch) {
+        try {
+          const result = await sql`
+            INSERT INTO umnico_chat_ids (id, source, metadata)
+            VALUES (${String(id)}, ${source}, ${JSON.stringify(metadata)})
+            ON CONFLICT (id) DO NOTHING
+            RETURNING id
+          `;
+          
+          if (result.length > 0) {
+            saved++;
+          } else {
+            skipped++;
           }
-        } else {
-          skipped++;
+        } catch (error) {
+          console.error(`❌ Ошибка сохранения ID ${id}:`, error.message);
         }
-      } catch (error) {
-        console.error(`❌ Ошибка сохранения ID ${id}:`, error.message);
+      }
+      
+      if ((saved + skipped) % 100 === 0 || (saved + skipped) === ids.length) {
+        console.log(`   Обработано: ${saved + skipped}/${ids.length} (сохранено: ${saved}, пропущено: ${skipped})`);
       }
     }
     

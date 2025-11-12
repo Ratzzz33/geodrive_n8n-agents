@@ -1,0 +1,728 @@
+
+🚀 Автоматический парсинг 90 диалогов через MCP Chrome
+
+📋 Инструкции для парсинга:
+
+
+🔍 Парсинг диалога 61006882...
+
+1. Диалог 61006882:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61006882")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61094606...
+
+2. Диалог 61094606:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61094606")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61152446...
+
+3. Диалог 61152446:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61152446")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61196596...
+
+4. Диалог 61196596:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61196596")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61219776...
+
+5. Диалог 61219776:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61219776")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61316101...
+
+6. Диалог 61316101:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61316101")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61354074...
+
+7. Диалог 61354074:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61354074")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61495153...
+
+8. Диалог 61495153:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61495153")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61523932...
+
+9. Диалог 61523932:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61523932")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61580107...
+
+10. Диалог 61580107:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61580107")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61599823...
+
+11. Диалог 61599823:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61599823")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61616361...
+
+12. Диалог 61616361:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61616361")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61619635...
+
+13. Диалог 61619635:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61619635")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61654627...
+
+14. Диалог 61654627:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61654627")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61670231...
+
+15. Диалог 61670231:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61670231")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61779047...
+
+16. Диалог 61779047:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61779047")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61781233...
+
+17. Диалог 61781233:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61781233")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61789411...
+
+18. Диалог 61789411:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61789411")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61853293...
+
+19. Диалог 61853293:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61853293")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61857699...
+
+20. Диалог 61857699:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61857699")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61861447...
+
+21. Диалог 61861447:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61861447")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61880519...
+
+22. Диалог 61880519:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61880519")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61881320...
+
+23. Диалог 61881320:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61881320")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61897674...
+
+24. Диалог 61897674:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61897674")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61906259...
+
+25. Диалог 61906259:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61906259")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61917973...
+
+26. Диалог 61917973:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61917973")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61920123...
+
+27. Диалог 61920123:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61920123")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61931877...
+
+28. Диалог 61931877:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61931877")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61934247...
+
+29. Диалог 61934247:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61934247")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61934404...
+
+30. Диалог 61934404:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61934404")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61937095...
+
+31. Диалог 61937095:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61937095")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61939176...
+
+32. Диалог 61939176:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61939176")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61940631...
+
+33. Диалог 61940631:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61940631")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61947581...
+
+34. Диалог 61947581:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61947581")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61955151...
+
+35. Диалог 61955151:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61955151")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61957598...
+
+36. Диалог 61957598:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61957598")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61964742...
+
+37. Диалог 61964742:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61964742")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61965921...
+
+38. Диалог 61965921:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61965921")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61967924...
+
+39. Диалог 61967924:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61967924")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61968979...
+
+40. Диалог 61968979:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61968979")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61969665...
+
+41. Диалог 61969665:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61969665")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61969699...
+
+42. Диалог 61969699:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61969699")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61973375...
+
+43. Диалог 61973375:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61973375")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61977041...
+
+44. Диалог 61977041:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61977041")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61985335...
+
+45. Диалог 61985335:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61985335")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61987335...
+
+46. Диалог 61987335:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61987335")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61989414...
+
+47. Диалог 61989414:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61989414")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 61991205...
+
+48. Диалог 61991205:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/61991205")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62001893...
+
+49. Диалог 62001893:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62001893")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62002151...
+
+50. Диалог 62002151:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62002151")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62002847...
+
+51. Диалог 62002847:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62002847")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62003659...
+
+52. Диалог 62003659:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62003659")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62003764...
+
+53. Диалог 62003764:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62003764")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62004154...
+
+54. Диалог 62004154:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62004154")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62004199...
+
+55. Диалог 62004199:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62004199")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62004202...
+
+56. Диалог 62004202:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62004202")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62005098...
+
+57. Диалог 62005098:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62005098")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62005282...
+
+58. Диалог 62005282:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62005282")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62007292...
+
+59. Диалог 62007292:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62007292")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62008517...
+
+60. Диалог 62008517:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62008517")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62009126...
+
+61. Диалог 62009126:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62009126")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62009528...
+
+62. Диалог 62009528:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62009528")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62009592...
+
+63. Диалог 62009592:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62009592")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62009904...
+
+64. Диалог 62009904:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62009904")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62012268...
+
+65. Диалог 62012268:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62012268")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62012741...
+
+66. Диалог 62012741:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62012741")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62013880...
+
+67. Диалог 62013880:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62013880")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62014492...
+
+68. Диалог 62014492:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62014492")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62014984...
+
+69. Диалог 62014984:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62014984")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62016374...
+
+70. Диалог 62016374:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62016374")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62016808...
+
+71. Диалог 62016808:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62016808")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62024953...
+
+72. Диалог 62024953:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62024953")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62025065...
+
+73. Диалог 62025065:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62025065")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62027111...
+
+74. Диалог 62027111:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62027111")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62028779...
+
+75. Диалог 62028779:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62028779")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62028882...
+
+76. Диалог 62028882:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62028882")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62029617...
+
+77. Диалог 62029617:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62029617")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62031944...
+
+78. Диалог 62031944:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62031944")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62032854...
+
+79. Диалог 62032854:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62032854")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62037368...
+
+80. Диалог 62037368:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62037368")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62039185...
+
+81. Диалог 62039185:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62039185")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62039659...
+
+82. Диалог 62039659:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62039659")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62039884...
+
+83. Диалог 62039884:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62039884")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62040709...
+
+84. Диалог 62040709:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62040709")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62041775...
+
+85. Диалог 62041775:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62041775")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62042772...
+
+86. Диалог 62042772:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62042772")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62042930...
+
+87. Диалог 62042930:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62042930")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62046098...
+
+88. Диалог 62046098:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62046098")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62046421...
+
+89. Диалог 62046421:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62046421")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+🔍 Парсинг диалога 62047430...
+
+90. Диалог 62047430:
+   - Навигация: mcp_chrome-devtools_navigate("https://umnico.com/app/inbox/deals/inbox/details/62047430")
+   - Ожидание: mcp_chrome-devtools_wait_for(".im-stack__messages-item-wrap")
+   - Извлечение: mcp_chrome-devtools_evaluate(undefined)
+   - Прокрутка (если нужно): mcp_chrome-devtools_evaluate(undefined)
+
+✅ Сгенерировано 90 инструкций для парсинга
+
