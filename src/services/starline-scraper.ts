@@ -417,29 +417,25 @@ export class StarlineScraperService {
     try {
       return await this._getDeviceDetailsInternal(deviceId);
     } catch (error) {
-      // Если ошибка содержит "page.evaluate" - это ошибка из evaluate, пробрасываем дальше
       const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('page.evaluate')) {
-        // Это ошибка из page.evaluate - обрабатываем как истечение сессии
-        logger.warn(`StarlineScraperService: page.evaluate error detected: ${errorMessage.substring(0, 200)}`);
-        const isSessionExpired = errorMessage.includes('Unexpected token') || 
-                                 errorMessage.includes('Необходима') ||
-                                 /[А-Яа-яЁё]/.test(errorMessage) ||
-                                 /\\u04[0-9a-fA-F]{2}/.test(errorMessage);
+      
+      // Если ошибка содержит "page.evaluate" и "Unexpected token" - это истекшая сессия
+      if (errorMessage.includes('page.evaluate') && errorMessage.includes('Unexpected token')) {
+        logger.warn(`StarlineScraperService: page.evaluate error with Unexpected token detected, restarting browser...`);
+        logger.warn(`StarlineScraperService: Error details: ${errorMessage.substring(0, 300)}`);
         
-        if (isSessionExpired) {
-          logger.warn(`StarlineScraperService: Session expired detected in page.evaluate, restarting browser...`);
-          try {
-            await this.restartBrowser();
-            // Повторяем запрос после перезапуска
-            logger.info(`StarlineScraperService: Retrying fetch for device ${deviceId} after browser restart...`);
-            return await this._getDeviceDetailsInternal(deviceId);
-          } catch (restartError) {
-            logger.error(`StarlineScraperService: Failed to restart browser:`, restartError);
-            throw new Error(`Session expired and browser restart failed: ${errorMessage.substring(0, 200)}`);
-          }
+        try {
+          await this.restartBrowser();
+          // Повторяем запрос после перезапуска
+          logger.info(`StarlineScraperService: Retrying fetch for device ${deviceId} after browser restart...`);
+          return await this._getDeviceDetailsInternal(deviceId);
+        } catch (restartError) {
+          logger.error(`StarlineScraperService: Failed to restart browser:`, restartError);
+          throw new Error(`Session expired and browser restart failed: ${errorMessage.substring(0, 200)}`);
         }
       }
+      
+      // Все остальные ошибки пробрасываем дальше
       throw error;
     }
   }
