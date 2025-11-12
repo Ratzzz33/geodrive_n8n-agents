@@ -190,6 +190,8 @@ export class StarlineScraperService {
         },
         // Переопределяем navigator свойства через CDP
         permissions: ['geolocation'],
+        // Очищаем все куки и историю при создании нового контекста
+        storageState: undefined,
       });
 
       // Переопределяем navigator свойства через CDP для более реалистичного fingerprint
@@ -221,6 +223,25 @@ export class StarlineScraperService {
       });
 
       this.page = await this.context.newPage();
+
+      // Очищаем все куки и историю перед логином
+      await this.page.evaluate(() => {
+        // Очищаем localStorage
+        localStorage.clear();
+        // Очищаем sessionStorage
+        sessionStorage.clear();
+        // Очищаем куки (через document.cookie)
+        document.cookie.split(';').forEach(c => {
+          const eqPos = c.indexOf('=');
+          const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${window.location.hostname}`;
+        });
+      });
+
+      // Очищаем куки через Playwright API
+      await this.context.clearCookies();
 
       // Логинимся
       await this.login();
