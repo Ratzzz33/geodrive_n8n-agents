@@ -841,7 +841,7 @@ export class StarlineScraperService {
           
           // Повторяем запрос после перезапуска
           logger.info(`StarlineScraperService: Retrying fetch for device ${deviceId} after browser restart...`);
-          return await this.getDeviceDetails(deviceId);
+          return await this._getDeviceDetailsInternal(deviceId);
         } catch (restartError) {
           logger.error(`StarlineScraperService: Failed to restart browser:`, restartError);
           throw new Error(`Session expired and browser restart failed: ${errorMessage.substring(0, 200)}`);
