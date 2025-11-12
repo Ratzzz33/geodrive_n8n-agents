@@ -547,6 +547,13 @@ export class StarlineScraperService {
       const errorString = String(error);
       
       // Проверяем на наличие признаков истечения сессии
+      // Ошибка может содержать кириллицу в экранированном виде (\u041d = 'Н')
+      const hasCyrillicUnicode = /\\u[0-9a-fA-F]{4}/.test(errorString) && 
+                                 (errorString.includes('\\u041d') || // Н
+                                  errorString.includes('\\u043d') || // н
+                                  errorString.includes('\\u043e') || // о
+                                  errorString.includes('\\u0431'));  // б
+      
       const isSessionExpired = 
         errorMessage.includes('SESSION_EXPIRED') ||
         errorMessage.includes('Expected JSON but got') || 
@@ -554,10 +561,10 @@ export class StarlineScraperService {
         errorMessage.includes('Необходима') ||
         errorMessage.includes('необходима') ||
         errorMessage.includes('authorization') ||
-        errorMessage.includes('Unexpected token') ||
+        (errorMessage.includes('Unexpected token') && (hasCyrillicUnicode || /[А-Яа-яЁё]/.test(errorMessage))) ||
         // Проверяем на наличие кириллицы в сообщении об ошибке (признак HTML страницы)
         /[А-Яа-яЁё]/.test(errorMessage) ||
-        errorString.includes('Unexpected token') && /[А-Яа-яЁё]/.test(errorString);
+        (errorString.includes('Unexpected token') && /[А-Яа-яЁё]/.test(errorString));
       
       if (isSessionExpired) {
         logger.warn(`StarlineScraperService: Session expired detected (error: ${errorMessage.substring(0, 100)}), re-logging in for device ${deviceId}...`);
