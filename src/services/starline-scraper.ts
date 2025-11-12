@@ -181,13 +181,13 @@ export class StarlineScraperService {
         ],
       });
 
-      // Создаем контекст с РЕАЛЬНЫМ профилем браузера и SOCKS5 прокси
+      // Создаем контекст с РЕАЛЬНЫМ профилем браузера и HTTP прокси
       this.context = await this.browser.newContext({
-        // SOCKS5 прокси для обхода блокировок
+        // HTTP прокси для обхода блокировок (Playwright поддерживает HTTP с авторизацией)
         proxy: {
-          server: 'socks5://j4mqjbmxfz.cn.fxdx.in:16286',
-          username: '33pokrov33202947',
-          password: 'eSZemNt6zrgu',
+          server: 'http://j4mqjbmxfz.cn.fxdx.in:16285',
+          username: '33pokrov33202941',
+          password: 'IAzLy13QUvwf',
         },
         // Реальный User-Agent из Chrome
         userAgent: realUserAgent,
