@@ -224,30 +224,11 @@ export class StarlineScraperService {
 
       this.page = await this.context.newPage();
 
-      logger.info('StarlineScraperService: Clearing cookies and storage before login...');
-      
-      // Очищаем все куки и историю перед логином
-      await this.page.evaluate(() => {
-        // Очищаем localStorage
-        localStorage.clear();
-        // Очищаем sessionStorage
-        sessionStorage.clear();
-        // Очищаем куки (через document.cookie)
-        document.cookie.split(';').forEach(c => {
-          const eqPos = c.indexOf('=');
-          const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
-          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
-          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${window.location.hostname}`;
-        });
-      });
-
-      // Очищаем куки через Playwright API
+      // Очищаем куки через Playwright API (до загрузки страницы)
       await this.context.clearCookies();
-      
-      logger.info('StarlineScraperService: ✅ Cookies and storage cleared');
+      logger.info('StarlineScraperService: ✅ Cookies cleared via Playwright API');
 
-      // Логинимся
+      // Логинимся (внутри login() будет очистка localStorage после загрузки страницы)
       await this.login();
       
       // После успешного логина устанавливаем куки из реального браузера (MCP Chrome)
