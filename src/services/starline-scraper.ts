@@ -421,6 +421,44 @@ export class StarlineScraperService {
         await this.page.goto(`${this.BASE_URL}/site/map`, { waitUntil: 'networkidle', timeout: 15000 });
       }
 
+      // Убеждаемся, что мы на странице карты (если нет - переходим)
+      if (!currentUrl.includes('/site/map')) {
+        logger.info('StarlineScraperService: Navigating to /site/map...');
+        await this.page.goto(`${this.BASE_URL}/site/map`, { waitUntil: 'networkidle', timeout: 15000 });
+        await this.page.waitForTimeout(1000); // Даем время странице стабилизироваться
+      }
+
+      // Проверяем авторизацию: если сессия истекла, перелогиниваемся
+      const isLoggedIn = await this.page.evaluate(() => {
+        // Проверяем наличие элементов, которые видны только после логина
+        // @ts-ignore
+        const hasLoginButton = !!document.querySelector('a[href="#login"]');
+        // @ts-ignore
+        const hasDevicesList = !!document.querySelector('[data-device-id]') || 
+                              // @ts-ignore
+                              !!document.querySelector('.device-item');
+        // @ts-ignore
+        const currentPath = window.location.pathname;
+        
+        return {
+          hasLoginButton,
+          hasDevicesList,
+          isOnMapPage: currentPath.includes('/site/map'),
+          // @ts-ignore
+          cookies: document.cookie
+        };
+      });
+
+      // Если видим кнопку логина и нет списка устройств - сессия истекла
+      if (isLoggedIn.hasLoginButton && !isLoggedIn.hasDevicesList && !isLoggedIn.isOnMapPage) {
+        logger.warn('StarlineScraperService: Session expired, re-logging in...');
+        this.isLoggedIn = false;
+        await this.login();
+        // Переходим на страницу карты после логина
+        await this.page.goto(`${this.BASE_URL}/site/map`, { waitUntil: 'networkidle', timeout: 15000 });
+        await this.page.waitForTimeout(1000);
+      }
+
       // Выполняем fetch с таймаутом через Promise.race
       const response = await Promise.race([
         this.page.evaluate(async (id) => {
@@ -487,6 +525,30 @@ export class StarlineScraperService {
       logger.error(`StarlineScraperService: Failed to get details for device ${deviceId}. Response:`, response);
       throw new Error(`Failed to get Starline device details for ${deviceId}`);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Если получили HTML вместо JSON - сессия истекла, перелогиниваемся
+      if (errorMessage.includes('Expected JSON but got') || 
+          errorMessage.includes('Invalid JSON response') ||
+          errorMessage.includes('Необходима') ||
+          errorMessage.includes('authorization')) {
+        logger.warn(`StarlineScraperService: Got HTML response (session expired?), re-logging in for device ${deviceId}...`);
+        this.isLoggedIn = false;
+        try {
+          await this.login();
+          // Переходим на страницу карты после логина
+          await this.page!.goto(`${this.BASE_URL}/site/map`, { waitUntil: 'networkidle', timeout: 15000 });
+          await this.page!.waitForTimeout(1000);
+          
+          // Повторяем запрос после перелогина
+          logger.info(`StarlineScraperService: Retrying fetch for device ${deviceId} after re-login...`);
+          return await this.getDeviceDetails(deviceId);
+        } catch (reloginError) {
+          logger.error(`StarlineScraperService: Failed to re-login:`, reloginError);
+          throw new Error(`Session expired and re-login failed: ${errorMessage}`);
+        }
+      }
+      
       logger.error(`StarlineScraperService: Error fetching device details for ${deviceId}:`, error);
       throw error;
     }
@@ -525,11 +587,13 @@ export class StarlineScraperService {
         
         if (!deviceRadio) {
           // Пробуем найти по value
+          // @ts-ignore - код выполняется в браузере
           deviceRadio = document.querySelector(`input[type="radio"][value="${id}"]`) as HTMLInputElement;
         }
         
         if (!deviceRadio) {
           // Пробуем найти все радио-кнопки и выбрать нужную
+          // @ts-ignore - код выполняется в браузере
           const allRadios = Array.from(document.querySelectorAll('input[type="radio"]')) as HTMLInputElement[];
           deviceRadio = allRadios.find(radio => {
             const parent = radio.closest('label, div, li');
@@ -547,11 +611,13 @@ export class StarlineScraperService {
       }, deviceId);
 
       // Устанавливаем период через JavaScript
-      await this.page.evaluate(async (from, to) => {
+      await this.page.evaluate(async (from: string, to: string) => {
         // @ts-ignore - код выполняется в браузере
         // Ищем кнопку "Период" и кликаем
+        // @ts-ignore - код выполняется в браузере
         const periodButton = Array.from(document.querySelectorAll('button')).find(
-          btn => btn.textContent?.trim().includes('Период') || btn.textContent?.trim() === 'Период'
+          // @ts-ignore
+          (btn: any) => btn.textContent?.trim().includes('Период') || btn.textContent?.trim() === 'Период'
         ) as HTMLButtonElement;
         
         if (periodButton) {
@@ -583,8 +649,10 @@ export class StarlineScraperService {
 
         // Ищем и кликаем кнопку "Показать отчет за период" или "Показать отчет"
         // @ts-ignore
+        // @ts-ignore - код выполняется в браузере
         const showButton = Array.from(document.querySelectorAll('button')).find(
-          btn => btn.textContent?.includes('Показать отчет') || 
+          // @ts-ignore
+          (btn: any) => btn.textContent?.includes('Показать отчет') ||
                  btn.textContent?.includes('Показать') ||
                  btn.getAttribute('class')?.includes('show') ||
                  btn.getAttribute('id')?.includes('show')
@@ -597,7 +665,7 @@ export class StarlineScraperService {
         } else {
           console.warn('Кнопка "Показать отчет" не найдена');
         }
-      }, dateFrom, dateTo);
+      }, dateFrom as string, dateTo as string);
 
       // Ждем загрузки маршрутов на странице (увеличено время)
       await this.page.waitForTimeout(5000);
