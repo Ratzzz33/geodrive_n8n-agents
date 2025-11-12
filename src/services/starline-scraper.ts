@@ -481,24 +481,38 @@ export class StarlineScraperService {
               throw new Error(`HTTP ${res.status}: ${errorText.substring(0, 200)}`);
             }
             
+            // Получаем текст ответа для проверки
+            const responseText = await res.text();
+            
+            // Проверяем, не является ли это HTML страницей авторизации (проверяем ДО парсинга JSON)
+            const lowerText = responseText.toLowerCase();
+            if (responseText.includes('Необходима') || 
+                responseText.includes('необходима') ||
+                responseText.includes('authorization') ||
+                responseText.includes('login') ||
+                responseText.includes('<!DOCTYPE') ||
+                responseText.includes('<html') ||
+                lowerText.includes('авторизация') ||
+                lowerText.includes('войти')) {
+              throw new Error('SESSION_EXPIRED: HTML authorization page received. Text: ' + responseText.substring(0, 200));
+            }
+            
             // Проверяем Content-Type перед парсингом JSON
             const contentType = res.headers.get('content-type') || '';
             if (!contentType.includes('application/json') && !contentType.includes('text/javascript')) {
-              const text = await res.text();
-              throw new Error(`Expected JSON but got ${contentType}. Response: ${text.substring(0, 200)}`);
+              throw new Error(`Expected JSON but got ${contentType}. Response: ${responseText.substring(0, 200)}`);
             }
             
             // Пытаемся распарсить JSON
             try {
-              return await res.json();
+              return JSON.parse(responseText);
             } catch (jsonError) {
-              // Если не JSON, возвращаем текст ошибки
-              const text = await res.text();
-              // Проверяем, не является ли это страницей авторизации
-              if (text.includes('Необходима') || text.includes('authorization') || text.includes('login')) {
-                throw new Error('SESSION_EXPIRED: ' + text.substring(0, 200));
+              // Если не JSON, проверяем на наличие кириллицы (признак HTML страницы)
+              const hasCyrillic = /[А-Яа-яЁё]/.test(responseText);
+              if (hasCyrillic && (responseText.length > 100 || responseText.includes('<'))) {
+                throw new Error('SESSION_EXPIRED: Cyrillic text in response (likely HTML page). Text: ' + responseText.substring(0, 200));
               }
-              throw new Error(`Invalid JSON response: ${text.substring(0, 200)}`);
+              throw new Error(`Invalid JSON response: ${responseText.substring(0, 200)}`);
             }
           } catch (error) {
             clearTimeout(timeoutId);
@@ -530,28 +544,77 @@ export class StarlineScraperService {
       throw new Error(`Failed to get Starline device details for ${deviceId}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorString = String(error);
       
-      // Если получили HTML вместо JSON - сессия истекла, перелогиниваемся
-      if (errorMessage.includes('SESSION_EXPIRED') ||
-          errorMessage.includes('Expected JSON but got') || 
-          errorMessage.includes('Invalid JSON response') ||
-          errorMessage.includes('Необходима') ||
-          errorMessage.includes('authorization') ||
-          errorMessage.includes('Unexpected token')) {
-        logger.warn(`StarlineScraperService: Got HTML response (session expired?), re-logging in for device ${deviceId}...`);
+      // Проверяем на наличие признаков истечения сессии
+      const isSessionExpired = 
+        errorMessage.includes('SESSION_EXPIRED') ||
+        errorMessage.includes('Expected JSON but got') || 
+        errorMessage.includes('Invalid JSON response') ||
+        errorMessage.includes('Необходима') ||
+        errorMessage.includes('необходима') ||
+        errorMessage.includes('authorization') ||
+        errorMessage.includes('Unexpected token') ||
+        // Проверяем на наличие кириллицы в сообщении об ошибке (признак HTML страницы)
+        /[А-Яа-яЁё]/.test(errorMessage) ||
+        errorString.includes('Unexpected token') && /[А-Яа-яЁё]/.test(errorString);
+      
+      if (isSessionExpired) {
+        logger.warn(`StarlineScraperService: Session expired detected (error: ${errorMessage.substring(0, 100)}), re-logging in for device ${deviceId}...`);
         this.isLoggedIn = false;
         try {
           await this.login();
           // Переходим на страницу карты после логина
           await this.page!.goto(`${this.BASE_URL}/site/map`, { waitUntil: 'networkidle', timeout: 15000 });
-          await this.page!.waitForTimeout(1000);
+          await this.page!.waitForTimeout(2000); // Увеличено время ожидания
           
-          // Повторяем запрос после перелогина
+          // Повторяем запрос после перелогина (только один раз, чтобы избежать бесконечного цикла)
           logger.info(`StarlineScraperService: Retrying fetch for device ${deviceId} after re-login...`);
-          return await this.getDeviceDetails(deviceId);
+          // Используем прямой вызов без рекурсии, чтобы избежать бесконечного цикла
+          const retryResponse = await Promise.race([
+            this.page!.evaluate(async (id) => {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 8000);
+              try {
+                const res = await fetch(`/device/${id}?tz=240&_=` + Date.now(), {
+                  headers: {
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'X-Requested-With': 'XMLHttpRequest',
+                  },
+                  signal: controller.signal,
+                });
+                clearTimeout(timeoutId);
+                if (!res.ok) {
+                  const errorText = await res.text().catch(() => res.statusText);
+                  throw new Error(`HTTP ${res.status}: ${errorText.substring(0, 200)}`);
+                }
+                const responseText = await res.text();
+                const contentType = res.headers.get('content-type') || '';
+                if (!contentType.includes('application/json') && !contentType.includes('text/javascript')) {
+                  throw new Error(`Expected JSON but got ${contentType}`);
+                }
+                return JSON.parse(responseText);
+              } catch (err) {
+                clearTimeout(timeoutId);
+                if (err instanceof Error) throw err;
+                throw new Error(String(err));
+              }
+            }, deviceId),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error(`Timeout: retry failed for device ${deviceId}`)), 10000)
+            )
+          ]) as any;
+          
+          // Проверяем формат ответа
+          if (retryResponse.result === 1 && retryResponse.answer) {
+            return retryResponse.answer as StarlineDeviceDetails;
+          } else if (retryResponse.device_id && retryResponse.alias) {
+            return retryResponse as StarlineDeviceDetails;
+          }
+          throw new Error(`Invalid response format after re-login`);
         } catch (reloginError) {
-          logger.error(`StarlineScraperService: Failed to re-login:`, reloginError);
-          throw new Error(`Session expired and re-login failed: ${errorMessage}`);
+          logger.error(`StarlineScraperService: Failed to re-login or retry:`, reloginError);
+          throw new Error(`Session expired and re-login failed: ${errorMessage.substring(0, 200)}`);
         }
       }
       
