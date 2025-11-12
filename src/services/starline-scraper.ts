@@ -224,6 +224,8 @@ export class StarlineScraperService {
 
       this.page = await this.context.newPage();
 
+      logger.info('StarlineScraperService: Clearing cookies and storage before login...');
+      
       // Очищаем все куки и историю перед логином
       await this.page.evaluate(() => {
         // Очищаем localStorage
@@ -242,6 +244,8 @@ export class StarlineScraperService {
 
       // Очищаем куки через Playwright API
       await this.context.clearCookies();
+      
+      logger.info('StarlineScraperService: ✅ Cookies and storage cleared');
 
       // Логинимся
       await this.login();
