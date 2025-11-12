@@ -494,6 +494,10 @@ export class StarlineScraperService {
             } catch (jsonError) {
               // Если не JSON, возвращаем текст ошибки
               const text = await res.text();
+              // Проверяем, не является ли это страницей авторизации
+              if (text.includes('Необходима') || text.includes('authorization') || text.includes('login')) {
+                throw new Error('SESSION_EXPIRED: ' + text.substring(0, 200));
+              }
               throw new Error(`Invalid JSON response: ${text.substring(0, 200)}`);
             }
           } catch (error) {
@@ -528,10 +532,12 @@ export class StarlineScraperService {
       const errorMessage = error instanceof Error ? error.message : String(error);
       
       // Если получили HTML вместо JSON - сессия истекла, перелогиниваемся
-      if (errorMessage.includes('Expected JSON but got') || 
+      if (errorMessage.includes('SESSION_EXPIRED') ||
+          errorMessage.includes('Expected JSON but got') || 
           errorMessage.includes('Invalid JSON response') ||
           errorMessage.includes('Необходима') ||
-          errorMessage.includes('authorization')) {
+          errorMessage.includes('authorization') ||
+          errorMessage.includes('Unexpected token')) {
         logger.warn(`StarlineScraperService: Got HTML response (session expired?), re-logging in for device ${deviceId}...`);
         this.isLoggedIn = false;
         try {
@@ -586,15 +592,15 @@ export class StarlineScraperService {
         let deviceRadio = document.querySelector(`input[type="radio"][data-device-id="${id}"]`) as HTMLInputElement;
         
         if (!deviceRadio) {
-          // Пробуем найти по value
-          // @ts-ignore - код выполняется в браузере
-          deviceRadio = document.querySelector(`input[type="radio"][value="${id}"]`) as HTMLInputElement;
+        // Пробуем найти по value
+        // @ts-ignore - код выполняется в браузере, где есть document и HTMLInputElement
+        deviceRadio = document.querySelector(`input[type="radio"][value="${id}"]`) as any;
         }
         
         if (!deviceRadio) {
           // Пробуем найти все радио-кнопки и выбрать нужную
-          // @ts-ignore - код выполняется в браузере
-          const allRadios = Array.from(document.querySelectorAll('input[type="radio"]')) as HTMLInputElement[];
+          // @ts-ignore - код выполняется в браузере, где есть document и HTMLInputElement
+          const allRadios = Array.from(document.querySelectorAll('input[type="radio"]')) as any[];
           deviceRadio = allRadios.find(radio => {
             const parent = radio.closest('label, div, li');
             return parent && parent.textContent?.includes(id.toString());
