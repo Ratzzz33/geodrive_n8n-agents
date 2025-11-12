@@ -254,17 +254,71 @@ export class StarlineScraperService {
       await this.context.clearCookies();
       logger.info('StarlineScraperService: ✅ Cookies cleared via Playwright API');
 
-      // Логинимся (внутри login() будет очистка localStorage после загрузки страницы)
+      // Логинимся через прокси (внутри login() будет очистка localStorage после загрузки страницы)
+      logger.info('StarlineScraperService: 🔐 Logging in via proxy...');
       await this.login();
       
-      // После успешного логина устанавливаем куки из реального браузера (MCP Chrome)
-      // Это помогает обойти защиту от DDoS, имитируя реальный браузер
-      await this.setCookiesFromRealBrowser();
+      // После успешного логина получаем cookies из контекста с прокси
+      logger.info('StarlineScraperService: 📋 Copying cookies from proxy context...');
+      const cookies = await this.contextWithProxy!.cookies();
+      logger.info(`StarlineScraperService: ✅ Got ${cookies.length} cookies from proxy context`);
+      
+      // Создаем НОВЫЙ контекст БЕЗ прокси для быстрой работы
+      logger.info('StarlineScraperService: 🚀 Creating fast context WITHOUT proxy...');
+      this.context = await this.browser.newContext({
+        // БЕЗ прокси - для скорости!
+        userAgent: realUserAgent,
+        viewport: viewport,
+        locale: 'ru-RU',
+        timezoneId: 'Asia/Tbilisi',
+        extraHTTPHeaders: {
+          'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Sec-Ch-Ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+          'Sec-Ch-Ua-Mobile': '?0',
+          'Sec-Ch-Ua-Platform': '"Windows"',
+        },
+        permissions: ['geolocation'],
+        storageState: undefined,
+      });
+      
+      // Переопределяем navigator свойства в новом контексте без прокси
+      await this.context.addInitScript(() => {
+        Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
+        Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
+        Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
+        Object.defineProperty(navigator, 'webdriver', { get: () => false });
+        (window as any).chrome = { runtime: {} };
+      });
+      
+      // Добавляем cookies в новый контекст без прокси
+      await this.context.addCookies(cookies);
+      logger.info('StarlineScraperService: ✅ Cookies copied to fast context');
+      
+      // Закрываем старый контекст с прокси и страницу
+      if (this.page) {
+        await this.page.close();
+      }
+      if (this.contextWithProxy) {
+        await this.contextWithProxy.close();
+        this.contextWithProxy = null;
+      }
+      
+      // Создаем новую страницу в контексте без прокси
+      this.page = await this.context.newPage();
+      logger.info('StarlineScraperService: ✅ New page created in fast context (no proxy)');
       
       this.isLoggedIn = true;
       this.isInitializing = false;
 
-      logger.info('StarlineScraperService: ✅ Persistent browser session initialized and logged in');
+      logger.info('StarlineScraperService: ✅ Persistent browser session initialized (proxy → no proxy for speed)');
     } catch (error) {
       this.isInitializing = false;
       logger.error('StarlineScraperService: Failed to initialize:', error);
