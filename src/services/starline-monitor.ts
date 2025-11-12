@@ -236,7 +236,25 @@ export class StarlineMonitorService {
         }
         
         // Для остальных устройств - обычная обработка
-        const deviceDetails = await scraper.getDeviceDetails(match.starlineDeviceId);
+        // Перехватываем ошибки истечения сессии для автоматического перезапуска браузера
+        let deviceDetails;
+        try {
+          deviceDetails = await scraper.getDeviceDetails(match.starlineDeviceId);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          // Если ошибка связана с истечением сессии - перезапускаем браузер и повторяем
+          if (errorMessage.includes('page.evaluate') && 
+              (errorMessage.includes('Unexpected token') || 
+               errorMessage.includes('Необходима') ||
+               /[А-Яа-яЁё]/.test(errorMessage))) {
+            console.log(`🔄 Сессия истекла для ${match.starlineAlias}, перезапускаем браузер...`);
+            // Перезапуск браузера происходит внутри scraper.getDeviceDetails()
+            // Просто повторяем запрос
+            deviceDetails = await scraper.getDeviceDetails(match.starlineDeviceId);
+          } else {
+            throw error;
+          }
+        }
         await this.processDevice(match, deviceDetails, sqlConnection, details, errors);
         updated++;
 
