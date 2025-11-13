@@ -87,6 +87,13 @@ export class StarlineScraperService {
   private readonly LOGIN_URL = `${this.BASE_URL}/`;
   private readonly username: string;
   private readonly password: string;
+  
+  // Кэш списка устройств
+  private devicesCache: {
+    data: StarlineDeviceOverview[] | null;
+    timestamp: number;
+    ttl: number; // 5 минут по умолчанию
+  } = { data: null, timestamp: 0, ttl: 5 * 60 * 1000 };
 
   constructor() {
     this.username = process.env.STARLINE_USERNAME || '';
@@ -697,14 +704,44 @@ export class StarlineScraperService {
   /**
    * Получение списка всех устройств
    */
+  /**
+   * Получение списка устройств с кэшированием
+   */
   async getDevices(): Promise<StarlineDeviceOverview[]> {
+    const now = Date.now();
+    
+    // Проверяем кэш
+    if (this.devicesCache.data && 
+        (now - this.devicesCache.timestamp) < this.devicesCache.ttl) {
+      logger.info(`StarlineScraperService: Using cached devices list (${this.devicesCache.data.length} devices, age: ${Math.round((now - this.devicesCache.timestamp) / 1000)}s)`);
+      return this.devicesCache.data;
+    }
+    
+    // Запрашиваем свежие данные
+    const devices = await this._getDevicesInternal();
+    
+    // Обновляем кэш
+    this.devicesCache = {
+      data: devices,
+      timestamp: now,
+      ttl: 5 * 60 * 1000 // 5 минут
+    };
+    
+    logger.info(`StarlineScraperService: Devices list cached (${devices.length} devices)`);
+    return devices;
+  }
+
+  /**
+   * Внутренний метод для получения списка устройств (без кэширования)
+   */
+  private async _getDevicesInternal(): Promise<StarlineDeviceOverview[]> {
     await this.ensureHealthy();
 
     if (!this.page) {
       throw new Error('Page not initialized');
     }
 
-    logger.info('StarlineScraperService: Fetching devices list...');
+    logger.info('StarlineScraperService: Fetching devices list from Starline...');
 
     // Убеждаемся что мы на странице map перед fetch (важно для относительных URL)
     const currentUrl = this.page.url();
@@ -778,60 +815,67 @@ export class StarlineScraperService {
   }
 
   /**
-   * Получение детальной информации по конкретному устройству
+   * Проверка, является ли ошибка ошибкой сессии
    */
-  async getDeviceDetails(deviceId: number): Promise<StarlineDeviceDetails> {
-    await this.ensureHealthy();
-
-    if (!this.page) {
-      throw new Error('Page not initialized');
-    }
-
-    logger.info(`StarlineScraperService: Fetching details for device ${deviceId}...`);
+  private isSessionError(error: Error): boolean {
+    const errorMessage = error.message;
+    const errorString = String(error);
+    const fullErrorText = errorMessage + ' ' + errorString;
     
-    // Обертка для перехвата всех ошибок, включая ошибки из page.evaluate()
-    try {
-      return await this._getDeviceDetailsInternal(deviceId);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const errorString = String(error);
-      const errorStack = error instanceof Error ? (error.stack || '') : '';
-      const fullErrorText = errorMessage + ' ' + errorString + ' ' + errorStack;
-      
-      // Логируем ВСЕ ошибки для диагностики
-      logger.warn(`StarlineScraperService: Error caught in getDeviceDetails for device ${deviceId}`);
-      logger.warn(`StarlineScraperService: Error message: ${errorMessage.substring(0, 200)}`);
-      logger.warn(`StarlineScraperService: Error string: ${errorString.substring(0, 300)}`);
-      logger.warn(`StarlineScraperService: Full error text: ${fullErrorText.substring(0, 500)}`);
-      
-      // Проверяем на наличие "page.evaluate" и "Unexpected token" в любом виде
-      const hasPageEvaluate = fullErrorText.includes('page.evaluate') ||
-                             errorMessage.includes('page.evaluate');
-      const hasUnexpectedToken = fullErrorText.includes('Unexpected token') ||
-                                 errorMessage.includes('Unexpected token');
-      const hasCyrillic = /[А-Яа-яЁё]/.test(fullErrorText) || 
-                         /\\u04[0-9a-fA-F]{2}/.test(fullErrorText);
-      
-      logger.warn(`StarlineScraperService: hasPageEvaluate=${hasPageEvaluate}, hasUnexpectedToken=${hasUnexpectedToken}, hasCyrillic=${hasCyrillic}`);
-      
-      // Если ошибка содержит "page.evaluate" и "Unexpected token" - это истекшая сессия
-      if (hasPageEvaluate && (hasUnexpectedToken || hasCyrillic)) {
-        logger.warn(`StarlineScraperService: Session expired detected, restarting browser...`);
+    const hasPageEvaluate = fullErrorText.includes('page.evaluate');
+    const hasUnexpectedToken = fullErrorText.includes('Unexpected token');
+    const hasCyrillic = /[А-Яа-яЁё]/.test(fullErrorText) || /\\u04[0-9a-fA-F]{2}/.test(fullErrorText);
+    const hasSessionExpired = errorMessage.includes('SESSION_EXPIRED') ||
+                             errorMessage.includes('Expected JSON but got') ||
+                             errorMessage.includes('Необходима') ||
+                             errorMessage.includes('authorization');
+    
+    return hasPageEvaluate && (hasUnexpectedToken || hasCyrillic || hasSessionExpired);
+  }
+
+  /**
+   * Получение детальной информации по конкретному устройству с retry и экспоненциальным backoff
+   */
+  async getDeviceDetails(deviceId: number, maxRetries: number = 3): Promise<StarlineDeviceDetails> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await this._getDeviceDetailsInternal(deviceId);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
         
-        try {
-          await this.restartBrowser();
-          // Повторяем запрос после перезапуска
-          logger.info(`StarlineScraperService: Retrying fetch for device ${deviceId} after browser restart...`);
-          return await this._getDeviceDetailsInternal(deviceId);
-        } catch (restartError) {
-          logger.error(`StarlineScraperService: Failed to restart browser:`, restartError);
-          throw new Error(`Session expired and browser restart failed: ${errorMessage.substring(0, 200)}`);
+        // Если это ошибка сессии - перезапускаем браузер и повторяем без задержки
+        if (this.isSessionError(lastError)) {
+          logger.warn(`StarlineScraperService: Session expired for device ${deviceId} (attempt ${attempt}/${maxRetries}), restarting browser...`);
+          
+          try {
+            await this.restartBrowser();
+            // Повторяем без задержки после перезапуска браузера
+            continue;
+          } catch (restartError) {
+            logger.error(`StarlineScraperService: Failed to restart browser:`, restartError);
+            // Если не удалось перезапустить - пробуем еще раз или выбрасываем ошибку
+            if (attempt < maxRetries) {
+              const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+              logger.warn(`StarlineScraperService: Retry ${attempt}/${maxRetries} for device ${deviceId} after ${delay}ms`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              continue;
+            }
+            throw new Error(`Session expired and browser restart failed: ${lastError.message.substring(0, 200)}`);
+          }
+        }
+        
+        // Для других ошибок - экспоненциальный backoff
+        if (attempt < maxRetries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+          logger.warn(`StarlineScraperService: Retry ${attempt}/${maxRetries} for device ${deviceId} after ${delay}ms (error: ${lastError.message.substring(0, 100)})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
-      
-      // Все остальные ошибки пробрасываем дальше
-      throw error;
     }
+    
+    throw lastError || new Error(`Max retries (${maxRetries}) exceeded for device ${deviceId}`);
   }
 
   private async _getDeviceDetailsInternal(deviceId: number): Promise<StarlineDeviceDetails> {
@@ -1159,7 +1203,7 @@ export class StarlineScraperService {
         } else {
           console.warn('Кнопка "Показать отчет" не найдена');
         }
-      }, dateFrom as string, dateTo as string);
+      }, dateFrom as string, dateTo as string) as any;
 
       // Ждем загрузки маршрутов на странице (увеличено время)
       await this.page.waitForTimeout(5000);

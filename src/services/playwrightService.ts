@@ -463,7 +463,8 @@ app.post('/scrape-bookings', async (req, res) => {
         // Извлекаем booking_id из ссылки
         const link = row.querySelector('a[href*="/bookings/"]');
         if (link) {
-          booking.detail_url = (link as HTMLAnchorElement).href;
+          // @ts-ignore - код выполняется в браузере
+          booking.detail_url = (link as any).href;
           booking.booking_id = booking.detail_url.match(/\/bookings\/(\d+)/)?.[1] || null;
         }
         
@@ -559,7 +560,8 @@ app.post('/scrape-bookings', async (req, res) => {
         
         const link = row.querySelector('a[href*="/bookings/"]');
         if (link) {
-          booking.detail_url = (link as HTMLAnchorElement).href;
+          // @ts-ignore - код выполняется в браузере
+          booking.detail_url = (link as any).href;
           booking.booking_id = booking.detail_url.match(/\/bookings\/(\d+)/)?.[1] || null;
         }
         
