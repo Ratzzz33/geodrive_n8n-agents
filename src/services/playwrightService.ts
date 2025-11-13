@@ -641,11 +641,14 @@ app.post('/scrape-booking-details', async (req, res) => {
     
     // Парсим все данные со страницы
     const details = await page.evaluate(() => {
+      // @ts-ignore - код выполняется в браузере
       // Здесь нужно будет добавить парсинг всех полей детальной страницы
       // Пока возвращаем базовую структуру
       return {
+        // @ts-ignore
         booking_id: window.location.pathname.match(/\/bookings\/(\d+)/)?.[1] || null,
         // TODO: Добавить парсинг всех полей детальной страницы
+        // @ts-ignore
         raw_html: document.body.innerHTML.substring(0, 5000) // Для отладки
       };
     });

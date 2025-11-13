@@ -48,18 +48,22 @@ async function applyMigration() {
     console.log('✅ Миграция применена успешно!');
     
     // Проверяем, что таблица создана
-    const tableExists = await sql`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'starline_metrics'
-      )
-    `;
-    
-    if (tableExists[0].exists) {
-      console.log('✅ Таблица starline_metrics создана');
-    } else {
-      console.warn('⚠️ Таблица starline_metrics не найдена');
+    try {
+      const tableExists = await sql`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'starline_metrics'
+        )
+      `;
+      
+      if (tableExists[0] && tableExists[0].exists) {
+        console.log('✅ Таблица starline_metrics создана');
+      } else {
+        console.warn('⚠️ Таблица starline_metrics не найдена');
+      }
+    } catch (checkError) {
+      console.warn('⚠️ Не удалось проверить существование таблицы:', checkError.message);
     }
     
   } catch (error) {

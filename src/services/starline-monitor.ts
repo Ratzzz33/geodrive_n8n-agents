@@ -329,10 +329,10 @@ export class StarlineMonitorService {
         processedDevices: updated,
         failedDevices: errors.length,
         totalDurationMs: totalDuration,
-        avgDeviceDurationMs: parseFloat(avgTimePerDevice),
+        avgDeviceDurationMs: parseFloat(avgTimePerDevice || '0'),
         batchSize: config.starlineParallelBatchSize,
         parallelMode: config.starlineParallelBatchSize > 1,
-        successRate: parseFloat(successRate)
+        successRate: parseFloat(successRate || '0')
       });
     } catch (metricsError) {
       logger.error(`StarlineMonitorService: Failed to save metrics:`, metricsError);
