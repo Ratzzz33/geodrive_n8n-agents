@@ -532,6 +532,10 @@ export async function updateBookingStatus(
       }])}::jsonb
     `;
     
+    if (!db) {
+      throw new Error('Database not available');
+    }
+    
     await db.update(bookings)
       .set(updates)
       .where(eq(bookings.id, bookingId));
@@ -611,6 +615,10 @@ export async function markHistoryProcessed(
   const notes = result.ok
     ? `✅ ${result.action}: ${JSON.stringify(result.details || {})}`
     : `❌ ${result.action}: ${result.error}`;
+  
+  if (!db) {
+    throw new Error('Database not available');
+  }
   
   await db.execute(sql`
     UPDATE history

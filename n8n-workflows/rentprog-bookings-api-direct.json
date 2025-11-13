@@ -1,0 +1,472 @@
+{
+  "name": "Парсинг броней RentProg через API (активные и неактивные) раз в 15 минут",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/15 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":100}",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTY2MCwiZXhwIjoxNzY1MDUxNjYwLCJqdGkiOiIxOTFjMDY4ZS1jOGNhLTQ4OWEtODk0OS1iMjJkMmUzODE2ZDIifQ.G4_I4D96Flv4rP3JwjwDPpEHaH6ShSb0YRRQG8PasXk"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            }
+          ]
+        }
+      },
+      "name": "Get Tbilisi Active",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 200],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":false,\"page\":1,\"per_page\":100}",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTY2MCwiZXhwIjoxNzY1MDUxNjYwLCJqdGkiOiIxOTFjMDY4ZS1jOGNhLTQ4OWEtODk0OS1iMjJkMmUzODE2ZDIifQ.G4_I4D96Flv4rP3JwjwDPpEHaH6ShSb0YRRQG8PasXk"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "name": "Get Tbilisi Inactive",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":100}",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDAyNSwiZXhwIjoxNzY1MDUyMDI1LCJqdGkiOiI0ZmQ2ODE4Yy0zYWNiLTRmZmQtOGZmYS0wZWMwZDkyMmIyMzgifQ.16s2ruRb3x_S7bgy4zF7TW9dSQ3ITqX3kei8recyH_8"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "name": "Get Batumi Active",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 400],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":false,\"page\":1,\"per_page\":100}",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDAyNSwiZXhwIjoxNzY1MDUyMDI1LCJqdGkiOiI0ZmQ2ODE4Yy0zYWNiLTRmZmQtOGZmYS0wZWMwZDkyMmIyMzgifQ.16s2ruRb3x_S7bgy4zF7TW9dSQ3ITqX3kei8recyH_8"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "name": "Get Batumi Inactive",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 500],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":100}",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDE3MiwiZXhwIjoxNzY1MDUyMTcyLCJqdGkiOiJmNzE1NGQ3MC0zZWFmLTRiNzItYTI3Ni0yZTg3MmQ4YjA0YmQifQ.1vd1kNbWB_qassLVqoxgyRsRJwtPsl7OR28gVsCxmwY"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "name": "Get Kutaisi Active",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 600],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":false,\"page\":1,\"per_page\":100}",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDE3MiwiZXhwIjoxNzY1MDUyMTcyLCJqdGkiOiJmNzE1NGQ3MC0zZWFmLTRiNzItYTI3Ni0yZTg3MmQ4YjA0YmQifQ.1vd1kNbWB_qassLVqoxgyRsRJwtPsl7OR28gVsCxmwY"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "name": "Get Kutaisi Inactive",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 700],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":100}",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTM4MSwiZXhwIjoxNzY1MDUxMzgxLCJqdGkiOiI4ZDdkYjYyNi1jNWJiLTQ0MWMtYTNlMy00YjQwOWFmODQ1NmUifQ.32BRzttLFFgOgMv-VusAXK8mmyvrk4X-pb_rHQHSFbw"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "name": "Get Service Active",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 800],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":false,\"page\":1,\"per_page\":100}",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTM4MSwiZXhwIjoxNzY1MDUxMzgxLCJqdGkiOiI4ZDdkYjYyNi1jNWJiLTQ0MWMtYTNlMy00YjQwOWFmODQ1NmUifQ.32BRzttLFFgOgMv-VusAXK8mmyvrk4X-pb_rHQHSFbw"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "name": "Get Service Inactive",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 900],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обрабатываем все брони со всех филиалов\nconst allItems = $input.all();\n\nconst branches = {\n  'tbilisi': { active: null, inactive: null },\n  'batumi': { active: null, inactive: null },\n  'kutaisi': { active: null, inactive: null },\n  'service-center': { active: null, inactive: null }\n};\n\n// Группируем данные по филиалам\nallItems.forEach(item => {\n  const nodeName = item.json.$node?.name || '';\n  \n  if (nodeName.includes('Tbilisi Active')) branches.tbilisi.active = item.json;\n  else if (nodeName.includes('Tbilisi Inactive')) branches.tbilisi.inactive = item.json;\n  else if (nodeName.includes('Batumi Active')) branches.batumi.active = item.json;\n  else if (nodeName.includes('Batumi Inactive')) branches.batumi.inactive = item.json;\n  else if (nodeName.includes('Kutaisi Active')) branches.kutaisi.active = item.json;\n  else if (nodeName.includes('Kutaisi Inactive')) branches.kutaisi.inactive = item.json;\n  else if (nodeName.includes('Service Active')) branches['service-center'].active = item.json;\n  else if (nodeName.includes('Service Inactive')) branches['service-center'].inactive = item.json;\n});\n\n// Обрабатываем каждый филиал\nconst results = [];\n\nfor (const [branch, data] of Object.entries(branches)) {\n  const active = data.active?.bookings || [];\n  const inactive = data.inactive?.bookings || [];\n  const allBookings = [...active, ...inactive];\n  \n  // Парсим JSON API формат\n  allBookings.forEach(booking => {\n    const attrs = booking.attributes || booking;\n    \n    results.push({\n      json: {\n        branch,\n        booking_id: String(booking.id || attrs.id),\n        number: attrs.number,\n        is_active: attrs.active === true,\n        \n        // Даты\n        start_date: attrs['start_date'],\n        end_date: attrs['end_date'],\n        start_date_formatted: attrs['start_date_formatted'],\n        end_date_formatted: attrs['end_date_formatted'],\n        created_at: attrs['created_at'],\n        \n        // Клиент\n        client_id: attrs['client_id'],\n        client_name: [attrs['first_name'], attrs['middle_name'], attrs['last_name']].filter(Boolean).join(' '),\n        client_category: attrs['client_category'],\n        \n        // Авто\n        car_id: attrs['car_id'],\n        car_name: attrs['car_name'],\n        car_code: attrs['car_code'],\n        \n        // Локации\n        location_start: attrs['location_start'],\n        location_end: attrs['location_end'],\n        \n        // Финансы\n        total: attrs['total'],\n        deposit: attrs['deposit'],\n        rental_cost: attrs['rental_cost'],\n        days: attrs['days'],\n        \n        // Статусы\n        state: attrs['state'],\n        in_rent: attrs['in_rent'],\n        archive: attrs['archive'],\n        \n        // Ответственные\n        start_worker_id: attrs['start_worker_id'],\n        end_worker_id: attrs['end_worker_id'],\n        responsible: attrs['responsible'],\n        \n        // Доп данные\n        description: attrs['description'],\n        source: attrs['source'],\n        \n        // Все остальное в data\n        data: JSON.stringify(attrs)\n      }\n    });\n  });\n}\n\nreturn results;"
+      },
+      "name": "Process All Bookings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Формируем итоговое сообщение\nconst allItems = $input.all();\n\nconst stats = {\n  total: allItems.length,\n  by_branch: {},\n  active: 0,\n  inactive: 0\n};\n\nallItems.forEach(item => {\n  const json = item.json;\n  const branch = json.branch || 'unknown';\n  \n  if (!stats.by_branch[branch]) {\n    stats.by_branch[branch] = { active: 0, inactive: 0, total: 0 };\n  }\n  \n  stats.by_branch[branch].total++;\n  \n  if (json.is_active) {\n    stats.by_branch[branch].active++;\n    stats.active++;\n  } else {\n    stats.by_branch[branch].inactive++;\n    stats.inactive++;\n  }\n});\n\nlet message = '📋 Парсинг броней RentProg через API раз в 15 минут:\\n';\n\nObject.keys(stats.by_branch).forEach(branch => {\n  const branchStats = stats.by_branch[branch];\n  message += `${branch.toUpperCase()}: ${branchStats.active} активных / ${branchStats.inactive} неактивных (всего: ${branchStats.total})\\n`;\n});\n\nmessage += `\\nИтого: ${stats.active} активных / ${stats.inactive} неактивных (всего: ${stats.total})`;\n\nreturn [{\n  json: {\n    message,\n    success: true,\n    total: stats.total,\n    active: stats.active,\n    inactive: stats.inactive,\n    by_branch: stats.by_branch\n  }\n}];"
+      },
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 500]
+    },
+    {
+      "parameters": {},
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1120, 500]
+    }
+  ],
+  "connections": {
+    "Every 15 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Get Tbilisi Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Tbilisi Inactive",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Batumi Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Batumi Inactive",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Kutaisi Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Kutaisi Inactive",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Service Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Service Inactive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tbilisi Active": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tbilisi Inactive": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Batumi Active": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Batumi Inactive": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Kutaisi Active": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Kutaisi Inactive": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Service Active": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Service Inactive": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process All Bookings": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+

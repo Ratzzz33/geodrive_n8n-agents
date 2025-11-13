@@ -1,121 +1,109 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Мониторинг импорта в реальном времени
-"""
+"""Monitor manual bookings import progress in real-time."""
 
+import os
 import sys
-import io
-import psycopg2
 import time
 from datetime import datetime
 
-if sys.platform == 'win32':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if BASE_DIR not in sys.path:
+    sys.path.append(BASE_DIR)
 
-CONNECTION_STRING = "postgresql://neondb_owner:npg_cHIT9Kxfk1Am@ep-rough-heart-ahnybmq0-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
+from setup.server_ssh import ServerSSH
 
-TOTAL_EXPECTED = 495457
-start_time = time.time()
-last_count = 0
-last_time = start_time
+PID = 27623  # Process ID
+CHECK_INTERVAL = 5  # seconds
 
-print("🔄 Мониторинг импорта i2crm (обновление каждые 10 секунд)")
-print("="*80)
-print(f"Начало: {datetime.now().strftime('%H:%M:%S')}")
-print(f"Ожидается: {TOTAL_EXPECTED:,} сообщений")
-print("="*80)
-print()
+def clear_screen():
+    """Clear terminal screen."""
+    os.system('cls' if os.name == 'nt' else 'clear')
 
-try:
-    while True:
-        try:
-            conn = psycopg2.connect(CONNECTION_STRING)
-            cur = conn.cursor()
-            
-            # Получаем статистику
-            cur.execute("SELECT COUNT(*) FROM i2crm_conversations")
-            convs = cur.fetchone()[0]
-            
-            cur.execute("SELECT COUNT(*) FROM i2crm_messages")
-            msgs = cur.fetchone()[0]
-            
-            cur.execute("SELECT channel, COUNT(*) FROM i2crm_messages GROUP BY channel ORDER BY channel")
-            by_channel = dict(cur.fetchall())
-            
-            cur.close()
-            conn.close()
-            
-            # Вычисляем скорость
-            current_time = time.time()
-            elapsed = current_time - start_time
-            elapsed_since_last = current_time - last_time
-            
-            if elapsed_since_last > 0 and msgs > last_count:
-                speed = (msgs - last_count) / elapsed_since_last
-            else:
-                speed = 0
-            
-            # Вычисляем ETA
-            if speed > 0:
-                remaining = TOTAL_EXPECTED - msgs
-                eta_seconds = remaining / speed
-                eta_minutes = eta_seconds / 60
-            else:
-                eta_minutes = 0
-            
-            # Прогресс бар
-            progress = msgs / TOTAL_EXPECTED * 100
-            bar_length = 50
-            filled = int(bar_length * progress / 100)
-            bar = '█' * filled + '░' * (bar_length - filled)
-            
-            # Очищаем предыдущий вывод (для Windows)
-            print(f"\r\033[K", end="")
-            
-            # Выводим статистику
+def get_process_status(ssh):
+    """Get process CPU and memory usage."""
+    output, _, _ = ssh.execute(f"ps aux | grep {PID} | grep -v grep")
+    if not output or output.strip() == '':
+        return None
+    
+    lines = [l for l in output.strip().split('\n') if 'node' in l]
+    if not lines:
+        return None
+        
+    parts = lines[0].split()
+    return {
+        'cpu': parts[2],
+        'mem': parts[3],
+        'time': parts[9]
+    }
+
+def get_bookings_count(ssh):
+    """Get current bookings count from database."""
+    output, _, _ = ssh.execute(
+        'cd /root/geodrive_n8n-agents && node setup/check_bookings_count.mjs 2>&1'
+    )
+    return output.strip() if output else 'N/A'
+
+def get_log_tail(ssh):
+    """Get last 10 lines from log file."""
+    output, _, _ = ssh.execute(
+        'tail -n 10 /root/geodrive_n8n-agents/logs/manual_bookings_import.log 2>&1'
+    )
+    return output.strip() if output else 'No logs yet'
+
+def main():
+    ssh = ServerSSH()
+    if not ssh.connect():
+        print("❌ Failed to connect to server")
+        return
+    
+    try:
+        iteration = 0
+        while True:
+            clear_screen()
+            iteration += 1
             now = datetime.now().strftime('%H:%M:%S')
-            print(f"\n[{now}] Прогресс импорта:")
-            print(f"  {bar} {progress:.1f}%")
-            print(f"  Сообщений: {msgs:,} / {TOTAL_EXPECTED:,}")
-            print(f"  Диалогов: {convs:,}")
-            print(f"  Скорость: {speed:.0f} сообщ/сек ({speed*60:.0f} сообщ/мин)")
-            print(f"  ETA: {eta_minutes:.1f} минут")
             
-            if by_channel:
-                print(f"  По каналам:")
-                for channel, count in by_channel.items():
-                    print(f"    • {channel}: {count:,}")
+            print("=" * 70)
+            print(f">> MANUAL BOOKINGS IMPORT MONITOR")
+            print(f">> {now} | Iteration #{iteration} | PID: {PID}")
+            print("=" * 70)
             
-            print(f"  Прошло времени: {elapsed/60:.1f} минут")
-            print()
-            
-            # Обновляем для следующей итерации
-            last_count = msgs
-            last_time = current_time
-            
-            # Проверяем завершение
-            if msgs >= TOTAL_EXPECTED:
-                print("\n" + "="*80)
-                print("✅ ИМПОРТ ЗАВЕРШЕН!")
-                print("="*80)
-                print(f"Импортировано: {msgs:,} сообщений")
-                print(f"Диалогов: {convs:,}")
-                print(f"Время выполнения: {elapsed/60:.1f} минут")
-                if convs < 15049:
-                    missing = 15049 - convs
-                    print(f"\n⚠️  ВНИМАНИЕ: Не хватает {missing} диалогов (ожидалось 15,049)")
-                print("="*80)
+            # Process status
+            proc_status = get_process_status(ssh)
+            if proc_status:
+                print(f"\n>> Process Status:")
+                print(f"   CPU:    {proc_status['cpu']}%")
+                print(f"   Memory: {proc_status['mem']}%")
+                print(f"   Time:   {proc_status['time']}")
+            else:
+                print(f"\n>> Process {PID} NOT FOUND!")
+                print("   Import may have completed or crashed.")
                 break
             
-            time.sleep(10)
+            # Database count
+            print(f"\n>> Database Status:")
+            db_output = get_bookings_count(ssh)
+            for line in db_output.split('\n'):
+                if line.strip():
+                    print(f"   {line}")
             
-        except psycopg2.Error as e:
-            print(f"⚠️  Ошибка подключения к БД: {e}")
-            time.sleep(5)
-            continue
+            # Recent logs
+            print(f"\n>> Recent Log (last 10 lines):")
+            log_output = get_log_tail(ssh)
+            for line in log_output.split('\n')[-10:]:
+                if line.strip():
+                    print(f"   {line}")
             
-except KeyboardInterrupt:
-    print("\n\n⏹️  Мониторинг остановлен пользователем")
-    print(f"Последний статус: {msgs:,} / {TOTAL_EXPECTED:,} сообщений")
+            print(f"\n{'=' * 70}")
+            print(f"Press Ctrl+C to stop monitoring")
+            print(f"Next refresh in {CHECK_INTERVAL} seconds...")
+            
+            time.sleep(CHECK_INTERVAL)
+            
+    except KeyboardInterrupt:
+        print("\n\n>>  Monitoring stopped by user")
+    finally:
+        ssh.close()
 
+if __name__ == '__main__':
+    main()

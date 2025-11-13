@@ -1112,7 +1112,7 @@ export class StarlineScraperService {
         const periodButton = Array.from(document.querySelectorAll('button')).find(
           // @ts-ignore
           (btn: any) => btn.textContent?.trim().includes('Период') || btn.textContent?.trim() === 'Период'
-        ) as HTMLButtonElement;
+        ) as any;
         
         if (periodButton) {
           periodButton.click();
@@ -1121,7 +1121,7 @@ export class StarlineScraperService {
 
         // Устанавливаем даты в календаре
         // @ts-ignore
-        const dateInputs = Array.from(document.querySelectorAll('input[type="date"]')) as HTMLInputElement[];
+        const dateInputs = Array.from(document.querySelectorAll('input[type="date"]')) as any[];
         if (dateInputs.length >= 2) {
           // @ts-ignore
           dateInputs[0].value = from; // Дата начала
@@ -1142,7 +1142,6 @@ export class StarlineScraperService {
         }
 
         // Ищем и кликаем кнопку "Показать отчет за период" или "Показать отчет"
-        // @ts-ignore
         // @ts-ignore - код выполняется в браузере
         const showButton = Array.from(document.querySelectorAll('button')).find(
           // @ts-ignore
@@ -1150,7 +1149,7 @@ export class StarlineScraperService {
                  btn.textContent?.includes('Показать') ||
                  btn.getAttribute('class')?.includes('show') ||
                  btn.getAttribute('id')?.includes('show')
-        ) as HTMLButtonElement;
+        ) as any;
         
         if (showButton) {
           showButton.click();

@@ -486,6 +486,49 @@ export function initApiServer(port: number = 3000): void {
     }
   });
 
+  // Endpoint для получения метрик Starline GPS Monitor
+  app.get('/starline/metrics', async (req, res) => {
+    try {
+      const { getSqlConnection } = await import('../db/index.js');
+      const sql = getSqlConnection();
+      const { hours = 24 } = req.query;
+      const hoursNum = parseInt(hours as string, 10) || 24;
+      
+      const metrics = await sql`
+        SELECT * FROM starline_metrics 
+        WHERE timestamp > NOW() - INTERVAL '${sql.raw(String(hoursNum))} hours'
+        ORDER BY timestamp DESC
+        LIMIT 100
+      `;
+      
+      // Вычисляем средние значения
+      const summary = await sql`
+        SELECT 
+          COUNT(*) as total_runs,
+          AVG(total_duration_ms) as avg_duration_ms,
+          AVG(success_rate) as avg_success_rate,
+          AVG(processed_devices) as avg_processed_devices,
+          SUM(failed_devices) as total_failed_devices,
+          AVG(batch_size) as avg_batch_size
+        FROM starline_metrics
+        WHERE timestamp > NOW() - INTERVAL '${sql.raw(String(hoursNum))} hours'
+      `;
+      
+      res.json({
+        ok: true,
+        metrics: metrics as any[],
+        summary: (summary as any[])[0] || {},
+        hours: hoursNum
+      });
+    } catch (error) {
+      logger.error('Starline metrics error:', error);
+      res.status(500).json({ 
+        ok: false, 
+        error: error instanceof Error ? error.message : 'Internal server error' 
+      });
+    }
+  });
+
   // Endpoint для диагностики Starline scraper
   app.get('/starline/diagnose', async (req, res) => {
     try {

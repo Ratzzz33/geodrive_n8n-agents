@@ -315,13 +315,63 @@ export class StarlineMonitorService {
 
     const totalDuration = Date.now() - startTime;
     const avgTimePerDevice = matches.length > 0 ? (totalDuration / matches.length).toFixed(0) : 0;
+    const successRate = matches.length > 0 ? ((updated / matches.length) * 100).toFixed(2) : 0;
     
-    logger.info(`\n📊 Итого обновлено: ${updated} из ${matches.length} за ${(totalDuration / 1000).toFixed(1)}с (${avgTimePerDevice}ms на устройство)`);
+    logger.info(`\n📊 Итого обновлено: ${updated} из ${matches.length} за ${(totalDuration / 1000).toFixed(1)}с (${avgTimePerDevice}ms на устройство, успешность: ${successRate}%)`);
     if (errors.length > 0) {
       logger.warn(`⚠️ Ошибок: ${errors.length}`);
     }
 
+    // Сохраняем метрики в БД
+    try {
+      await this.saveMetrics({
+        totalDevices: matches.length,
+        processedDevices: updated,
+        failedDevices: errors.length,
+        totalDurationMs: totalDuration,
+        avgDeviceDurationMs: parseFloat(avgTimePerDevice),
+        batchSize: config.starlineParallelBatchSize,
+        parallelMode: config.starlineParallelBatchSize > 1,
+        successRate: parseFloat(successRate)
+      });
+    } catch (metricsError) {
+      logger.error(`StarlineMonitorService: Failed to save metrics:`, metricsError);
+    }
+
     return { updated, errors, details };
+  }
+
+  /**
+   * Сохранение метрик производительности в БД
+   */
+  private async saveMetrics(metrics: {
+    totalDevices: number;
+    processedDevices: number;
+    failedDevices: number;
+    totalDurationMs: number;
+    avgDeviceDurationMs: number;
+    batchSize: number;
+    parallelMode: boolean;
+    successRate: number;
+    browserRestarts?: number;
+    sessionExpiredCount?: number;
+    proxyUsed?: boolean;
+  }): Promise<void> {
+    const sqlConnection = getSqlConnection();
+    
+    await sqlConnection`
+      INSERT INTO starline_metrics (
+        total_devices, processed_devices, failed_devices,
+        total_duration_ms, avg_device_duration_ms,
+        batch_size, parallel_mode, success_rate,
+        browser_restarts, session_expired_count, proxy_used
+      ) VALUES (
+        ${metrics.totalDevices}, ${metrics.processedDevices}, ${metrics.failedDevices},
+        ${metrics.totalDurationMs}, ${metrics.avgDeviceDurationMs},
+        ${metrics.batchSize}, ${metrics.parallelMode}, ${metrics.successRate},
+        ${metrics.browserRestarts || 0}, ${metrics.sessionExpiredCount || 0}, ${metrics.proxyUsed || false}
+      )
+    `;
   }
 
   /**

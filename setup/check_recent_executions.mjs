@@ -1,61 +1,61 @@
 #!/usr/bin/env node
-/**
- * Проверка последних executions workflow
- */
+import 'dotenv/config';
 
-import postgres from 'postgres';
+const WORKFLOW_ID = 'P3BnmX7Nrmh1cusF';
+const N8N_API_URL = 'https://n8n.rentflow.rentals/api/v1';
+const N8N_API_KEY = process.env.N8N_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZDYyYjM3My0yMDFiLTQ3ZjMtODU5YS1jZGM2OWRkZWE0NGEiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYyMDg0MjY4LCJleHAiOjE3NjQ2NTE2MDB9.gsdxltowlQShNi9mil074-cMhnuJJLI5lN6MP7FQEcI';
 
-const CONNECTION_STRING = 'postgresql://neondb_owner:npg_cHIT9Kxfk1Am@ep-rough-heart-ahnybmq0-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require';
-const BOOKING_ID = '486033';
+const response = await fetch(`${N8N_API_URL}/executions?workflowId=${WORKFLOW_ID}&limit=5`, {
+  headers: { 'X-N8N-API-KEY': N8N_API_KEY }
+});
 
-async function checkRecent() {
-  const sql = postgres(CONNECTION_STRING, {
-    max: 1,
-    ssl: { rejectUnauthorized: false },
+const result = await response.json();
+
+console.log('\n📊 Последние 5 executions:\n');
+
+result.data.forEach((exec, idx) => {
+  const start = new Date(exec.startedAt);
+  const now = new Date();
+  const elapsed = Math.round((now - start) / 1000);
+  const minutesAgo = Math.round(elapsed / 60);
+  
+  console.log(`${idx + 1}. ID: ${exec.id}`);
+  console.log(`   Время: ${start.toLocaleString('ru-RU')} (${minutesAgo} минут назад)`);
+  console.log(`   Статус: ${exec.status}`);
+  console.log(`   Завершено: ${exec.finished ? 'Да' : '⚠️ НЕТ - ВЫПОЛНЯЕТСЯ!'}`);
+  
+  if (exec.stoppedAt) {
+    const duration = Math.round((new Date(exec.stoppedAt) - start) / 1000);
+    console.log(`   Длительность: ${duration} сек`);
+  } else if (!exec.finished) {
+    console.log(`   ⏱️ Выполняется уже: ${elapsed} сек`);
+  }
+  
+  console.log('');
+});
+
+// Проверяем самое свежее выполнение детально
+const latest = result.data[0];
+if (!latest.finished) {
+  console.log('⚠️ ВЫПОЛНЕНИЕ В ПРОЦЕССЕ! Проверяю детали...\n');
+  
+  const detailResponse = await fetch(`${N8N_API_URL}/executions/${latest.id}`, {
+    headers: { 'X-N8N-API-KEY': N8N_API_KEY }
   });
-
-  console.log('\n🔍 Проверка последних событий для booking 486033...\n');
-
-  try {
-    // Последние события
-    const events = await sql`
-      SELECT id, ts, operation, processed
-      FROM events
-      WHERE rentprog_id = ${BOOKING_ID}
-      ORDER BY ts DESC
-      LIMIT 5;
-    `;
-
-    console.log('📊 Последние события:');
-    events.forEach(e => {
-      const time = new Date(e.ts).toLocaleTimeString('ru-RU');
-      console.log(`   ${e.id}: ${time} - ${e.operation} (processed: ${e.processed})`);
-    });
-
-    // Booking в БД
-    const booking = await sql`
-      SELECT b.id, b.car_id, b.client_id, b.car_name
-      FROM bookings b
-      JOIN external_refs er ON er.entity_id = b.id
-      WHERE er.system = 'rentprog' AND er.external_id = ${BOOKING_ID};
-    `;
-
-    if (booking.length > 0) {
-      console.log(`\n📦 Booking в БД:`);
-      console.log(`   ID: ${booking[0].id}`);
-      console.log(`   Car ID: ${booking[0].car_id || 'NULL'}`);
-      console.log(`   Client ID: ${booking[0].client_id || 'NULL'}`);
-      console.log(`   Car Name: ${booking[0].car_name}`);
-    } else {
-      console.log('\n⚠️  Booking не найден в БД');
+  
+  const details = await detailResponse.json();
+  
+  if (details.data && details.data.resultData && details.data.resultData.runData) {
+    const runData = details.data.resultData.runData;
+    const lastNode = Object.keys(runData).pop();
+    
+    console.log(`📍 Последняя выполненная нода: ${lastNode}`);
+    
+    if (lastNode === 'Save to DB') {
+      console.log('   🔄 Идет сохранение в БД...');
+      console.log('   ⏱️ Это может занять 30-60 секунд для ~2000 записей');
     }
-
-  } catch (error) {
-    console.error('❌ Ошибка:', error.message);
-  } finally {
-    await sql.end();
   }
 }
 
-checkRecent();
-
+console.log(`\n🔗 Открыть последнее: https://n8n.rentflow.rentals/workflow/${WORKFLOW_ID}/executions/${latest.id}\n`);
