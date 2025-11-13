@@ -94,14 +94,33 @@ export class StarlineScraperService {
     timestamp: number;
     ttl: number; // 5 минут по умолчанию
   } = { data: null, timestamp: 0, ttl: 5 * 60 * 1000 };
+  
+  // Rate Limiter для защиты от слишком частых запросов
+  private rateLimiter: {
+    queue: Array<() => void>;
+    processing: boolean;
+    maxRequestsPerSecond: number;
+    requestTimestamps: number[];
+  } = {
+    queue: [],
+    processing: false,
+    maxRequestsPerSecond: 5, // Максимум 5 запросов в секунду
+    requestTimestamps: []
+  };
 
   constructor() {
     this.username = process.env.STARLINE_USERNAME || '';
     this.password = process.env.STARLINE_PASSWORD || '';
+    
+    // Настройка rate limiter из переменных окружения
+    const maxRequestsPerSecond = parseInt(process.env.STARLINE_MAX_REQUESTS_PER_SECOND || '5', 10);
+    this.rateLimiter.maxRequestsPerSecond = Math.max(1, Math.min(maxRequestsPerSecond, 20)); // От 1 до 20
 
     if (!this.username || !this.password) {
       logger.warn('StarlineScraperService: STARLINE_USERNAME or STARLINE_PASSWORD not set. Scraper will not work.');
     }
+    
+    logger.info(`StarlineScraperService: Rate limiter configured: ${this.rateLimiter.maxRequestsPerSecond} requests/second`);
   }
 
   /**
@@ -878,7 +897,36 @@ export class StarlineScraperService {
     throw lastError || new Error(`Max retries (${maxRetries}) exceeded for device ${deviceId}`);
   }
 
+  /**
+   * Rate Limiter: ожидание перед выполнением запроса
+   */
+  private async waitForRateLimit(): Promise<void> {
+    const now = Date.now();
+    const { maxRequestsPerSecond, requestTimestamps } = this.rateLimiter;
+    
+    // Удаляем старые метки (старше 1 секунды)
+    const oneSecondAgo = now - 1000;
+    this.rateLimiter.requestTimestamps = requestTimestamps.filter(ts => ts > oneSecondAgo);
+    
+    // Если достигнут лимит - ждем
+    if (this.rateLimiter.requestTimestamps.length >= maxRequestsPerSecond) {
+      const oldestRequest = Math.min(...this.rateLimiter.requestTimestamps);
+      const waitTime = 1000 - (now - oldestRequest) + 10; // +10ms для безопасности
+      
+      if (waitTime > 0) {
+        logger.debug(`StarlineScraperService: Rate limit reached, waiting ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+    
+    // Добавляем метку текущего запроса
+    this.rateLimiter.requestTimestamps.push(Date.now());
+  }
+
   private async _getDeviceDetailsInternal(deviceId: number): Promise<StarlineDeviceDetails> {
+    // Применяем rate limiting перед запросом
+    await this.waitForRateLimit();
+    
     await this.ensureHealthy();
 
     if (!this.page) {
