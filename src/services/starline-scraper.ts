@@ -381,11 +381,12 @@ export class StarlineScraperService {
     await this.page.fill('input[type="text"]', this.username);
     await this.page.fill('input[type="password"]', this.password);
 
-    // Кликаем "Войти" и ждем навигации (увеличенный таймаут для прокси - 60 секунд)
-    logger.info('StarlineScraperService: Clicking submit button and waiting for navigation...');
+    // Кликаем "Войти" и ждем навигации
+    const isProxyContext = this.context === this.contextWithProxy;
+    logger.info(`StarlineScraperService: Clicking submit button and waiting for navigation${isProxyContext ? ' (via proxy)' : ' (no proxy)'}...`);
     await Promise.all([
       this.page.click('button[type="submit"]'),
-      this.page.waitForNavigation({ waitUntil: 'load', timeout: 60000 }),
+      this.page.waitForNavigation({ waitUntil: 'load', timeout: isProxyContext ? 60000 : 30000 }),
     ]);
     logger.info('StarlineScraperService: ✅ Navigation completed');
 
@@ -849,12 +850,13 @@ export class StarlineScraperService {
 
       // Если видим кнопку логина и нет списка устройств - сессия истекла
       if (isLoggedIn.hasLoginButton && !isLoggedIn.hasDevicesList && !isLoggedIn.isOnMapPage) {
-        logger.warn('StarlineScraperService: Session expired, re-logging in...');
+        logger.warn('StarlineScraperService: Session expired, restarting browser (will use proxy for login, then switch to no-proxy)...');
         this.isLoggedIn = false;
-        await this.login();
-        // Переходим на страницу карты после логина
-        await this.page.goto(`${this.BASE_URL}/site/map`, { waitUntil: 'networkidle', timeout: 15000 });
-        await this.page.waitForTimeout(1000);
+        // Используем restartBrowser() чтобы правильно переключиться с прокси на no-proxy
+        await this.restartBrowser();
+        // Переходим на страницу карты после перезапуска
+        await this.page!.goto(`${this.BASE_URL}/site/map`, { waitUntil: 'networkidle', timeout: 15000 });
+        await this.page!.waitForTimeout(1000);
       }
 
       // Выполняем fetch с таймаутом через Promise.race
