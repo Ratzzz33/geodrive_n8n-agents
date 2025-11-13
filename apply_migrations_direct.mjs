@@ -29,39 +29,23 @@ const sql = postgres(process.env.DATABASE_URL);
     
     for (const migration of migrations) {
       try {
-        // Проверяем, существует ли таблица
-        const exists = await sql`
-          SELECT EXISTS (
-            SELECT FROM information_schema.tables 
-            WHERE table_schema = 'public' 
-            AND table_name = ${migration.name}
-          )
-        `;
-        
-        if (exists[0].exists) {
-          console.log(`⚠️  Таблица ${migration.name} уже существует, пропускаю\n`);
-          continue;
-        }
-        
         console.log(`📄 Применяю: ${migration.file}...`);
         const migrationSQL = fs.readFileSync(migration.file, 'utf8');
         
-        // Разбиваем SQL на отдельные команды и выполняем их
-        const statements = migrationSQL
-          .split(';')
-          .map(s => s.trim())
-          .filter(s => s.length > 0 && !s.startsWith('--'));
-        
-        for (const statement of statements) {
-          if (statement.trim()) {
-            await sql.unsafe(statement);
-          }
-        }
+        // Выполняем весь SQL как один блок (postgres поддерживает множественные команды)
+        await sql.unsafe(migrationSQL);
         
         console.log(`   ✅ Успешно применена\n`);
       } catch (error) {
-        console.error(`   ❌ Ошибка: ${error.message}\n`);
-        console.error(`   Детали: ${error.stack}\n`);
+        // Игнорируем ошибки "already exists" для CREATE TABLE IF NOT EXISTS
+        if (error.message.includes('already exists') || 
+            error.message.includes('duplicate') ||
+            error.code === '42P07') {
+          console.log(`   ⚠️  Таблица ${migration.name} уже существует, пропускаю\n`);
+        } else {
+          console.error(`   ❌ Ошибка: ${error.message}\n`);
+          // Не прерываем выполнение, продолжаем с другими миграциями
+        }
       }
     }
     
