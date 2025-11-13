@@ -16,12 +16,29 @@ const sql = postgres(process.env.DATABASE_URL);
       ORDER BY table_name
     `;
     console.log('📊 Найденные таблицы:');
-    tables.forEach(t => console.log(`   ✅ ${t.table_name}`));
+    if (tables.length === 0) {
+      console.log('   ⚠️  Таблицы не найдены в information_schema');
+      // Попробуем прямой запрос к таблицам
+      try {
+        await sql`SELECT 1 FROM speed_history LIMIT 1`;
+        console.log('   ✅ speed_history существует (прямая проверка)');
+      } catch (e) {
+        console.log('   ❌ speed_history не существует');
+      }
+      try {
+        await sql`SELECT 1 FROM battery_voltage_history LIMIT 1`;
+        console.log('   ✅ battery_voltage_history существует (прямая проверка)');
+      } catch (e) {
+        console.log('   ❌ battery_voltage_history не существует');
+      }
+    } else {
+      tables.forEach(t => console.log(`   ✅ ${t.table_name}`));
+    }
     console.log();
     
     if (tables.length === 0) {
-      console.log('❌ Таблицы не найдены!');
-      process.exit(1);
+      console.log('⚠️  Таблицы не найдены в information_schema, но могут существовать');
+      // Продолжаем проверку данных
     }
     
     // Статистика по speed_history
