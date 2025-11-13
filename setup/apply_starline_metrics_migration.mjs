@@ -33,17 +33,15 @@ async function applyMigration() {
     const migrationPath = join(__dirname, 'migrations', '0022_create_starline_metrics.sql');
     const migrationSQL = readFileSync(migrationPath, 'utf-8');
     
-    // Выполняем SQL по частям (разделяем по ;)
-    const statements = migrationSQL
-      .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--'));
+    // Удаляем комментарии и выполняем SQL целиком
+    const cleanSQL = migrationSQL
+      .split('\n')
+      .filter(line => !line.trim().startsWith('--'))
+      .join('\n')
+      .trim();
     
-    for (const statement of statements) {
-      if (statement.length > 0) {
-        await sql.unsafe(statement);
-      }
-    }
+    // Выполняем SQL напрямую (CREATE TABLE IF NOT EXISTS безопасен)
+    await sql.unsafe(cleanSQL);
     
     console.log('✅ Миграция применена успешно!');
     
