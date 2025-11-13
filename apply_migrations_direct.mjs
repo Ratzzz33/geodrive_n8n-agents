@@ -42,7 +42,7 @@ const sql = postgres(process.env.DATABASE_URL);
         for (const statement of statements) {
           if (statement.trim()) {
             try {
-              await sql.unsafe(statement);
+              await sql.unsafe(statement + ';');
             } catch (stmtError) {
               // Игнорируем ошибки "already exists" для CREATE TABLE IF NOT EXISTS и CREATE INDEX IF NOT EXISTS
               if (stmtError.message.includes('already exists') || 
@@ -51,7 +51,13 @@ const sql = postgres(process.env.DATABASE_URL);
                   stmtError.code === '42710') {
                 // Это нормально для IF NOT EXISTS
                 continue;
+              } else if (stmtError.message.includes('does not exist')) {
+                // Если таблица не существует при создании индекса - пропускаем
+                console.log(`   ⚠️  Пропущена команда (таблица не существует): ${statement.substring(0, 50)}...`);
+                continue;
               } else {
+                console.error(`   ❌ Ошибка в команде: ${statement.substring(0, 100)}...`);
+                console.error(`   Сообщение: ${stmtError.message}`);
                 throw stmtError;
               }
             }
