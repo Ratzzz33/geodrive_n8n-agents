@@ -496,7 +496,7 @@ export function initApiServer(port: number = 3000): void {
       
       const metrics = await sql`
         SELECT * FROM starline_metrics 
-        WHERE timestamp > NOW() - INTERVAL '${sql.raw(String(hoursNum))} hours'
+        WHERE timestamp > NOW() - INTERVAL ${hoursNum.toString()} || ' hours'
         ORDER BY timestamp DESC
         LIMIT 100
       `;
@@ -511,7 +511,7 @@ export function initApiServer(port: number = 3000): void {
           SUM(failed_devices) as total_failed_devices,
           AVG(batch_size) as avg_batch_size
         FROM starline_metrics
-        WHERE timestamp > NOW() - INTERVAL '${sql.raw(String(hoursNum))} hours'
+        WHERE timestamp > NOW() - INTERVAL ${hoursNum.toString()} || ' hours'
       `;
       
       res.json({
