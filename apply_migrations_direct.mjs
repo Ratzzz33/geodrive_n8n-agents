@@ -32,20 +32,37 @@ const sql = postgres(process.env.DATABASE_URL);
         console.log(`📄 Применяю: ${migration.file}...`);
         const migrationSQL = fs.readFileSync(migration.file, 'utf8');
         
-        // Выполняем весь SQL как один блок (postgres поддерживает множественные команды)
-        await sql.unsafe(migrationSQL);
+        // Разбиваем SQL на отдельные команды (разделитель - точка с запятой)
+        const statements = migrationSQL
+          .split(';')
+          .map(s => s.trim())
+          .filter(s => s.length > 0 && !s.startsWith('--'));
+        
+        // Выполняем каждую команду отдельно
+        for (const statement of statements) {
+          if (statement.trim()) {
+            try {
+              await sql.unsafe(statement);
+            } catch (stmtError) {
+              // Игнорируем ошибки "already exists" для CREATE TABLE IF NOT EXISTS и CREATE INDEX IF NOT EXISTS
+              if (stmtError.message.includes('already exists') || 
+                  stmtError.message.includes('duplicate') ||
+                  stmtError.code === '42P07' ||
+                  stmtError.code === '42710') {
+                // Это нормально для IF NOT EXISTS
+                continue;
+              } else {
+                throw stmtError;
+              }
+            }
+          }
+        }
         
         console.log(`   ✅ Успешно применена\n`);
       } catch (error) {
-        // Игнорируем ошибки "already exists" для CREATE TABLE IF NOT EXISTS
-        if (error.message.includes('already exists') || 
-            error.message.includes('duplicate') ||
-            error.code === '42P07') {
-          console.log(`   ⚠️  Таблица ${migration.name} уже существует, пропускаю\n`);
-        } else {
-          console.error(`   ❌ Ошибка: ${error.message}\n`);
-          // Не прерываем выполнение, продолжаем с другими миграциями
-        }
+        console.error(`   ❌ Ошибка: ${error.message}\n`);
+        console.error(`   Детали: ${error.stack}\n`);
+        // Не прерываем выполнение, продолжаем с другими миграциями
       }
     }
     
