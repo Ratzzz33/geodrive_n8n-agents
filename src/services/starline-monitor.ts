@@ -423,8 +423,8 @@ export class StarlineMonitorService {
       );
     }
 
-    // Сохраняем историю скорости (если скорость > 0 или машина в движении)
-    if (gpsUpdate.speed !== null && gpsUpdate.speed !== undefined && (gpsUpdate.speed > 0 || gpsUpdate.isMoving)) {
+    // Сохраняем историю скорости при каждом проходе (даже если скорость = 0)
+    if (gpsUpdate.speed !== null && gpsUpdate.speed !== undefined) {
       await sqlConnection`
         INSERT INTO speed_history (
           car_id, starline_device_id, speed, timestamp,
