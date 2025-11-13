@@ -82,6 +82,7 @@ export class StarlineScraperService {
   private page: Page | null = null;
   private isLoggedIn: boolean = false;
   private isInitializing: boolean = false;
+  private isRestarting: boolean = false;  // Флаг для предотвращения параллельных перезапусков
   private readonly BASE_URL = 'https://starline-online.ru';
   private readonly LOGIN_URL = `${this.BASE_URL}/`;
   private readonly username: string;
@@ -244,6 +245,7 @@ export class StarlineScraperService {
         });
         
         // Переопределяем chrome
+        // @ts-ignore - window доступен в page.evaluate()
         (window as any).chrome = {
           runtime: {},
         };
@@ -296,6 +298,7 @@ export class StarlineScraperService {
         Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
         Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
         Object.defineProperty(navigator, 'webdriver', { get: () => false });
+        // @ts-ignore - window доступен в page.evaluate()
         (window as any).chrome = { runtime: {} };
       });
       
@@ -323,6 +326,7 @@ export class StarlineScraperService {
       // Проверяем что мы залогинены (без прокси)
       // @ts-ignore - document и window доступны в page.evaluate()
       const isLoggedInCheck = await this.page.evaluate(() => {
+        // @ts-ignore
         return !document.querySelector('a[href="#login"]') && window.location.pathname.includes('/site/map');
       });
       
@@ -657,11 +661,36 @@ export class StarlineScraperService {
    * Перезапуск браузера при необходимости
    */
   private async ensureHealthy(): Promise<void> {
-    const healthy = await this.isHealthy();
-    if (!healthy) {
-      logger.warn('StarlineScraperService: Browser is not healthy, reinitializing...');
+    // Проверяем, что браузер подключен
+    if (!this.browser || !this.browser.isConnected()) {
+      logger.warn('StarlineScraperService: Browser is not connected, reinitializing...');
       await this.shutdown();
       await this.initialize();
+      return;
+    }
+    
+    // Проверяем, что страница существует и не закрыта
+    if (!this.page || this.page.isClosed()) {
+      logger.warn('StarlineScraperService: Page is closed or missing, reinitializing...');
+      await this.shutdown();
+      await this.initialize();
+      return;
+    }
+    
+    // Проверяем, что контекст существует
+    if (!this.context) {
+      logger.warn('StarlineScraperService: Context is missing, reinitializing...');
+      await this.shutdown();
+      await this.initialize();
+      return;
+    }
+    
+    // Проверяем, что мы залогинены
+    if (!this.isLoggedIn) {
+      logger.warn('StarlineScraperService: Not logged in, reinitializing...');
+      await this.shutdown();
+      await this.initialize();
+      return;
     }
   }
 
@@ -811,6 +840,17 @@ export class StarlineScraperService {
     if (!this.page) {
       throw new Error('Page not initialized');
     }
+    
+    // Дополнительная проверка перед выполнением запросов
+    if (this.page.isClosed()) {
+      logger.warn('StarlineScraperService: Page is closed, reinitializing...');
+      await this.shutdown();
+      await this.initialize();
+      // Повторяем проверку после инициализации
+      if (!this.page || this.page.isClosed()) {
+        throw new Error('Page is still closed after reinitialization');
+      }
+    }
 
     try {
       // Проверяем, что страница загружена и доступна
@@ -859,6 +899,11 @@ export class StarlineScraperService {
         await this.page!.waitForTimeout(1000);
       }
 
+      // Финальная проверка перед page.evaluate - страница не должна быть закрыта
+      if (this.page.isClosed()) {
+        throw new Error('Page was closed before page.evaluate()');
+      }
+      
       // Выполняем fetch с таймаутом через Promise.race
       const response = await Promise.race([
         this.page.evaluate(async (id) => {
@@ -1146,10 +1191,27 @@ export class StarlineScraperService {
    * Это проще и надежнее, чем попытки перелогина - новая сессия гарантированно работает
    */
   private async restartBrowser(): Promise<void> {
-    logger.info('StarlineScraperService: 🔄 Restarting browser with NEW fingerprint (session expired)...');
+    // Предотвращаем параллельные перезапуски
+    if (this.isRestarting) {
+      logger.warn('StarlineScraperService: Browser restart already in progress, waiting...');
+      // Ждем завершения текущего перезапуска (максимум 60 секунд)
+      const startTime = Date.now();
+      while (this.isRestarting && (Date.now() - startTime) < 60000) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      if (this.isRestarting) {
+        throw new Error('Browser restart timeout - previous restart did not complete');
+      }
+      return;
+    }
     
-    // Сбрасываем флаг инициализации, чтобы разрешить повторную инициализацию
-    this.isInitializing = false;
+    this.isRestarting = true;
+    
+    try {
+      logger.info('StarlineScraperService: 🔄 Restarting browser with NEW fingerprint (session expired)...');
+      
+      // Сбрасываем флаг инициализации, чтобы разрешить повторную инициализацию
+      this.isInitializing = false;
     
     // Закрываем текущий контекст и страницу
     if (this.page) {
@@ -1183,10 +1245,13 @@ export class StarlineScraperService {
     // Сбрасываем состояние
     this.isLoggedIn = false;
     
-    // Инициализируем заново с НОВЫМ fingerprint (откроет браузер и залогинится)
-    await this.initialize();
-    
-    logger.info('StarlineScraperService: ✅ Browser restarted successfully with new fingerprint');
+      // Инициализируем заново с НОВЫМ fingerprint (откроет браузер и залогинится)
+      await this.initialize();
+      
+      logger.info('StarlineScraperService: ✅ Browser restarted successfully with new fingerprint');
+    } finally {
+      this.isRestarting = false;
+    }
   }
 
   /**
