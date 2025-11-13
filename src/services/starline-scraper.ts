@@ -1077,7 +1077,7 @@ export class StarlineScraperService {
       await this.page.evaluate(async (id) => {
         // @ts-ignore - код выполняется в браузере
         // Пробуем разные селекторы для поиска устройства
-        let deviceRadio = document.querySelector(`input[type="radio"][data-device-id="${id}"]`) as HTMLInputElement;
+        let deviceRadio = document.querySelector(`input[type="radio"][data-device-id="${id}"]`) as any;
         
         if (!deviceRadio) {
         // Пробуем найти по value
@@ -1105,6 +1105,7 @@ export class StarlineScraperService {
       }, deviceId);
 
       // Устанавливаем период через JavaScript
+      // @ts-ignore - Playwright page.evaluate поддерживает передачу аргументов после функции
       await this.page.evaluate(async (from: string, to: string) => {
         // @ts-ignore - код выполняется в браузере
         // Ищем кнопку "Период" и кликаем

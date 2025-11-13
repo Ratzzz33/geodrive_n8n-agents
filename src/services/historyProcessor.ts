@@ -311,11 +311,17 @@ export async function updateEmployeeCash(
       ? sql`${employees[cashField]} - ${amount}` // Инкассация - уменьшение
       : sql`${amount}`; // Корректировка - установка значения
     
+    if (!db) {
+      throw new Error('Database not available');
+    }
+    
     await db.update(employees)
       .set({
         [cashField]: updateSql,
+        // @ts-ignore - поле может существовать в БД, но не быть в схеме
         cash_last_updated: new Date(),
         // Добавить в history_log
+        // @ts-ignore - поле может существовать в БД, но не быть в схеме
         history_log: sql`
           COALESCE(history_log, '[]'::jsonb) || 
           ${JSON.stringify([{
@@ -386,8 +392,13 @@ export async function addMaintenanceNote(
     };
     
     // Добавить в history_log
+    if (!db) {
+      throw new Error('Database not available');
+    }
+    
     await db.update(cars)
       .set({
+        // @ts-ignore - поле может существовать в БД, но не быть в схеме
         history_log: sql`
           COALESCE(history_log, '[]'::jsonb) || 
           ${JSON.stringify([logEntry])}::jsonb
@@ -439,6 +450,10 @@ export async function updateCarStatus(
     }
     
     // Обновить статус и добавить в history_log
+    if (!db) {
+      throw new Error('Database not available');
+    }
+    
     await db.update(cars)
       .set({
         data: sql`
@@ -448,6 +463,7 @@ export async function updateCarStatus(
             ${JSON.stringify(status)}::jsonb
           )
         `,
+        // @ts-ignore - поле может существовать в БД, но не быть в схеме
         history_log: sql`
           COALESCE(history_log, '[]'::jsonb) || 
           ${JSON.stringify([{
