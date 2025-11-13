@@ -494,9 +494,11 @@ export function initApiServer(port: number = 3000): void {
       const { hours = 24 } = req.query;
       const hoursNum = parseInt(hours as string, 10) || 24;
       
+      const intervalStr = `${hoursNum} hours`;
+      
       const metrics = await sql`
         SELECT * FROM starline_metrics 
-        WHERE timestamp > NOW() - INTERVAL ${hoursNum.toString()} || ' hours'
+        WHERE timestamp > NOW() - ${intervalStr}::INTERVAL
         ORDER BY timestamp DESC
         LIMIT 100
       `;
@@ -511,7 +513,7 @@ export function initApiServer(port: number = 3000): void {
           SUM(failed_devices) as total_failed_devices,
           AVG(batch_size) as avg_batch_size
         FROM starline_metrics
-        WHERE timestamp > NOW() - INTERVAL ${hoursNum.toString()} || ' hours'
+        WHERE timestamp > NOW() - ${intervalStr}::INTERVAL
       `;
       
       res.json({
