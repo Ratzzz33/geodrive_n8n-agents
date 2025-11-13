@@ -47,6 +47,8 @@ const configSchema = z.object({
   objectStorageBucket: z.string().optional(),
   playwrightStarlineLogin: z.string().optional(),
   playwrightStarlinePassword: z.string().optional(),
+  // Starline параллельная обработка: размер батча (1 = последовательная, 5-10 = параллельная)
+  starlineParallelBatchSize: z.coerce.number().int().min(1).max(20).default(1),
   logLevel: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   // RentProg v1 integration
   rentprogBaseUrl: z.string().url().optional(),
@@ -95,6 +97,7 @@ export function getConfig(): Config {
       objectStorageBucket: process.env.OBJECT_STORAGE_BUCKET,
       playwrightStarlineLogin: process.env.PLAYWRIGHT_STARLINE_LOGIN,
       playwrightStarlinePassword: process.env.PLAYWRIGHT_STARLINE_PASSWORD,
+      starlineParallelBatchSize: process.env.STARLINE_PARALLEL_BATCH_SIZE || '1',
       logLevel: (process.env.LOG_LEVEL as Config['logLevel']) || 'info',
       // RentProg v1
       rentprogBaseUrl: process.env.RENTPROG_BASE_URL,

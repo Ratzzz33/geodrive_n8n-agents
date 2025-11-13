@@ -10,6 +10,7 @@ import { sql } from 'drizzle-orm';
 import { logger } from '../utils/logger.js';
 import { getCarStatus, calculateDistance } from '../utils/starline-helpers.js';
 import { sendTelegramAlert } from '../integrations/n8n.js';
+import { config } from '../config/index.js';
 
 interface CarMatch {
   carId: string;
@@ -173,10 +174,53 @@ export class StarlineMonitorService {
   }
 
   /**
+   * Безопасная обработка одного устройства (обертка для параллельной обработки)
+   */
+  private async processDeviceSafe(
+    match: CarMatch,
+    sqlConnection: any
+  ): Promise<{ success: boolean; detail?: any; error?: string }> {
+    try {
+      const scraper = getStarlineScraper();
+      let deviceDetails;
+      
+      try {
+        deviceDetails = await scraper.getDeviceDetails(match.starlineDeviceId);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        // Если ошибка связана с истечением сессии - перезапускаем браузер и повторяем
+        if (errorMessage.includes('page.evaluate') && 
+            (errorMessage.includes('Unexpected token') || 
+             errorMessage.includes('Необходима') || 
+             /[А-Яа-яЁё]/.test(errorMessage))) {
+          logger.warn(`StarlineMonitorService: Session expired for ${match.starlineAlias}, retrying...`);
+          // Перезапуск браузера происходит внутри scraper.getDeviceDetails()
+          deviceDetails = await scraper.getDeviceDetails(match.starlineDeviceId);
+        } else {
+          throw error;
+        }
+      }
+      
+      const detail: any = {};
+      await this.processDevice(match, deviceDetails, sqlConnection, [detail], []);
+      
+      return { success: true, detail };
+    } catch (error) {
+      const errorMsg = `Ошибка обновления ${match.starlineAlias}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      logger.error(`StarlineMonitorService: ${errorMsg}`);
+      return { success: false, error: errorMsg };
+    }
+  }
+
+  /**
    * Обновить GPS данные для всех сопоставленных машин
    */
   async updateGPSData(): Promise<{ updated: number; errors: string[]; details: any[] }> {
-    console.log('📍 Начинаем обновление GPS данных...');
+    const startTime = Date.now();
+    const batchSize = config.starlineParallelBatchSize;
+    const isParallel = batchSize > 1;
+    
+    logger.info(`📍 Начинаем обновление GPS данных (режим: ${isParallel ? `параллельный, батч ${batchSize}` : 'последовательный'})...`);
 
     const sqlConnection = getSqlConnection();
     const matches = await this.matchCars();
@@ -185,84 +229,96 @@ export class StarlineMonitorService {
     let updated = 0;
     let firstDeviceProcessed = false;
 
-    for (const match of matches) {
-      let gpsUpdate: GPSUpdate | undefined;
+    // Обработка первого устройства отдельно (для проверки зависания)
+    if (matches.length > 0) {
+      const firstMatch = matches[0];
+      firstDeviceProcessed = true;
+      logger.info(`🔄 Обработка первого устройства: ${firstMatch.starlineAlias} (${firstMatch.starlineDeviceId})...`);
+      
       try {
-        // Получаем детальные данные устройства через scraper
-        const scraper = getStarlineScraper();
+        const deviceDetails = await Promise.race([
+          getStarlineScraper().getDeviceDetails(firstMatch.starlineDeviceId),
+          new Promise((_, reject) => 
+            setTimeout(() => {
+              reject(new Error(`Timeout: Первое устройство ${firstMatch.starlineAlias} не ответило за 15 секунд`));
+            }, 15000)
+          )
+        ]) as any;
         
-        // Для первого устройства добавляем таймаут и отслеживание зависания
-        if (!firstDeviceProcessed) {
-          firstDeviceProcessed = true;
-          console.log(`🔄 Обработка первого устройства: ${match.starlineAlias} (${match.starlineDeviceId})...`);
-          
-          try {
-            const deviceDetails = await Promise.race([
-              scraper.getDeviceDetails(match.starlineDeviceId),
-              new Promise((_, reject) => 
-                setTimeout(() => {
-                  reject(new Error(`Timeout: Первое устройство ${match.starlineAlias} не ответило за 15 секунд - возможно, повис сервер страницы`));
-                }, 15000)
-              )
-            ]) as any;
-            
-            // Если первый запрос успешен - продолжаем обычную обработку
-            await this.processDevice(match, deviceDetails, sqlConnection, details, errors);
-            updated++;
-            console.log(`✅ ${match.starlineAlias}: успешно обработано`);
-            continue;
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(`❌ Ошибка на первом устройстве: ${errorMessage}`);
-            
-            // Отправляем уведомление о зависании
-            await this.sendPageHangAlert(match, errorMessage, scraper);
-            
-            // Добавляем ошибку и продолжаем обработку остальных устройств
-            errors.push(`Первый запрос завис: ${errorMessage}`);
-            continue;
-          }
-        }
-        
-        // Для остальных устройств - обычная обработка
-        // Перехватываем ошибки истечения сессии для автоматического перезапуска браузера
-        let deviceDetails;
-        try {
-          deviceDetails = await scraper.getDeviceDetails(match.starlineDeviceId);
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          // Если ошибка связана с истечением сессии - перезапускаем браузер и повторяем
-          if (errorMessage.includes('page.evaluate') && 
-              (errorMessage.includes('Unexpected token') || 
-               errorMessage.includes('Необходима') ||
-               /[А-Яа-яЁё]/.test(errorMessage))) {
-            console.log(`🔄 Сессия истекла для ${match.starlineAlias}, перезапускаем браузер...`);
-            // Перезапуск браузера происходит внутри scraper.getDeviceDetails()
-            // Просто повторяем запрос
-            deviceDetails = await scraper.getDeviceDetails(match.starlineDeviceId);
-          } else {
-            throw error;
-          }
-        }
-        await this.processDevice(match, deviceDetails, sqlConnection, details, errors);
+        await this.processDevice(firstMatch, deviceDetails, sqlConnection, details, errors);
         updated++;
-
+        logger.info(`✅ ${firstMatch.starlineAlias}: успешно обработано`);
       } catch (error) {
-        const errorMsg = `Ошибка обновления ${match.starlineAlias}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-        console.error(`❌ ${errorMsg}`);
-        console.error(`❌ Детали ошибки:`, error);
-        try {
-          console.error(`❌ GPSUpdate данные:`, JSON.stringify(gpsUpdate, null, 2));
-        } catch (e) {
-          console.error(`❌ Не удалось сериализовать gpsUpdate`);
-        }
-        errors.push(errorMsg);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error(`❌ Ошибка на первом устройстве: ${errorMessage}`);
+        errors.push(`Первый запрос завис: ${errorMessage}`);
       }
     }
 
-    console.log(`\n📊 Итого обновлено: ${updated} из ${matches.length}`);
+    // Обработка остальных устройств
+    const remainingMatches = matches.slice(1);
+    
+    if (isParallel && remainingMatches.length > 0) {
+      // Параллельная обработка батчами
+      logger.info(`🔄 Параллельная обработка ${remainingMatches.length} устройств батчами по ${batchSize}...`);
+      
+      const batches: CarMatch[][] = [];
+      for (let i = 0; i < remainingMatches.length; i += batchSize) {
+        batches.push(remainingMatches.slice(i, i + batchSize));
+      }
+      
+      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        const batch = batches[batchIndex];
+        const batchStartTime = Date.now();
+        
+        logger.info(`📦 Батч ${batchIndex + 1}/${batches.length}: обработка ${batch.length} устройств...`);
+        
+        const results = await Promise.allSettled(
+          batch.map(match => this.processDeviceSafe(match, sqlConnection))
+        );
+        
+        results.forEach((result, index) => {
+          const match = batch[index];
+          if (result.status === 'fulfilled') {
+            if (result.value.success) {
+              updated++;
+              if (result.value.detail) {
+                details.push(result.value.detail);
+              }
+            } else {
+              errors.push(result.value.error || `Ошибка обработки ${match.starlineAlias}`);
+            }
+          } else {
+            errors.push(`Ошибка обработки ${match.starlineAlias}: ${result.reason}`);
+          }
+        });
+        
+        const batchDuration = Date.now() - batchStartTime;
+        logger.info(`✅ Батч ${batchIndex + 1}/${batches.length} завершен за ${batchDuration}ms (${(batchDuration / batch.length).toFixed(0)}ms на устройство)`);
+      }
+    } else {
+      // Последовательная обработка (старый способ, для обратной совместимости)
+      logger.info(`🔄 Последовательная обработка ${remainingMatches.length} устройств...`);
+      
+      for (const match of remainingMatches) {
+        const result = await this.processDeviceSafe(match, sqlConnection);
+        if (result.success) {
+          updated++;
+          if (result.detail) {
+            details.push(result.detail);
+          }
+        } else {
+          errors.push(result.error || `Ошибка обработки ${match.starlineAlias}`);
+        }
+      }
+    }
+
+    const totalDuration = Date.now() - startTime;
+    const avgTimePerDevice = matches.length > 0 ? (totalDuration / matches.length).toFixed(0) : 0;
+    
+    logger.info(`\n📊 Итого обновлено: ${updated} из ${matches.length} за ${(totalDuration / 1000).toFixed(1)}с (${avgTimePerDevice}ms на устройство)`);
     if (errors.length > 0) {
-      console.log(`⚠️ Ошибок: ${errors.length}`);
+      logger.warn(`⚠️ Ошибок: ${errors.length}`);
     }
 
     return { updated, errors, details };
