@@ -114,17 +114,23 @@ const sql = postgres(process.env.DATABASE_URL);
     }
     
     // Проверяем частоту сохранения (должно быть примерно каждые 2-3 минуты)
-    const avgInterval = await sql`
-      SELECT 
-        AVG(EXTRACT(EPOCH FROM (timestamp - LAG(timestamp) OVER (PARTITION BY car_id ORDER BY timestamp))) / 60) as avg_interval_minutes
-      FROM speed_history
-      WHERE timestamp > ${tenMinutesAgo.toISOString()}
-        AND car_id = (SELECT id FROM cars WHERE plate = 'BE021ES' LIMIT 1)
+    const intervals = await sql`
+      WITH intervals AS (
+        SELECT 
+          timestamp,
+          LAG(timestamp) OVER (PARTITION BY car_id ORDER BY timestamp) as prev_timestamp
+        FROM speed_history
+        WHERE timestamp > ${tenMinutesAgo.toISOString()}
+          AND car_id = (SELECT id FROM cars WHERE plate = 'BE021ES' LIMIT 1)
+      )
+      SELECT AVG(EXTRACT(EPOCH FROM (timestamp - prev_timestamp)) / 60) as avg_interval_minutes
+      FROM intervals
+      WHERE prev_timestamp IS NOT NULL
     `;
     
-    if (avgInterval[0]?.avg_interval_minutes) {
-      console.log(`⏱️  Средний интервал между записями для BE021ES: ${Number(avgInterval[0].avg_interval_minutes).toFixed(1)} минут`);
-      if (Number(avgInterval[0].avg_interval_minutes) > 0 && Number(avgInterval[0].avg_interval_minutes) < 5) {
+    if (intervals[0]?.avg_interval_minutes) {
+      console.log(`⏱️  Средний интервал между записями для BE021ES: ${Number(intervals[0].avg_interval_minutes).toFixed(1)} минут`);
+      if (Number(intervals[0].avg_interval_minutes) > 0 && Number(intervals[0].avg_interval_minutes) < 5) {
         console.log('   ✅ Интервал нормальный (2-3 минуты)');
       } else {
         console.log('   ⚠️  Интервал необычный');
