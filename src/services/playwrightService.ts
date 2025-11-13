@@ -366,10 +366,12 @@ app.post('/scrape-bookings', async (req, res) => {
     
     // Парсим активные брони
     const activeBookings = await page.evaluate(() => {
+      // @ts-ignore - код выполняется в браузере
       const rows = Array.from(document.querySelectorAll('table tbody tr'));
       const bookings: any[] = [];
       
       rows.forEach((row: any) => {
+        // @ts-ignore - код выполняется в браузере
         const cells = row.querySelectorAll('td');
         if (cells.length < 14) return;
         
@@ -484,6 +486,7 @@ app.post('/scrape-bookings', async (req, res) => {
     
     // Парсим неактивные брони
     const inactiveBookings = await page.evaluate(() => {
+      // @ts-ignore - код выполняется в браузере
       const rows = Array.from(document.querySelectorAll('table tbody tr'));
       const bookings: any[] = [];
       
