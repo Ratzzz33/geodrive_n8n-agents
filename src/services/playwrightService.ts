@@ -369,7 +369,7 @@ app.post('/scrape-bookings', async (req, res) => {
       const rows = Array.from(document.querySelectorAll('table tbody tr'));
       const bookings: any[] = [];
       
-      rows.forEach((row) => {
+      rows.forEach((row: any) => {
         const cells = row.querySelectorAll('td');
         if (cells.length < 14) return;
         
@@ -487,7 +487,7 @@ app.post('/scrape-bookings', async (req, res) => {
       const rows = Array.from(document.querySelectorAll('table tbody tr'));
       const bookings: any[] = [];
       
-      rows.forEach((row) => {
+      rows.forEach((row: any) => {
         const cells = row.querySelectorAll('td');
         if (cells.length < 13) return;
         
