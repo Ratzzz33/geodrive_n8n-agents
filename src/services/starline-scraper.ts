@@ -914,7 +914,7 @@ export class StarlineScraperService {
       const waitTime = 1000 - (now - oldestRequest) + 10; // +10ms для безопасности
       
       if (waitTime > 0) {
-        logger.debug(`StarlineScraperService: Rate limit reached, waiting ${waitTime}ms...`);
+        logger.info(`StarlineScraperService: Rate limit reached (${this.rateLimiter.requestTimestamps.length}/${maxRequestsPerSecond}), waiting ${waitTime}ms...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }
