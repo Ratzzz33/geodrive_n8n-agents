@@ -201,10 +201,11 @@ export class StarlineMonitorService {
         }
       }
       
-      const detail: any = {};
-      await this.processDevice(match, deviceDetails, sqlConnection, [detail], []);
+      const detailsArray: any[] = [];
+      await this.processDevice(match, deviceDetails, sqlConnection, detailsArray, []);
       
-      return { success: true, detail };
+      // Возвращаем первый (и единственный) элемент из массива
+      return { success: true, detail: detailsArray[0] };
     } catch (error) {
       const errorMsg = `Ошибка обновления ${match.starlineAlias}: ${error instanceof Error ? error.message : 'Unknown error'}`;
       logger.error(`StarlineMonitorService: ${errorMsg}`);
@@ -434,6 +435,19 @@ export class StarlineMonitorService {
 
     // Определяем статус
     const status = getCarStatus(deviceDetails);
+    
+    // ОТЛАДКА: Логируем данные position для Maserati
+    if (match.starlineAlias?.includes('Maserati') || match.starlineAlias?.includes('686')) {
+      console.log('========== MASERATI DEBUG ==========');
+      console.log('Device:', match.starlineAlias);
+      console.log('Position данные:', JSON.stringify(pos, null, 2));
+      console.log('pos.s (скорость):', pos.s);
+      console.log('pos.dir (направление):', pos.dir);
+      console.log('pos.sat_qty (спутники):', pos.sat_qty);
+      console.log('deviceDetails.status:', deviceDetails.status);
+      console.log('====================================');
+    }
+    
     // ВАЖНО: поле скорости в Starline API называется "s", а не "speed"!
     const speed = pos.s ?? 0;
     const googleMapsLink = this.generateGoogleMapsLink(currentLat, currentLng);
