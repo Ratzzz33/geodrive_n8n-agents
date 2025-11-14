@@ -433,8 +433,8 @@ export class StarlineMonitorService {
       isMoving = distanceMoved > 10;
     }
 
-    // Определяем статус
-    const status = getCarStatus(deviceDetails);
+    // Определяем статус (передаем isMoving для устранения коллизии)
+    const status = getCarStatus(deviceDetails, isMoving);
     
     // ВАЖНО: поле скорости в Starline API называется "s", а не "speed"!
     const speed = pos.s ?? 0;

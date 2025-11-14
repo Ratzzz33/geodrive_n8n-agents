@@ -45,14 +45,19 @@ interface StarlinePosition {
  * независимо от того движется машина или стоит.
  * Текст "В движении" на веб-сайте генерируется клиентом на основе скорости.
  * 
- * Мы используем комбинированную логику:
- * 1. Скорость > 5 км/ч -> 'moving' (машина движется)
- * 2. Зажигание + двигатель -> 'moving' (даже если скорость = 0 из-за плохого GPS)
- * 3. Только зажигание -> 'parked_on'
- * 4. Всё выключено -> 'parked_off'
+ * Мы используем комбинированную логику с ПРИОРИТЕТОМ для is_moving:
+ * 1. Фактически проехала > 10 метров (isMovingByDistance) -> 'moving' (ПРИОРИТЕТ!)
+ * 2. Скорость > 1 км/ч -> 'moving' (любое движение, включая пробки)
+ * 3. Зажигание + двигатель -> 'moving' (даже если скорость = 0 из-за плохого GPS)
+ * 4. Только зажигание -> 'parked_on'
+ * 5. Всё выключено -> 'parked_off'
+ * 
+ * @param device Данные устройства Starline
+ * @param isMovingByDistance Флаг движения на основе изменения координат (distance_moved > 10м)
  */
 export function getCarStatus(
-  device: StarlineDeviceDetails
+  device: StarlineDeviceDetails,
+  isMovingByDistance: boolean = false
 ): 'offline' | 'gps_offline' | 'moving' | 'parked_on' | 'parked_off' {
   // Устройство offline
   if (device.status === 0) {
@@ -72,9 +77,10 @@ export function getCarStatus(
   const speed = pos?.s ?? 0;
 
   // Машина двигается если:
-  // 1. Скорость > 5 км/ч (основной критерий, как на сайте Starline)
-  // 2. ИЛИ зажигание включено и двигатель работает (даже если GPS показывает 0 из-за плохого сигнала)
-  if (speed > 5 || (device.car_state?.ign && device.car_state?.run)) {
+  // 1. ПРИОРИТЕТ: Фактически проехала > 10 метров (устраняет коллизию is_moving=true но status=parked_off)
+  // 2. ИЛИ скорость > 1 км/ч (понижен порог с 5 до 1 км/ч для пробок и медленных маневров)
+  // 3. ИЛИ зажигание + двигатель работает (даже если GPS показывает 0 из-за плохого сигнала)
+  if (isMovingByDistance || speed > 1 || (device.car_state?.ign && device.car_state?.run)) {
     return 'moving';
   }
 

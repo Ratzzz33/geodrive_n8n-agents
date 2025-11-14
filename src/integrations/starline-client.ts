@@ -133,20 +133,31 @@ export class StarlineClient {
 
   /**
    * Определить статус машины
+   * @param device Данные устройства Starline
+   * @param isMovingByDistance Флаг движения на основе изменения координат (distance_moved > 10м)
    */
-  getCarStatus(device: StarlineDeviceDetails): 'offline' | 'gps_offline' | 'moving' | 'parked_on' | 'parked_off' {
+  getCarStatus(device: StarlineDeviceDetails, isMovingByDistance: boolean = false): 'offline' | 'gps_offline' | 'moving' | 'parked_on' | 'parked_off' {
     // Устройство offline
     if (device.status === 0) {
       return 'offline';
     }
 
-    // GPS отключен
-    if (!device.gps_lvl || device.gps_lvl === 0 || !device.pos?.sat_qty || device.pos.sat_qty === 0) {
+    // Используем pos или position (API может вернуть любое из этих полей)
+    const pos = device.pos || device.position;
+
+    // GPS отключен (слабый сигнал) - проверяем только gps_lvl
+    if (!device.gps_lvl || device.gps_lvl === 0) {
       return 'gps_offline';
     }
 
-    // Машина двигается (зажигание включено и двигатель работает)
-    if (device.car_state?.ign && device.car_state?.run) {
+    // Получаем скорость (ВАЖНО: поле называется "s", а не "speed"!)
+    const speed = pos?.s ?? 0;
+
+    // Машина двигается если:
+    // 1. ПРИОРИТЕТ: Фактически проехала > 10 метров (устраняет коллизию is_moving=true но status=parked_off)
+    // 2. ИЛИ скорость > 1 км/ч (понижен порог с 5 до 1 км/ч для пробок и медленных маневров)
+    // 3. ИЛИ зажигание + двигатель работает (даже если GPS показывает 0 из-за плохого сигнала)
+    if (isMovingByDistance || speed > 1 || (device.car_state?.ign && device.car_state?.run)) {
       return 'moving';
     }
 
