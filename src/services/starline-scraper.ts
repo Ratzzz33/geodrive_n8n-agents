@@ -783,7 +783,25 @@ export class StarlineScraperService {
             'X-Requested-With': 'XMLHttpRequest',
           },
         });
-        return res.json();
+        
+        // Проверяем статус ответа
+        if (!res.ok) {
+          const statusText = res.statusText || 'Unknown error';
+          throw new Error(`HTTP ${res.status}: ${statusText}`);
+        }
+        
+        // Проверяем что тело ответа не пустое
+        const text = await res.text();
+        if (!text || text.trim().length === 0) {
+          throw new Error('Empty response from Starline API');
+        }
+        
+        // Парсим JSON с обработкой ошибок
+        try {
+          return JSON.parse(text);
+        } catch (parseError) {
+          throw new Error(`Failed to parse JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}. Response preview: ${text.substring(0, 200)}`);
+        }
       }) as StarlineAPIResponse<{ devices: StarlineDeviceOverview[] }>;
 
       if (response.result === 1 && response.answer && response.answer.devices) {
@@ -798,12 +816,16 @@ export class StarlineScraperService {
       const errorString = String(error);
       const fullErrorText = errorMessage + ' ' + errorString;
       
-      // Проверяем на истечение сессии (такая же логика как в getDeviceDetails)
+      // Проверяем на истечение сессии или ошибки парсинга JSON
       const hasPageEvaluate = fullErrorText.includes('page.evaluate');
       const hasUnexpectedToken = fullErrorText.includes('Unexpected token');
+      const hasUnexpectedEnd = fullErrorText.includes('Unexpected end of JSON input');
+      const hasFailedToExecute = fullErrorText.includes("Failed to execute 'json' on 'Response'");
+      const hasEmptyResponse = fullErrorText.includes('Empty response');
       const hasCyrillic = /[А-Яа-яЁё]/.test(fullErrorText) || /\\u04[0-9a-fA-F]{2}/.test(fullErrorText);
       
-      if (hasPageEvaluate && (hasUnexpectedToken || hasCyrillic)) {
+      // Если это ошибка парсинга JSON или пустой ответ - перезапускаем браузер
+      if (hasPageEvaluate && (hasUnexpectedToken || hasUnexpectedEnd || hasFailedToExecute || hasEmptyResponse || hasCyrillic)) {
         logger.warn('StarlineScraperService: Session expired in getDevices, restarting browser...');
         
         try {
@@ -818,7 +840,25 @@ export class StarlineScraperService {
                 'X-Requested-With': 'XMLHttpRequest',
               },
             });
-            return res.json();
+            
+            // Проверяем статус ответа
+            if (!res.ok) {
+              const statusText = res.statusText || 'Unknown error';
+              throw new Error(`HTTP ${res.status}: ${statusText}`);
+            }
+            
+            // Проверяем что тело ответа не пустое
+            const text = await res.text();
+            if (!text || text.trim().length === 0) {
+              throw new Error('Empty response from Starline API');
+            }
+            
+            // Парсим JSON с обработкой ошибок
+            try {
+              return JSON.parse(text);
+            } catch (parseError) {
+              throw new Error(`Failed to parse JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}. Response preview: ${text.substring(0, 200)}`);
+            }
           }) as StarlineAPIResponse<{ devices: StarlineDeviceOverview[] }>;
           
           if (response.result === 1 && response.answer && response.answer.devices) {
@@ -848,13 +888,16 @@ export class StarlineScraperService {
     
     const hasPageEvaluate = fullErrorText.includes('page.evaluate');
     const hasUnexpectedToken = fullErrorText.includes('Unexpected token');
+    const hasUnexpectedEnd = fullErrorText.includes('Unexpected end of JSON input');
+    const hasFailedToExecute = fullErrorText.includes("Failed to execute 'json' on 'Response'");
+    const hasEmptyResponse = fullErrorText.includes('Empty response');
     const hasCyrillic = /[А-Яа-яЁё]/.test(fullErrorText) || /\\u04[0-9a-fA-F]{2}/.test(fullErrorText);
     const hasSessionExpired = errorMessage.includes('SESSION_EXPIRED') ||
                              errorMessage.includes('Expected JSON but got') ||
                              errorMessage.includes('Необходима') ||
                              errorMessage.includes('authorization');
     
-    return hasPageEvaluate && (hasUnexpectedToken || hasCyrillic || hasSessionExpired);
+    return hasPageEvaluate && (hasUnexpectedToken || hasUnexpectedEnd || hasFailedToExecute || hasEmptyResponse || hasCyrillic || hasSessionExpired);
   }
 
   /**
@@ -1025,6 +1068,11 @@ export class StarlineScraperService {
             
             // Получаем текст ответа для проверки
             const responseText = await res.text();
+            
+            // Проверяем что тело ответа не пустое
+            if (!responseText || responseText.trim().length === 0) {
+              throw new Error('Empty response from Starline API');
+            }
             
             // Проверяем, не является ли это HTML страницей авторизации (проверяем ДО парсинга JSON)
             const lowerText = responseText.toLowerCase();
