@@ -434,7 +434,8 @@ export class StarlineMonitorService {
 
     // Определяем статус
     const status = getCarStatus(deviceDetails);
-    const speed = pos.speed ?? 0;
+    // ВАЖНО: поле скорости в Starline API называется "s", а не "speed"!
+    const speed = pos.s ?? 0;
     const googleMapsLink = this.generateGoogleMapsLink(currentLat, currentLng);
 
     // Подготавливаем данные для обновления

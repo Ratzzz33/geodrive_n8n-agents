@@ -11,7 +11,8 @@ interface StarlineDeviceDetails {
     y: number;
     sat_qty: number;
     ts: number;
-    speed?: number; // скорость в км/ч
+    dir?: number; // направление (градусы)
+    s?: number; // скорость в км/ч (важно: поле называется "s", а не "speed"!)
   };
   car_state?: {
     ign: boolean;
@@ -25,7 +26,8 @@ interface StarlinePosition {
   y: number; // latitude
   sat_qty: number;
   ts: number;
-  speed?: number; // скорость в км/ч
+  dir?: number; // направление (градусы)
+  s?: number; // скорость в км/ч (важно: поле называется "s", а не "speed"!)
 }
 
 /**

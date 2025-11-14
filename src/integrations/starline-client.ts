@@ -8,7 +8,8 @@ interface StarlinePosition {
   y: number; // latitude
   sat_qty: number;
   ts: number; // timestamp
-  dir?: number; // направление движения
+  dir?: number; // направление движения (градусы)
+  s?: number; // скорость в км/ч (важно: поле называется "s", а не "speed"!)
 }
 
 interface StarlineDevice {

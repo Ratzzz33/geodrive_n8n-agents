@@ -10,12 +10,16 @@ interface StarlineDeviceOverview {
     y: number; // latitude
     sat_qty: number;
     ts: number;
+    dir?: number; // направление (градусы)
+    s?: number; // скорость в км/ч (важно: поле называется "s", а не "speed"!)
   };
   position?: {
     x: number;
     y: number;
     sat_qty: number;
     ts: number;
+    dir?: number; // направление (градусы)
+    s?: number; // скорость в км/ч (важно: поле называется "s", а не "speed"!)
   };
   shared_for_me: boolean;
 }
@@ -28,7 +32,8 @@ interface StarlineDeviceDetails {
     ts: number;
     x: number;
     y: number;
-    speed?: number; // скорость в км/ч
+    dir?: number; // направление (градусы)
+    s?: number; // скорость в км/ч (важно: поле называется "s", а не "speed"!)
   };
   status: number;
   position?: {
@@ -36,8 +41,8 @@ interface StarlineDeviceDetails {
     ts: number;
     x: number;
     y: number;
-    dir?: number;
-    speed?: number; // скорость в км/ч
+    dir?: number; // направление (градусы)
+    s?: number; // скорость в км/ч (важно: поле называется "s", а не "speed"!)
   };
   gps_lvl: number;
   gsm_lvl: number;
