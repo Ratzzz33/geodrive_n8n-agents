@@ -433,18 +433,6 @@ export class StarlineMonitorService {
       isMoving = distanceMoved > 10;
     }
 
-    // ОТЛАДКА: Логируем статус для Maserati
-    if (match.starlineAlias?.includes('Maserati') || match.starlineAlias?.includes('686')) {
-      console.log('========== MASERATI STATUS DEBUG ==========');
-      console.log('Device:', match.starlineAlias);
-      console.log('deviceDetails.status:', deviceDetails.status, '(0=offline, 1=online)');
-      console.log('deviceDetails.gps_lvl:', deviceDetails.gps_lvl);
-      console.log('deviceDetails.pos?.sat_qty:', deviceDetails.pos?.sat_qty);
-      console.log('deviceDetails.car_state?.ign:', deviceDetails.car_state?.ign);
-      console.log('deviceDetails.car_state?.run:', deviceDetails.car_state?.run);
-      console.log('==========================================');
-    }
-    
     // Определяем статус
     const status = getCarStatus(deviceDetails);
     

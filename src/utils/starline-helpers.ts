@@ -32,6 +32,16 @@ interface StarlinePosition {
 
 /**
  * Определить статус машины по данным Starline
+ * 
+ * ВАЖНО: Starline API возвращает device.status = 1 ("online") для всех машин "в сети",
+ * независимо от того движется машина или стоит.
+ * Текст "В движении" на веб-сайте генерируется клиентом на основе скорости.
+ * 
+ * Мы используем комбинированную логику:
+ * 1. Скорость > 5 км/ч -> 'moving' (машина движется)
+ * 2. Зажигание + двигатель -> 'moving' (даже если скорость = 0 из-за плохого GPS)
+ * 3. Только зажигание -> 'parked_on'
+ * 4. Всё выключено -> 'parked_off'
  */
 export function getCarStatus(
   device: StarlineDeviceDetails
@@ -41,22 +51,31 @@ export function getCarStatus(
     return 'offline';
   }
 
-  // GPS отключен
-  if (!device.gps_lvl || device.gps_lvl === 0 || !device.pos?.sat_qty || device.pos.sat_qty === 0) {
+  // Используем pos или position (API может вернуть любое из этих полей)
+  const pos = device.pos || device.position;
+
+  // GPS отключен (слабый сигнал) - проверяем только gps_lvl
+  // sat_qty может быть undefined даже при хорошем GPS сигнале!
+  if (!device.gps_lvl || device.gps_lvl === 0) {
     return 'gps_offline';
   }
 
-  // Машина двигается (зажигание включено и двигатель работает)
-  if (device.car_state?.ign && device.car_state?.run) {
+  // Получаем скорость (ВАЖНО: поле называется "s", а не "speed"!)
+  const speed = pos?.s ?? 0;
+
+  // Машина двигается если:
+  // 1. Скорость > 5 км/ч (основной критерий, как на сайте Starline)
+  // 2. ИЛИ зажигание включено и двигатель работает (даже если GPS показывает 0 из-за плохого сигнала)
+  if (speed > 5 || (device.car_state?.ign && device.car_state?.run)) {
     return 'moving';
   }
 
-  // Машина стоит с включенным зажиганием
+  // Машина стоит с включенным зажиганием (прогрев, остановка на светофоре и т.д.)
   if (device.car_state?.ign && !device.car_state?.run) {
     return 'parked_on';
   }
 
-  // Машина стоит с выключенным зажиганием
+  // Машина стоит с выключенным зажиганием (припаркована)
   return 'parked_off';
 }
 
