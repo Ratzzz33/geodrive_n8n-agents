@@ -14,6 +14,14 @@ interface StarlineDeviceDetails {
     dir?: number; // направление (градусы)
     s?: number; // скорость в км/ч (важно: поле называется "s", а не "speed"!)
   };
+  position?: {  // Альтернативное имя поля (API может вернуть любое из этих двух)
+    x: number;
+    y: number;
+    sat_qty?: number;
+    ts: number;
+    dir?: number;
+    s?: number;
+  };
   car_state?: {
     ign: boolean;
     run: boolean;
