@@ -94,13 +94,18 @@ async function upsertCarPrices(client, carId, carData) {
       };
     }
     
-    // Проверить существует ли запись
+    // Проверить существует ли запись (используем IS NOT DISTINCT FROM для NULL)
     const existing = await client.query(
       `SELECT id FROM car_prices 
-       WHERE car_id = $1 AND season_id = $2 
+       WHERE car_id = $1 AND season_id IS NOT DISTINCT FROM $2 
        LIMIT 1`,
       [carId, seasonId]
     );
+    
+    // Извлечь данные сезона
+    const seasonName = priceData.season?.name || null;
+    const seasonStartDate = priceData.season?.start_date || null;
+    const seasonEndDate = priceData.season?.end_date || null;
     
     if (existing.rows.length > 0) {
       // Обновить
@@ -108,17 +113,21 @@ async function upsertCarPrices(client, carId, carData) {
         `UPDATE car_prices 
          SET price_values = $1,
              rentprog_price_id = $2,
+             season_name = $3,
+             season_start_date = $4,
+             season_end_date = $5,
+             active = TRUE,
              updated_at = NOW()
-         WHERE id = $3`,
-        [JSON.stringify(priceData), rentprogPriceId, existing.rows[0].id]
+         WHERE id = $6`,
+        [JSON.stringify(priceData), rentprogPriceId, seasonName, seasonStartDate, seasonEndDate, existing.rows[0].id]
       );
       updated++;
     } else {
       // Вставить
       await client.query(
-        `INSERT INTO car_prices (car_id, season_id, rentprog_price_id, price_values, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, NOW(), NOW())`,
-        [carId, seasonId, rentprogPriceId, JSON.stringify(priceData)]
+        `INSERT INTO car_prices (car_id, season_id, rentprog_price_id, price_values, season_name, season_start_date, season_end_date, active, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, NOW(), NOW())`,
+        [carId, seasonId, rentprogPriceId, JSON.stringify(priceData), seasonName, seasonStartDate, seasonEndDate]
       );
       inserted++;
     }
