@@ -1,7 +1,7 @@
 import { Client } from 'pg';
 
 const BASE_URL = 'https://rentprog.net/api/v1/public';
-const REQUEST_DELAY_MS = 1000; // ~60 req/min
+const REQUEST_DELAY_MS = 3000; // 3 сек = 20 запросов/мин (консервативно для избежания Rate limit)
 
 // Hardcoded company tokens per branch
 const BRANCH_TOKENS = {
@@ -131,14 +131,18 @@ async function processBranch(client, branchCode, companyToken) {
   console.log(`\n===== ${branchCode.toUpperCase()} =====`);
   
   let token = await getRequestToken(companyToken);
+  await sleep(REQUEST_DELAY_MS); // Задержка после получения токена
   console.log('✓ token received');
   
-  // Получить все машины этого филиала
+  // Получить все машины этого филиала через external_refs
   const { rows: cars } = await client.query(
-    `SELECT c.id, c.rentprog_id, c.model, c.plate
+    `SELECT c.id, er.external_id AS rentprog_id, c.model, c.plate
      FROM cars c
      JOIN branches b ON b.id = c.branch_id
-     WHERE b.code = $1 AND c.rentprog_id IS NOT NULL
+     JOIN external_refs er ON er.entity_id = c.id
+     WHERE b.code = $1 
+       AND er.system = 'rentprog'
+       AND er.entity_type = 'car'
      ORDER BY c.model`,
     [branchCode]
   );
@@ -229,6 +233,11 @@ async function main() {
     grandTotalUpdated += updated;
     grandTotalSkipped += skipped;
     grandTotalErrors += errors;
+    
+    // Задержка между филиалами (кроме последнего)
+    if (branch !== branches[branches.length - 1]) {
+      await sleep(5000); // 5 сек между филиалами
+    }
   }
   
   console.log('\n===== GRAND SUMMARY =====');
