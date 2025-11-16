@@ -85,12 +85,28 @@ async function upsertCarPrices(client, carId, carData) {
       }))
     };
     
-    // Найти сезон
+    // Найти сезон и нормализовать даты
     const season = seasons.find(s => s.id === seasonId);
     if (season) {
+      // Нормализация дат из формата "DD.MM" или "D.MM" в "YYYY-MM-DD"
+      const normalizeDate = (dateStr) => {
+        if (!dateStr) return null;
+        // Если уже в формате YYYY-MM-DD, вернуть как есть
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+        // Если в формате DD.MM или D.MM, преобразовать
+        const match = dateStr.match(/^(\d{1,2})\.(\d{2})$/);
+        if (match) {
+          const day = match[1].padStart(2, '0');
+          const month = match[2];
+          const year = new Date().getFullYear(); // Используем текущий год
+          return `${year}-${month}-${day}`;
+        }
+        return null;
+      };
+      
       priceData.season = {
-        start_date: season.start_date,
-        end_date: season.end_date
+        start_date: normalizeDate(season.start_date),
+        end_date: normalizeDate(season.end_date)
       };
     }
     
