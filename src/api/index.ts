@@ -28,13 +28,15 @@ app.use('/conversations', express.static(webPath));
 
 // Подключаем роутеры
 // import carSearchRouter from './car-search'; // Временно закомментировано
-// import processHistoryRouter from './routes/processHistory.js'; // Временно отключено
-// import eventLinksRouter from './routes/eventLinks.js'; // Временно отключено (проблема с импортом)
-// import entityTimelineRouter from './routes/entityTimeline.js'; // Временно отключено (проблема с импортом)
+import processHistoryRouter from './routes/processHistory.js';
+import eventLinksRouter from './routes/eventLinks.js';
+import entityTimelineRouter from './routes/entityTimeline.js';
 import syncEmployeeCashRouter from './routes/syncEmployeeCash.js';
 import syncBookingsRouter from './routes/syncBookings.js';
 import umnicoSendRouter from './routes/umnico-send.js';
 import umnicoConversationRouter from './routes/umnico-conversation.js';
+import { startEventProcessor } from '../services/eventProcessor.js';
+import { startHistoryProcessor } from '../services/historyEventProcessor.js';
 
 let server: ReturnType<typeof app.listen> | null = null;
 
@@ -47,11 +49,11 @@ export function initApiServer(port: number = 3000): void {
     return;
   }
 
-// Подключаем роутеры
-// app.use('/api/cars', carSearchRouter); // Временно закомментировано
-// app.use('/process-history', processHistoryRouter); // Временно отключено
-// app.use('/event-links', eventLinksRouter); // Временно отключено (проблема с импортом)
-// app.use('/entity-timeline', entityTimelineRouter); // Временно отключено (проблема с импортом)
+  // Подключаем роутеры
+  // app.use('/api/cars', carSearchRouter); // Временно закомментировано
+  // app.use('/process-history', processHistoryRouter); // Временно отключено
+  // app.use('/event-links', eventLinksRouter); // Временно отключено (проблема с импортом)
+  // app.use('/entity-timeline', entityTimelineRouter); // Временно отключено (проблема с импортом)
   app.use('/', syncEmployeeCashRouter); // POST /sync-employee-cash
   app.use('/', syncBookingsRouter); // POST /sync-bookings
   app.use('/api/umnico', umnicoSendRouter); // POST /api/umnico/send
@@ -914,6 +916,20 @@ export function initApiServer(port: number = 3000): void {
 
   server = app.listen(port, '0.0.0.0', () => {
     logger.info(`🌐 API server listening on port ${port} (0.0.0.0)`);
+    
+    // Запускаем обработчик событий через триггеры БД (асинхронно)
+    startEventProcessor().then(() => {
+      logger.info('✅ Event processor started (listening to pg_notify)');
+    }).catch((error) => {
+      logger.error('❌ Failed to start event processor:', error);
+    });
+    
+    // Запускаем обработчик history через триггеры БД (асинхронно)
+    startHistoryProcessor().then(() => {
+      logger.info('✅ History processor started (listening to pg_notify)');
+    }).catch((error) => {
+      logger.error('❌ Failed to start history processor:', error);
+    });
   });
 }
 
