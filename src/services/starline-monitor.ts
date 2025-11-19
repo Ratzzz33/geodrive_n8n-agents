@@ -510,6 +510,27 @@ export class StarlineMonitorService {
         last_sync = NOW()
     `;
 
+    // Сохраняем историю координат при каждом обновлении GPS (независимо от скорости)
+    if (gpsUpdate.currentLat !== null && gpsUpdate.currentLng !== null) {
+      await sqlConnection`
+        INSERT INTO gps_tracking_history (
+          car_id, starline_device_id,
+          latitude, longitude, satellites,
+          status, is_moving, speed, distance_moved,
+          gps_level, gsm_level,
+          ignition_on, engine_running, parking_brake, battery_voltage,
+          timestamp
+        ) VALUES (
+          ${gpsUpdate.carId}, ${gpsUpdate.starlineDeviceId},
+          ${gpsUpdate.currentLat}, ${gpsUpdate.currentLng}, ${gpsUpdate.currentSatQty},
+          ${gpsUpdate.status}, ${gpsUpdate.isMoving}, ${gpsUpdate.speed}, ${gpsUpdate.distanceMoved},
+          ${gpsUpdate.gpsLevel}, ${gpsUpdate.gsmLevel},
+          ${gpsUpdate.ignitionOn}, ${gpsUpdate.engineRunning}, ${gpsUpdate.parkingBrake}, ${gpsUpdate.batteryVoltage},
+          ${gpsUpdate.currentTimestamp.toISOString()}
+        )
+      `;
+    }
+
     // Сохраняем историю вольтажа (если вольтаж есть)
     if (gpsUpdate.batteryVoltage !== null && gpsUpdate.batteryVoltage !== undefined) {
       await sqlConnection`
