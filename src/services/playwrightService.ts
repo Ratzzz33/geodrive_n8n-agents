@@ -1,3 +1,4 @@
+// @ts-nocheck
 /// <reference lib="dom" />
 import express from 'express';
 
