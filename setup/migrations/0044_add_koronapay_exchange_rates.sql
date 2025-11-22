@@ -3,9 +3,15 @@
 -- =====================================================
 -- Дата: 2025-01-20
 -- Описание: Добавляем поля для хранения курсов оплаты и возврата
---           из KoronaPay (Россия → Грузия, GEL → RUB)
---           - koronapay_payment_rate: курс оплаты рублями (сколько RUB за 1 GEL)
---           - koronapay_return_rate: курс возврата из лари в рубли (сколько RUB за 1 GEL при возврате)
+--           из KoronaPay (Россия → Грузия, RUB → GEL)
+--           
+--           koronapay_payment_rate: курс для оплаты брони/залога в рублях
+--           Используется когда сотрудник принимает рубли от клиента,
+--           чтобы потом обменять их на лари (основную валюту).
+--           Формат: сколько RUB стоит 1 GEL (например, 31.12 RUB за 1 GEL)
+--           
+--           koronapay_return_rate: курс возврата из лари в рубли
+--           (сколько RUB возвращается за 1 GEL при возврате)
 
 BEGIN;
 
@@ -21,7 +27,7 @@ ALTER TABLE exchange_rates
 -- 2. Комментарии к полям
 -- =====================================================
 
-COMMENT ON COLUMN exchange_rates.koronapay_payment_rate IS 'Курс оплаты рублями через KoronaPay (RUB за 1 GEL) - парсится с koronapay.com/transfers/';
+COMMENT ON COLUMN exchange_rates.koronapay_payment_rate IS 'Курс оплаты рублями через KoronaPay (RUB за 1 GEL). Используется для расчета оплаты брони/залога в рублях. Когда сотрудник принимает рубли от клиента, этот курс используется для конвертации в лари (основную валюту). Парсится с koronapay.com/transfers/';
 COMMENT ON COLUMN exchange_rates.koronapay_return_rate IS 'Курс возврата из лари в рубли через KoronaPay (RUB за 1 GEL при возврате) - парсится с koronapay.com/transfers/';
 
 -- =====================================================
