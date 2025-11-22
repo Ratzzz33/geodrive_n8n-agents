@@ -337,10 +337,30 @@ export function parseRentProgDate(dateStr: string | Date | undefined | null): Da
  */
 export async function upsertBookingFromRentProg(
   payload: any,
-  branchCode: BranchName
+  branchCode: BranchName,
+  changeTracking?: {
+    source?: 'rentprog_webhook' | 'rentprog_history' | 'snapshot_workflow' | 'jarvis_api' | 'manual' | 'n8n_workflow';
+    workflow?: string;
+    function?: string;
+    executionId?: string;
+    user?: string;
+    metadata?: Record<string, any>;
+  }
 ): Promise<{ entityId: string; created: boolean }> {
   const db = getDatabase();
   const rentprogId = String(payload.id || payload.booking_id);
+  
+  // Парсим number (обычно совпадает с ID, если это число)
+  let number = parseInt(rentprogId);
+  if (isNaN(number)) {
+    // Если ID не числовой (например, в тестах), используем хэш или рандом
+    // Для тестов с префиксом test- берем часть после дефиса
+    if (rentprogId.startsWith('test-')) {
+      number = parseInt(rentprogId.split('-')[1]) || 0;
+    } else {
+      number = 0; // Fallback
+    }
+  }
 
   // Ищем существующую ссылку
   let bookingId = await resolveByExternalRef('rentprog', rentprogId);
@@ -420,6 +440,16 @@ export async function upsertBookingFromRentProg(
   }
   status = status ? String(status) : null;
 
+  // Подготавливаем информацию об источнике изменения
+  const changeInfo = {
+    updated_by_source: changeTracking?.source || 'jarvis_api',
+    updated_by_workflow: changeTracking?.workflow || null,
+    updated_by_function: changeTracking?.function || 'upsertBookingFromRentProg',
+    updated_by_execution_id: changeTracking?.executionId || null,
+    updated_by_user: changeTracking?.user || null,
+    updated_by_metadata: changeTracking?.metadata || null,
+  };
+
   // Функция для попытки загрузки клиента из RentProg при ошибке FK
   const tryLoadClientFromRentProg = async (): Promise<boolean> => {
     if (!clientIdOriginal) {
@@ -483,16 +513,20 @@ export async function upsertBookingFromRentProg(
         .update(bookings)
         .set({
           branch_id: branchId,
+          branch: branchCode, // Добавляем название филиала
           car_id: carId,
           client_id: clientId,
           start_at: startAt,
           end_at: endAt,
           status: status,
+          rentprog_id: rentprogId,
+          number: number,
+          ...changeInfo,
           updated_at: new Date(),
         })
         .where(eq(bookings.id, bookingId));
 
-      logger.debug(`Updated booking ${bookingId} from RentProg ${rentprogId}`);
+      logger.debug(`Updated booking ${bookingId} from RentProg ${rentprogId} by ${changeInfo.updated_by_source}`);
       return { entityId: bookingId, created: false };
     } catch (error: any) {
       // Проверяем, это ли ошибка FK constraint для client_id
@@ -508,11 +542,15 @@ export async function upsertBookingFromRentProg(
               .update(bookings)
               .set({
                 branch_id: branchId,
+                branch: branchCode,
                 car_id: carId,
                 client_id: clientId,
                 start_at: startAt,
                 end_at: endAt,
                 status: status,
+                rentprog_id: rentprogId,
+                number: number,
+                ...changeInfo,
                 updated_at: new Date(),
               })
               .where(eq(bookings.id, bookingId));
@@ -530,11 +568,15 @@ export async function upsertBookingFromRentProg(
             .update(bookings)
             .set({
               branch_id: branchId,
+              branch: branchCode,
               car_id: carId,
               client_id: null, // Устанавливаем NULL вместо несуществующего клиента
               start_at: startAt,
               end_at: endAt,
               status: status,
+              rentprog_id: rentprogId,
+              number: number,
+              ...changeInfo,
               updated_at: new Date(),
             })
             .where(eq(bookings.id, bookingId));
@@ -554,11 +596,15 @@ export async function upsertBookingFromRentProg(
         .insert(bookings)
         .values({
           branch_id: branchId,
+          branch: branchCode,
           car_id: carId,
           client_id: clientId,
           start_at: startAt,
           end_at: endAt,
           status: status,
+          rentprog_id: rentprogId,
+          number: number,
+          ...changeInfo,
         })
         .returning({ id: bookings.id });
 
@@ -566,7 +612,7 @@ export async function upsertBookingFromRentProg(
 
       // Создаем внешнюю ссылку
       await linkExternalRef('booking', bookingId, 'rentprog', rentprogId, branchCode, payload);
-      logger.debug(`Created booking ${bookingId} from RentProg ${rentprogId}`);
+      logger.debug(`Created booking ${bookingId} from RentProg ${rentprogId} by ${changeInfo.updated_by_source}`);
       return { entityId: bookingId, created: true };
     } catch (error: any) {
       // Проверяем, это ли ошибка FK constraint для client_id
@@ -582,11 +628,15 @@ export async function upsertBookingFromRentProg(
               .insert(bookings)
               .values({
                 branch_id: branchId,
+                branch: branchCode,
                 car_id: carId,
                 client_id: clientId,
                 start_at: startAt,
                 end_at: endAt,
                 status: status,
+                rentprog_id: rentprogId,
+                number: number,
+                ...changeInfo,
               })
               .returning({ id: bookings.id });
 
@@ -607,11 +657,15 @@ export async function upsertBookingFromRentProg(
             .insert(bookings)
             .values({
               branch_id: branchId,
+              branch: branchCode,
               car_id: carId,
               client_id: null, // Устанавливаем NULL вместо несуществующего клиента
               start_at: startAt,
               end_at: endAt,
               status: status,
+              rentprog_id: rentprogId,
+              number: number,
+              ...changeInfo,
             })
             .returning({ id: bookings.id });
 
@@ -767,6 +821,15 @@ export async function dynamicUpsertEntity(
     if (tableName === 'cars') {
       insertData.branch_id = await getOrCreateBranch('service-center', 'Service Center');
     }
+    
+    // Для bookings добавляем rentprog_id и number если доступны в data
+    if (tableName === 'bookings') {
+      insertData.rentprog_id = rentprogId;
+      // Пытаемся парсить number
+      let num = parseInt(rentprogId);
+      if (isNaN(num)) num = 0;
+      insertData.number = num;
+    }
 
     await db.insert(table).values(insertData);
     logger.debug(`INSERT into ${tableName}: id=${entityId}`);
@@ -800,4 +863,3 @@ export async function dynamicUpsertEntity(
 
   return { entity_id: entityId, created, added_columns: addedColumns };
 }
-

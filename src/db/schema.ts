@@ -3,7 +3,7 @@
  * Наша модель данных с UUID как первичными ключами
  */
 
-import { pgTable, text, uuid, timestamp, integer, jsonb, unique, index, boolean, bigserial, primaryKey } from 'drizzle-orm/pg-core';
+import { pgTable, text, uuid, timestamp, integer, jsonb, unique, index, boolean, bigserial, primaryKey, bigint } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 // Филиалы
@@ -87,6 +87,12 @@ export const bookings = pgTable('bookings', {
   car_id: uuid('car_id').references(() => cars.id),
   client_id: uuid('client_id').references(() => clients.id),
   responsible_id: uuid('responsible_id').references(() => rentprogEmployees.id), // Ответственный сотрудник из RentProg
+  
+  // Обязательные поля RentProg
+  rentprog_id: text('rentprog_id').notNull(),
+  number: bigint('number', { mode: 'number' }).notNull(),
+  branch: text('branch'), // Название филиала текстом (из БД)
+  
   start_at: timestamp('start_at'),
   end_at: timestamp('end_at'),
   status: text('status'), // 'planned', 'active', 'completed', 'cancelled'
@@ -108,6 +114,7 @@ export const bookings = pgTable('bookings', {
   statusIdx: index('bookings_status_idx').on(table.status),
   sourceIdx: index('idx_bookings_updated_by_source').on(table.updated_by_source),
   workflowIdx: index('idx_bookings_updated_by_workflow').on(table.updated_by_workflow),
+  rentprogIdIdx: index('idx_bookings_rentprog_id').on(table.rentprog_id),
 }));
 
 // Универсальная таблица внешних ссылок
@@ -209,7 +216,7 @@ export const payments = pgTable('payments', {
   hasCheckIdx: index('payments_has_check_idx').on(table.has_check),
   isCompletedIdx: index('payments_is_completed_idx').on(table.is_completed),
   carCodeIdx: index('payments_car_code_idx').on(table.car_code),
-  // Индексы для alias-колонок (workflow)
+  // Индексы для alias-колонки (workflow)
   paymentIdIdx: index('idx_payments_payment_id').on(table.payment_id),
   groupIdx: index('idx_payments_group').on(table.group),
   // UNIQUE constraints для дедупликации
