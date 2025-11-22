@@ -22,26 +22,22 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "=http://172.17.0.1:3001/scrape-koronapay-rates",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": []
-        },
-        "options": {
-          "timeout": 60000
-        },
+        "method": "GET",
+        "url": "=https://koronapay.com/transfers/online/api/transfers/tariffs?sendingCountryId=RUS&sendingCurrencyId=810&receivingCountryId=GEO&receivingCurrencyId=981&paymentMethod=debitCard&receivingAmount=100&receivingMethod=cash",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Content-Type",
-              "value": "application/json"
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             }
           ]
+        },
+        "options": {
+          "timeout": 30000
         }
       },
-      "name": "Scrape KoronaPay via Playwright",
+      "name": "Get KoronaPay Rate",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -51,7 +47,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Обработка ответа от Playwright сервиса\nconst response = $json;\n\nconsole.log('Processing KoronaPay rates from Playwright service...');\n\ntry {\n  if (!response.success) {\n    return [{\n      json: {\n        status: 'error',\n        error: response.error || 'Unknown error from Playwright service',\n        suggestion: response.suggestion || ''\n      }\n    }];\n  }\n  \n  const paymentRate = response.paymentRate; // Курс оплаты рублями (сколько RUB за 1 GEL)\n  const returnRate = response.returnRate || response.paymentRate; // Курс возврата\n  \n  if (!paymentRate || paymentRate <= 0) {\n    return [{\n      json: {\n        status: 'error',\n        error: 'Invalid exchange rate received from Playwright service'\n      }\n    }];\n  }\n  \n  console.log('Parsed rates:', { paymentRate, returnRate });\n  \n  return [{\n    json: {\n      koronapay_payment_rate: paymentRate,\n      koronapay_return_rate: returnRate,\n      raw_data: JSON.stringify({\n        parsed_at: response.parsedAt || new Date().toISOString(),\n        source: 'koronapay.com/transfers/',\n        method: response.method || 'api',\n        payment_rate: paymentRate,\n        return_rate: returnRate\n      })\n    }\n  }];\n  \n} catch (error) {\n  console.error('Parse error:', error);\n  return [{\n    json: {\n      status: 'error',\n      error: error.message\n    }\n  }];\n}"
+        "jsCode": "// Обработка ответа от KoronaPay API\nconst apiResponse = $json;\n\nconsole.log('Processing KoronaPay API response...');\n\ntry {\n  // API возвращает массив: [{ exchangeRate: 31.1193, ... }]\n  if (!Array.isArray(apiResponse) || apiResponse.length === 0) {\n    return [{\n      json: {\n        status: 'error',\n        error: 'Invalid API response: expected array',\n        suggestion: 'KoronaPay API structure may have changed'\n      }\n    }];\n  }\n  \n  const firstResult = apiResponse[0];\n  const paymentRate = firstResult.exchangeRate; // Курс оплаты рублями (сколько RUB за 1 GEL)\n  \n  if (!paymentRate || paymentRate <= 0 || paymentRate > 100) {\n    return [{\n      json: {\n        status: 'error',\n        error: `Invalid exchange rate: ${paymentRate}`,\n        suggestion: 'Rate out of expected range (0-100)'\n      }\n    }];\n  }\n  \n  // Для возврата используем тот же курс (или можно попробовать получить обратный курс отдельно)\n  const returnRate = paymentRate;\n  \n  console.log('Parsed rates:', { paymentRate, returnRate });\n  \n  return [{\n    json: {\n      koronapay_payment_rate: paymentRate,\n      koronapay_return_rate: returnRate,\n      raw_data: JSON.stringify({\n        parsed_at: new Date().toISOString(),\n        source: 'koronapay.com/transfers/online/api/transfers/tariffs',\n        method: 'api',\n        payment_rate: paymentRate,\n        return_rate: returnRate,\n        full_response: firstResult\n      })\n    }\n  }];\n  \n} catch (error) {\n  console.error('Parse error:', error);\n  return [{\n    json: {\n      status: 'error',\n      error: error.message\n    }\n  }];\n}"
       },
       "name": "Parse KoronaPay Rate",
       "type": "n8n-nodes-base.code",
@@ -179,18 +175,7 @@
       "main": [
         [
           {
-            "node": "Scrape KoronaPay via Playwright",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Scrape KoronaPay via Playwright": {
-      "main": [
-        [
-          {
-            "node": "Parse KoronaPay Rate",
+            "node": "Get KoronaPay Rate",
             "type": "main",
             "index": 0
           }
@@ -253,6 +238,17 @@
         [
           {
             "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get KoronaPay Rate": {
+      "main": [
+        [
+          {
+            "node": "Parse KoronaPay Rate",
             "type": "main",
             "index": 0
           }
