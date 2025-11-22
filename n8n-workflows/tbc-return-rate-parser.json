@@ -17,12 +17,11 @@
       "typeVersion": 1.2,
       "position": [
         240,
-        300
+        304
       ]
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "=https://apigw.tbcbank.ge/api/v1/exchangeRates/getExchangeRate?Iso1=RUR&Iso2=GEL",
         "sendHeaders": true,
         "headerParameters": {
@@ -45,12 +44,9 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        440,
-        300
-      ],
-      "retryOnFail": true,
-      "maxTries": 2,
-      "continueOnFail": false
+        448,
+        304
+      ]
     },
     {
       "parameters": {
@@ -61,7 +57,7 @@
       "typeVersion": 2,
       "position": [
         640,
-        300
+        304
       ]
     },
     {
@@ -83,14 +79,15 @@
             }
           ],
           "combinator": "and"
-        }
+        },
+        "options": {}
       },
       "name": "Check for Errors",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        840,
-        300
+        848,
+        304
       ]
     },
     {
@@ -104,7 +101,7 @@
       "typeVersion": 2.5,
       "position": [
         1040,
-        200
+        352
       ],
       "credentials": {
         "postgres": {
@@ -122,8 +119,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1040,
-        400
+        1072,
+        128
       ],
       "credentials": {
         "postgres": {
@@ -139,8 +136,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1240,
-        200
+        1232,
+        352
       ]
     },
     {
@@ -150,7 +147,7 @@
       "typeVersion": 1,
       "position": [
         1440,
-        200
+        208
       ]
     },
     {
@@ -166,12 +163,11 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1240,
-        400
+        1248,
+        128
       ],
       "credentials": {
         "telegramApi": {
-          "id": "telegram-bot-api",
           "name": "Telegram Bot"
         }
       }
@@ -215,14 +211,14 @@
       "main": [
         [
           {
-            "node": "Save to DB",
+            "node": "Log Error",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Log Error",
+            "node": "Save to DB",
             "type": "main",
             "index": 0
           }
@@ -269,8 +265,6 @@
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
     "saveManualExecutions": true,
-    "saveExecutionProgress": true,
-    "executionTimeout": 3600
+    "saveExecutionProgress": true
   }
 }
-
