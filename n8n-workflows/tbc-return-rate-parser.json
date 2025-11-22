@@ -47,11 +47,14 @@
       "position": [
         440,
         300
-      ]
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": false
     },
     {
       "parameters": {
-        "jsCode": "// Обработка ответа от Playwright сервиса\nconst response = $json;\n\nconsole.log('Processing TBC Bank return rate from Playwright service...');\n\ntry {\n  if (!response.success) {\n    return [{\n      json: {\n        status: 'error',\n        error: response.error || 'Unknown error from Playwright service',\n        suggestion: response.suggestion || ''\n      }\n    }];\n  }\n  \n  const returnRate = response.returnRate; // Курс продажи рубля (GEL за 1 RUB)\n  \n  if (!returnRate || returnRate <= 0 || returnRate >= 1) {\n    return [{\n      json: {\n        status: 'error',\n        error: `Invalid exchange rate received: ${returnRate}`,\n        suggestion: 'Rate should be between 0 and 1 (GEL per 1 RUB)'\n      }\n    }];\n  }\n  \n  console.log('Parsed return rate:', { returnRate });\n  \n  return [{\n    json: {\n      tbc_return_rate: returnRate,\n      raw_data: JSON.stringify({\n        parsed_at: response.parsedAt || new Date().toISOString(),\n        source: response.source || 'tbcbank.ge/en/treasury-products',\n        method: response.method || 'playwright',\n        return_rate: returnRate\n      })\n    }\n  }];\n  \n} catch (error) {\n  console.error('Parse error:', error);\n  return [{\n    json: {\n      status: 'error',\n      error: error.message\n    }\n  }];\n}"
+        "jsCode": "// Обработка ответа от Playwright сервиса (теперь использует прямой API)\nconst response = $json;\n\nconsole.log('Processing TBC Bank return rate from API...');\n\ntry {\n  if (!response.success) {\n    return [{\n      json: {\n        status: 'error',\n        error: response.error || 'Unknown error from service',\n        suggestion: response.suggestion || ''\n      }\n    }];\n  }\n  \n  const returnRate = response.returnRate; // Курс продажи рубля (GEL за 1 RUB)\n  \n  if (!returnRate || returnRate <= 0 || returnRate >= 1) {\n    return [{\n      json: {\n        status: 'error',\n        error: `Invalid exchange rate received: ${returnRate}`,\n        suggestion: 'Rate should be between 0 and 1 (GEL per 1 RUB)'\n      }\n    }];\n  }\n  \n  console.log('Parsed return rate:', { returnRate, buyRate: response.buyRate });\n  \n  return [{\n    json: {\n      tbc_return_rate: returnRate,\n      raw_data: JSON.stringify({\n        parsed_at: response.parsedAt || new Date().toISOString(),\n        source: response.source || 'apigw.tbcbank.ge/api/v1/exchangeRates/getExchangeRate',\n        method: response.method || 'api',\n        return_rate: returnRate,\n        buy_rate: response.buyRate,\n        update_date: response.updateDate\n      })\n    }\n  }];\n  \n} catch (error) {\n  console.error('Parse error:', error);\n  return [{\n    json: {\n      status: 'error',\n      error: error.message\n    }\n  }];\n}"
       },
       "name": "Parse TBC Return Rate",
       "type": "n8n-nodes-base.code",

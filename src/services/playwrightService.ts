@@ -1388,73 +1388,52 @@ app.post('/scrape-koronapay-rates', async (req, res) => {
   }
 });
 
-// Endpoint 8: Парсинг курса возврата TBC Bank (GEL → RUB, курс продажи рубля)
+// Endpoint 8: Парсинг курса возврата TBC Bank (GEL → RUB, курс продажи рубля) через API
 app.post('/scrape-tbc-return-rate', async (req, res) => {
-  let browser;
   try {
-    browser = await chromium.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
-
-    const page = await browser.newPage();
+    // Прямой API запрос к TBC Bank
+    // Endpoint: https://apigw.tbcbank.ge/api/v1/exchangeRates/getExchangeRate?Iso1=RUR&Iso2=GEL
+    const apiUrl = 'https://apigw.tbcbank.ge/api/v1/exchangeRates/getExchangeRate?Iso1=RUR&Iso2=GEL';
     
-    // Переходим на страницу TBC Bank с курсами
-    const url = 'https://tbcbank.ge/en/treasury-products?amount=100&ccyFrom=RUR&ccyTo=GEL';
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-    
-    // Ждем загрузки контента (Angular приложение)
-    await page.waitForTimeout(3000);
-    
-    // Парсим курс продажи рубля (нижний курс)
-    const rate = await page.evaluate(() => {
-      // Ищем все элементы с курсами
-      const bodyText = document.body.innerText;
-      
-      // Паттерн для поиска курса: ищем числа вида 0.0289 или 0.0402
-      const ratePattern = /0\.0[0-9]{3}/g;
-      const matches = bodyText.match(ratePattern);
-      
-      if (!matches || matches.length === 0) {
-        return null;
+    const response = await fetch(apiUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json'
       }
-      
-      // Конвертируем в числа и находим минимальный (нижний курс - курс продажи)
-      const rates = matches.map(m => parseFloat(m)).filter(r => r > 0 && r < 1);
-      
-      if (rates.length === 0) {
-        return null;
-      }
-      
-      // Возвращаем минимальный курс (курс продажи рубля)
-      return Math.min(...rates);
     });
     
-    await browser.close();
-    
-    if (!rate || rate <= 0 || rate >= 1) {
-      return res.status(500).json({ 
-        success: false, 
-        error: `Invalid rate parsed: ${rate}`,
-        suggestion: 'TBC Bank page structure may have changed'
-      });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`TBC Bank API error: ${response.status} ${text}`);
     }
+    
+    const data = await response.json();
+    
+    // Проверяем структуру ответа
+    if (!data.sellRate || data.sellRate <= 0 || data.sellRate >= 1) {
+      throw new Error(`Invalid sellRate in API response: ${data.sellRate}`);
+    }
+    
+    // sellRate - это курс продажи рубля (нижний курс, GEL за 1 RUB)
+    // Это именно то, что нам нужно для возврата баланса
+    const returnRate = data.sellRate;
     
     res.json({
       success: true,
-      returnRate: rate, // Курс продажи рубля (GEL за 1 RUB)
+      returnRate: returnRate, // Курс продажи рубля (GEL за 1 RUB)
+      buyRate: data.buyRate, // Курс покупки рубля (для справки)
       parsedAt: new Date().toISOString(),
-      source: 'tbcbank.ge/en/treasury-products',
-      method: 'playwright'
+      updateDate: data.updateDate,
+      source: 'apigw.tbcbank.ge/api/v1/exchangeRates/getExchangeRate',
+      method: 'api'
     });
     
   } catch (error: any) {
-    if (browser) await browser.close();
-    console.error('TBC Bank scraping error:', error);
+    console.error('TBC Bank API error:', error);
     res.status(500).json({ 
       success: false, 
       error: error.message,
-      suggestion: 'Check TBC Bank website availability'
+      suggestion: 'Check TBC Bank API availability'
     });
   }
 });
