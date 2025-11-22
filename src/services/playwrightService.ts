@@ -1357,9 +1357,69 @@ app.post('/scrape-koronapay-rates', async (req, res) => {
     
     // Переход на страницу переводов
     await page.goto('https://koronapay.com/transfers/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await page.waitForTimeout(5000); // Ждем загрузки React и рендеринга
+    await page.waitForTimeout(5000); // Ждем загрузки React
     
-    // Парсим курс
+    // Попытка взаимодействия с UI для выбора стран
+    try {
+        // 1. Проверяем текущую страну отправления
+        // Ищем элементы, похожие на выбор страны
+        // Обычно это div или span с текстом страны
+        
+        // Попробуем найти и кликнуть на страну отправления (обычно первая в списке)
+        // Предполагаем, что по дефолту Германия (как в логах)
+        const germany = page.locator('text=Германия').first();
+        if (await germany.isVisible()) {
+            console.log('Found Germany, trying to switch to Russia...');
+            await germany.click();
+            await page.waitForTimeout(1000);
+            
+            // Пытаемся найти Россию в списке
+            const russiaOption = page.locator('text=Россия').first();
+            if (await russiaOption.isVisible()) {
+                await russiaOption.click();
+            } else {
+                // Пробуем поиск
+                const searchInput = page.locator('input[placeholder*="Поиск"], input[placeholder*="Search"]');
+                if (await searchInput.isVisible()) {
+                    await searchInput.fill('Россия');
+                    await page.waitForTimeout(1000);
+                    await page.click('text=Россия');
+                }
+            }
+            await page.waitForTimeout(2000);
+        }
+        
+        // 2. Выбираем страну назначения (Грузия)
+        // Ищем Узбекистан или "Куда"
+        const uzbekistan = page.locator('text=Узбекистан').first();
+        const whereLabel = page.locator('text=Куда').first();
+        
+        if (await uzbekistan.isVisible()) {
+             await uzbekistan.click();
+        } else if (await whereLabel.isVisible()) {
+             // Кликаем на элемент под "Куда"
+             // Это сложнее без точного селектора
+        }
+        
+        // Если открылось окно выбора, ищем Грузию
+        const georgiaOption = page.locator('text=Грузия').first();
+        if (await georgiaOption.isVisible()) {
+            await georgiaOption.click();
+        } else {
+             const searchInput = page.locator('input[placeholder*="Поиск"]');
+             if (await searchInput.isVisible()) {
+                 await searchInput.fill('Грузия');
+                 await page.waitForTimeout(1000);
+                 await page.click('text=Грузия');
+             }
+        }
+        await page.waitForTimeout(2000);
+        
+    } catch (e) {
+        console.log('UI interaction error:', e);
+    }
+
+    // Парсим курс после манипуляций
     const rates = await page.evaluate(async () => {
       // @ts-ignore
       const result: { paymentRate: number | null; returnRate: number | null; error?: string; debug_title?: string; debug_text?: string } = {
@@ -1368,45 +1428,33 @@ app.post('/scrape-koronapay-rates', async (req, res) => {
       };
       
       try {
-        // Отладка: сохраняем заголовок и текст
         // @ts-ignore
         result.debug_title = document.title;
         // @ts-ignore
-        result.debug_text = document.body.innerText ? document.body.innerText.substring(0, 1000) : 'No text';
+        result.debug_text = document.body.innerText ? document.body.innerText.substring(0, 2000) : 'No text';
 
-        // Вариант 1: Поиск в тексте страницы (самый простой и надежный если есть текст)
-        // Ищем "1 GEL = X.XX RUB" или "X.XX RUB" рядом с GEL
         // @ts-ignore
         const bodyText = document.body.textContent || '';
         
-        // Паттерны для поиска курса
-        // Примеры: "1 GEL ≈ 35.50 RUB", "Курс конвертации: 35.50", "35.50 ₽"
-        // Но на короне обычно надо вводить суммы.
+        // Ищем "1 GEL = X.XX RUB"
+        // Или "Курс: 35.50"
         
-        // Попробуем найти инпуты и заполнить их, если их нет в HTML сразу
-        // Но evaluate - это синхронный (в контексте страницы) код (если не async), но мы не можем вызывать page methods внутри evaluate.
-        // Поэтому мы просто анализируем то что есть.
-        
-        // Если мы на странице, попробуем найти то, что похоже на курс
-        
-        // Вариант 4 из прошлого кода:
-        const rubMatch = bodyText.match(/1\s*(GEL|лари|₾)\s*[=≈]\s*(\d+[.,]\d+)\s*(RUB|руб|₽)/i);
-        if (rubMatch) {
-             result.paymentRate = parseFloat(rubMatch[2].replace(',', '.'));
+        const rateMatch = bodyText.match(/1\s*(GEL|лари|₾)\s*[=≈]\s*(\d+[.,]\d+)\s*(RUB|руб|₽)/i);
+        if (rateMatch) {
+             result.paymentRate = parseFloat(rateMatch[2].replace(',', '.'));
         }
         
-        // Если не нашли в тексте, попробуем найти в __NEXT_DATA__
+        // Если нет, ищем просто цифры рядом с валютами в __NEXT_DATA__
         // @ts-ignore
         if (!result.paymentRate && window.__NEXT_DATA__) {
           // @ts-ignore
           const nextData = window.__NEXT_DATA__;
           const searchForRates = (obj: any, depth = 0): number | null => {
             if (depth > 10) return null;
-            if (typeof obj === 'number' && obj > 20 && obj < 100) return obj; // Курс примерно 30-40
+            if (typeof obj === 'number' && obj > 20 && obj < 100) return obj; 
             if (typeof obj === 'object' && obj !== null) {
               for (const [key, value] of Object.entries(obj)) {
-                 // Ищем ключи типа 'rate', 'exchange', 'course'
-                 if (key.toLowerCase().includes('rate') && typeof value === 'number' && value > 20 && value < 100) {
+                 if ((key.includes('rate') || key.includes('exchange')) && typeof value === 'number' && value > 20 && value < 100) {
                      return value;
                  }
                  const found = searchForRates(value, depth + 1);
@@ -1421,7 +1469,7 @@ app.post('/scrape-koronapay-rates', async (req, res) => {
         if (!result.paymentRate) {
             result.error = 'Rate not found';
         } else {
-            result.returnRate = result.paymentRate; // Пока так
+            result.returnRate = result.paymentRate;
         }
         
       } catch (e: any) {
