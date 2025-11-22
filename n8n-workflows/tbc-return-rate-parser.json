@@ -130,7 +130,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const saved = $('Save to DB').first()?.json;\n\nconst rate = saved?.tbc_return_rate;\n\nlet message = `💱 TBC BANK RETURN RATE\\n\\n`;\n\nif (rate) {\n  message += `Курс возврата (GEL за 1 RUB): ${rate.toFixed(6)}\\n`;\n  message += `Для возврата 1000 GEL: ${(1000 / rate).toFixed(2)} RUB\\n`;\n}\n\nmessage += `\\n✅ Saved at ${new Date().toISOString()}`;\n\nreturn [{ json: { message } }];"
+        "jsCode": "const saved = $('Save to DB').first()?.json;\n\n// Конвертируем rate в число (из БД может прийти строка)\nconst rate = saved?.tbc_return_rate ? parseFloat(saved.tbc_return_rate) : null;\n\nlet message = `💱 TBC BANK RETURN RATE\\n\\n`;\n\nif (rate && !isNaN(rate) && rate > 0) {\n  message += `Курс возврата (GEL за 1 RUB): ${rate.toFixed(6)}\\n`;\n  message += `Для возврата 1000 GEL: ${(1000 / rate).toFixed(2)} RUB\\n`;\n} else {\n  message += `⚠️ Rate not found or invalid\\n`;\n}\n\nmessage += `\\n✅ Saved at ${new Date().toISOString()}`;\n\nreturn [{ json: { message } }];"
       },
       "name": "Format Result",
       "type": "n8n-nodes-base.code",
