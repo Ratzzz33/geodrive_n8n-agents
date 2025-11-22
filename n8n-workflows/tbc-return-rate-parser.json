@@ -1,0 +1,273 @@
+{
+  "name": "TBC Bank Return Rate Parser",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6,12,18 * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://172.17.0.1:3001/scrape-tbc-return-rate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "name": "Get TBC Return Rate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обработка ответа от Playwright сервиса\nconst response = $json;\n\nconsole.log('Processing TBC Bank return rate from Playwright service...');\n\ntry {\n  if (!response.success) {\n    return [{\n      json: {\n        status: 'error',\n        error: response.error || 'Unknown error from Playwright service',\n        suggestion: response.suggestion || ''\n      }\n    }];\n  }\n  \n  const returnRate = response.returnRate; // Курс продажи рубля (GEL за 1 RUB)\n  \n  if (!returnRate || returnRate <= 0 || returnRate >= 1) {\n    return [{\n      json: {\n        status: 'error',\n        error: `Invalid exchange rate received: ${returnRate}`,\n        suggestion: 'Rate should be between 0 and 1 (GEL per 1 RUB)'\n      }\n    }];\n  }\n  \n  console.log('Parsed return rate:', { returnRate });\n  \n  return [{\n    json: {\n      tbc_return_rate: returnRate,\n      raw_data: JSON.stringify({\n        parsed_at: response.parsedAt || new Date().toISOString(),\n        source: response.source || 'tbcbank.ge/en/treasury-products',\n        method: response.method || 'playwright',\n        return_rate: returnRate\n      })\n    }\n  }];\n  \n} catch (error) {\n  console.error('Parse error:', error);\n  return [{\n    json: {\n      status: 'error',\n      error: error.message\n    }\n  }];\n}"
+      },
+      "name": "Parse TBC Return Rate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-error",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "error",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Check for Errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        840,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO exchange_rates (\n  branch,\n  tbc_return_rate,\n  raw_data\n) VALUES (\n  'tbc',\n  {{ $json.tbc_return_rate || 'NULL' }},\n  '{{ ($json.raw_data || '{}').replace(/'/g, \"''\") }}'\n)\nRETURNING *",
+        "options": {}
+      },
+      "name": "Save to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1040,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "name": "PostgreSQL Neon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO events (\n  branch,\n  type,\n  ext_id,\n  ok,\n  reason,\n  processed\n) VALUES (\n  'tbc',\n  'tbc.return_rate.parse.failed',\n  NULL,\n  FALSE,\n  '{{ ($json.error || 'Unknown error').replace(/'/g, \"''\") }}',\n  TRUE\n)",
+        "options": {}
+      },
+      "name": "Log Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1040,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "name": "PostgreSQL Neon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const saved = $('Save to DB').first()?.json;\n\nconst rate = saved?.tbc_return_rate;\n\nlet message = `💱 TBC BANK RETURN RATE\\n\\n`;\n\nif (rate) {\n  message += `Курс возврата (GEL за 1 RUB): ${rate.toFixed(6)}\\n`;\n  message += `Для возврата 1000 GEL: ${(1000 / rate).toFixed(2)} RUB\\n`;\n}\n\nmessage += `\\n✅ Saved at ${new Date().toISOString()}`;\n\nreturn [{ json: { message } }];"
+      },
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        200
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "-1003484642420",
+        "text": "=🚨 <b>Ошибка парсинга курса возврата TBC Bank</b>\n\nError: {{ $json.error || $json.reason || 'Unknown error' }}\n\n<i>Suggestion: {{ $json.suggestion || 'Check logs' }}</i>",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1240,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-api",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": {
+      "main": [
+        [
+          {
+            "node": "Get TBC Return Rate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get TBC Return Rate": {
+      "main": [
+        [
+          {
+            "node": "Parse TBC Return Rate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse TBC Return Rate": {
+      "main": [
+        [
+          {
+            "node": "Check for Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {
+            "node": "Save to DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to DB": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Error": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "executionTimeout": 3600
+  }
+}
+

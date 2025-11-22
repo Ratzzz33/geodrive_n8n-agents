@@ -1388,6 +1388,77 @@ app.post('/scrape-koronapay-rates', async (req, res) => {
   }
 });
 
+// Endpoint 8: Парсинг курса возврата TBC Bank (GEL → RUB, курс продажи рубля)
+app.post('/scrape-tbc-return-rate', async (req, res) => {
+  let browser;
+  try {
+    browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    });
+
+    const page = await browser.newPage();
+    
+    // Переходим на страницу TBC Bank с курсами
+    const url = 'https://tbcbank.ge/en/treasury-products?amount=100&ccyFrom=RUR&ccyTo=GEL';
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+    
+    // Ждем загрузки контента (Angular приложение)
+    await page.waitForTimeout(3000);
+    
+    // Парсим курс продажи рубля (нижний курс)
+    const rate = await page.evaluate(() => {
+      // Ищем все элементы с курсами
+      const bodyText = document.body.innerText;
+      
+      // Паттерн для поиска курса: ищем числа вида 0.0289 или 0.0402
+      const ratePattern = /0\.0[0-9]{3}/g;
+      const matches = bodyText.match(ratePattern);
+      
+      if (!matches || matches.length === 0) {
+        return null;
+      }
+      
+      // Конвертируем в числа и находим минимальный (нижний курс - курс продажи)
+      const rates = matches.map(m => parseFloat(m)).filter(r => r > 0 && r < 1);
+      
+      if (rates.length === 0) {
+        return null;
+      }
+      
+      // Возвращаем минимальный курс (курс продажи рубля)
+      return Math.min(...rates);
+    });
+    
+    await browser.close();
+    
+    if (!rate || rate <= 0 || rate >= 1) {
+      return res.status(500).json({ 
+        success: false, 
+        error: `Invalid rate parsed: ${rate}`,
+        suggestion: 'TBC Bank page structure may have changed'
+      });
+    }
+    
+    res.json({
+      success: true,
+      returnRate: rate, // Курс продажи рубля (GEL за 1 RUB)
+      parsedAt: new Date().toISOString(),
+      source: 'tbcbank.ge/en/treasury-products',
+      method: 'playwright'
+    });
+    
+  } catch (error: any) {
+    if (browser) await browser.close();
+    console.error('TBC Bank scraping error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      suggestion: 'Check TBC Bank website availability'
+    });
+  }
+});
+
 // Health check
 
 app.get('/health', (req, res) => {
