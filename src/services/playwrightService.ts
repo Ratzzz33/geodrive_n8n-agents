@@ -1339,226 +1339,121 @@ app.post('/scrape-booking-details', async (req, res) => {
 
 
 // Endpoint 7: Парсинг курсов KoronaPay
-
 app.post('/scrape-koronapay-rates', async (req, res) => {
-
   let browser;
-
   
-
   try {
-
     browser = await chromium.launch({
-
       headless: true,
-
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-blink-features=AutomationControlled']
+    });
+    
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      viewport: { width: 1280, height: 720 }
     });
 
+    const page = await context.newPage();
     
-
-    const page = await browser.newPage();
-
-    
-
     // Переход на страницу переводов
-
-    await page.goto('https://koronapay.com/transfers/', { waitUntil: 'networkidle' });
-
-    await page.waitForTimeout(3000); // Ждем загрузки React
-
+    await page.goto('https://koronapay.com/transfers/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(5000); // Ждем загрузки React и рендеринга
     
-
-    // Парсим курс через заполнение формы
-
+    // Парсим курс
     const rates = await page.evaluate(async () => {
-
-      // @ts-ignore - код выполняется в браузере
-
-      const result: { paymentRate: number | null; returnRate: number | null; error?: string } = {
-
+      // @ts-ignore
+      const result: { paymentRate: number | null; returnRate: number | null; error?: string; debug_title?: string; debug_text?: string } = {
         paymentRate: null,
-
         returnRate: null
-
       };
-
       
-
       try {
-
-        // Ищем селекторы для выбора стран
-
-        // Россия → Грузия (RUB → GEL)
-
-        
-
-        // Вариант 1: Ищем элементы с текстом "Россия" и "Грузия"
-
-        const countrySelectors = Array.from(document.querySelectorAll('*')).filter((el: any) => {
-
-          const text = el.textContent || '';
-
-          return /(Россия|Russia)/i.test(text) || /(Грузия|Georgia)/i.test(text);
-
-        });
-
-        
-
-        // Вариант 2: Ищем input поля для валют
-
-        const currencyInputs = Array.from(document.querySelectorAll('input[type="text"], input[type="number"]'));
-
-        const sendingInput = currencyInputs.find((inp: any) => 
-
-          inp.id?.includes('sending') || inp.id?.includes('Currency') || inp.placeholder?.includes('отправ')
-
-        );
-
-        const receivingInput = currencyInputs.find((inp: any) => 
-
-          inp.id?.includes('receiving') || inp.id?.includes('Currency') || inp.placeholder?.includes('получ')
-
-        );
-
-        
-
-        // Вариант 3: Ищем в window.__NEXT_DATA__ или других глобальных объектах
-
+        // Отладка: сохраняем заголовок и текст
         // @ts-ignore
+        result.debug_title = document.title;
+        // @ts-ignore
+        result.debug_text = document.body.innerText ? document.body.innerText.substring(0, 1000) : 'No text';
 
-        if (window.__NEXT_DATA__) {
-
-          // @ts-ignore
-
-          const nextData = window.__NEXT_DATA__;
-
-          const searchForRates = (obj: any, depth = 0): number | null => {
-
-            if (depth > 10) return null;
-
-            if (typeof obj === 'number' && obj > 0.01 && obj < 1000) return obj;
-
-            if (typeof obj === 'object' && obj !== null) {
-
-              for (const value of Object.values(obj)) {
-
-                const found = searchForRates(value, depth + 1);
-
-                if (found) return found;
-
-              }
-
-            }
-
-            return null;
-
-          };
-
-          
-
-          result.paymentRate = searchForRates(nextData);
-
-        }
-
-        
-
-        // Вариант 4: Ищем в тексте страницы паттерны курса
-
+        // Вариант 1: Поиск в тексте страницы (самый простой и надежный если есть текст)
+        // Ищем "1 GEL = X.XX RUB" или "X.XX RUB" рядом с GEL
+        // @ts-ignore
         const bodyText = document.body.textContent || '';
-
-        const rateMatches = bodyText.match(/(\d+[.,]\d+)\s*(руб|RUB|₽|лари|GEL|₾)/gi);
-
-        if (rateMatches && rateMatches.length >= 2) {
-
-          // Пытаемся извлечь курс из текста
-
-          const rubMatch = bodyText.match(/1\s*(GEL|лари|₾)\s*[=≈]\s*(\d+[.,]\d+)\s*(RUB|руб|₽)/i);
-
-          if (rubMatch) {
-
-            result.paymentRate = parseFloat(rubMatch[2].replace(',', '.'));
-
-          }
-
-        }
-
         
-
-        // Если не нашли, возвращаем ошибку
-
+        // Паттерны для поиска курса
+        // Примеры: "1 GEL ≈ 35.50 RUB", "Курс конвертации: 35.50", "35.50 ₽"
+        // Но на короне обычно надо вводить суммы.
+        
+        // Попробуем найти инпуты и заполнить их, если их нет в HTML сразу
+        // Но evaluate - это синхронный (в контексте страницы) код (если не async), но мы не можем вызывать page methods внутри evaluate.
+        // Поэтому мы просто анализируем то что есть.
+        
+        // Если мы на странице, попробуем найти то, что похоже на курс
+        
+        // Вариант 4 из прошлого кода:
+        const rubMatch = bodyText.match(/1\s*(GEL|лари|₾)\s*[=≈]\s*(\d+[.,]\d+)\s*(RUB|руб|₽)/i);
+        if (rubMatch) {
+             result.paymentRate = parseFloat(rubMatch[2].replace(',', '.'));
+        }
+        
+        // Если не нашли в тексте, попробуем найти в __NEXT_DATA__
+        // @ts-ignore
+        if (!result.paymentRate && window.__NEXT_DATA__) {
+          // @ts-ignore
+          const nextData = window.__NEXT_DATA__;
+          const searchForRates = (obj: any, depth = 0): number | null => {
+            if (depth > 10) return null;
+            if (typeof obj === 'number' && obj > 20 && obj < 100) return obj; // Курс примерно 30-40
+            if (typeof obj === 'object' && obj !== null) {
+              for (const [key, value] of Object.entries(obj)) {
+                 // Ищем ключи типа 'rate', 'exchange', 'course'
+                 if (key.toLowerCase().includes('rate') && typeof value === 'number' && value > 20 && value < 100) {
+                     return value;
+                 }
+                 const found = searchForRates(value, depth + 1);
+                 if (found) return found;
+              }
+            }
+            return null;
+          };
+          result.paymentRate = searchForRates(nextData);
+        }
+        
         if (!result.paymentRate) {
-
-          result.error = 'Exchange rate not found. Page structure may have changed.';
-
+            result.error = 'Rate not found';
         } else {
-
-          // Для возврата используем тот же курс (можно уточнить позже)
-
-          result.returnRate = result.paymentRate;
-
+            result.returnRate = result.paymentRate; // Пока так
         }
-
         
-
       } catch (e: any) {
-
         result.error = e.message;
-
       }
-
       
-
       return result;
-
     });
-
     
-
     await browser.close();
-
     
-
     if (rates.error || !rates.paymentRate) {
-
       return res.status(500).json({ 
-
         success: false, 
-
         error: rates.error || 'Exchange rate not found',
-
-        suggestion: 'KoronaPay page structure may have changed. Need to update parsing logic.'
-
+        debug_title: rates.debug_title,
+        debug_text: rates.debug_text
       });
-
     }
-
     
-
     res.json({
-
       success: true,
-
       paymentRate: rates.paymentRate,
-
       returnRate: rates.returnRate || rates.paymentRate,
-
       parsedAt: new Date().toISOString()
-
     });
-
+    
   } catch (error: any) {
-
     if (browser) await browser.close();
-
     res.status(500).json({ success: false, error: error.message });
-
   }
-
 });
-
-
 
 // Health check
 
