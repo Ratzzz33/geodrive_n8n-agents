@@ -23,7 +23,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=http://localhost:3001/scrape-koronapay-rates",
+        "url": "=http://172.17.0.1:3001/scrape-koronapay-rates",
         "sendBody": true,
         "bodyParameters": {
           "parameters": []
