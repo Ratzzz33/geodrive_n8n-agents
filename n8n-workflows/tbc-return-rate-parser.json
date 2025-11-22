@@ -22,23 +22,23 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "=http://172.17.0.1:3001/scrape-tbc-return-rate",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": []
-        },
-        "options": {
-          "timeout": 60000
-        },
+        "method": "GET",
+        "url": "=https://apigw.tbcbank.ge/api/v1/exchangeRates/getExchangeRate?Iso1=RUR&Iso2=GEL",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Content-Type",
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            },
+            {
+              "name": "Accept",
               "value": "application/json"
             }
           ]
+        },
+        "options": {
+          "timeout": 30000
         }
       },
       "name": "Get TBC Return Rate",
@@ -54,7 +54,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Обработка ответа от Playwright сервиса (теперь использует прямой API)\nconst response = $json;\n\nconsole.log('Processing TBC Bank return rate from API...');\n\ntry {\n  if (!response.success) {\n    return [{\n      json: {\n        status: 'error',\n        error: response.error || 'Unknown error from service',\n        suggestion: response.suggestion || ''\n      }\n    }];\n  }\n  \n  const returnRate = response.returnRate; // Курс продажи рубля (GEL за 1 RUB)\n  \n  if (!returnRate || returnRate <= 0 || returnRate >= 1) {\n    return [{\n      json: {\n        status: 'error',\n        error: `Invalid exchange rate received: ${returnRate}`,\n        suggestion: 'Rate should be between 0 and 1 (GEL per 1 RUB)'\n      }\n    }];\n  }\n  \n  console.log('Parsed return rate:', { returnRate, buyRate: response.buyRate });\n  \n  return [{\n    json: {\n      tbc_return_rate: returnRate,\n      raw_data: JSON.stringify({\n        parsed_at: response.parsedAt || new Date().toISOString(),\n        source: response.source || 'apigw.tbcbank.ge/api/v1/exchangeRates/getExchangeRate',\n        method: response.method || 'api',\n        return_rate: returnRate,\n        buy_rate: response.buyRate,\n        update_date: response.updateDate\n      })\n    }\n  }];\n  \n} catch (error) {\n  console.error('Parse error:', error);\n  return [{\n    json: {\n      status: 'error',\n      error: error.message\n    }\n  }];\n}"
+        "jsCode": "// Обработка ответа от TBC Bank API (прямой запрос)\nconst apiResponse = $json;\n\nconsole.log('Processing TBC Bank API response...');\n\ntry {\n  // API возвращает: { iso1: 'RUR', iso2: 'GEL', buyRate: 0.0289, sellRate: 0.0402, ... }\n  if (!apiResponse.sellRate) {\n    return [{\n      json: {\n        status: 'error',\n        error: 'Invalid API response: sellRate not found',\n        suggestion: 'TBC Bank API structure may have changed'\n      }\n    }];\n  }\n  \n  const returnRate = apiResponse.sellRate; // Курс продажи рубля (GEL за 1 RUB)\n  const buyRate = apiResponse.buyRate; // Курс покупки рубля (для справки)\n  \n  if (!returnRate || returnRate <= 0 || returnRate >= 1) {\n    return [{\n      json: {\n        status: 'error',\n        error: `Invalid exchange rate: ${returnRate}`,\n        suggestion: 'Rate should be between 0 and 1 (GEL per 1 RUB)'\n      }\n    }];\n  }\n  \n  console.log('Parsed return rate:', { returnRate, buyRate });\n  \n  return [{\n    json: {\n      tbc_return_rate: returnRate,\n      raw_data: JSON.stringify({\n        parsed_at: new Date().toISOString(),\n        source: 'apigw.tbcbank.ge/api/v1/exchangeRates/getExchangeRate',\n        method: 'api',\n        return_rate: returnRate,\n        buy_rate: buyRate,\n        update_date: apiResponse.updateDate,\n        full_response: apiResponse\n      })\n    }\n  }];\n  \n} catch (error) {\n  console.error('Parse error:', error);\n  return [{\n    json: {\n      status: 'error',\n      error: error.message\n    }\n  }];\n}"
       },
       "name": "Parse TBC Return Rate",
       "type": "n8n-nodes-base.code",
