@@ -12,26 +12,46 @@
 
 ## Компоненты
 
-### 1. Playwright Service Endpoint
+### 1. Playwright Service Endpoint (использует прямой API)
 **Endpoint:** `POST /scrape-tbc-return-rate`
 
-**Логика парсинга:**
-1. Открывается страница TBC Bank: `https://tbcbank.ge/en/treasury-products?amount=100&ccyFrom=RUR&ccyTo=GEL`
-2. Ожидается загрузка Angular приложения (3 секунды)
-3. Парсится текст страницы для поиска курсов вида `0.0289` или `0.0402`
-4. Из всех найденных курсов выбирается **минимальный** (нижний курс - курс продажи рубля)
-5. Возвращается курс в формате: сколько GEL стоит 1 RUB
+**Логика:**
+1. Прямой GET запрос к API TBC Bank: `https://apigw.tbcbank.ge/api/v1/exchangeRates/getExchangeRate?Iso1=RUR&Iso2=GEL`
+2. Из ответа извлекается `sellRate` (курс продажи рубля - нижний курс)
+3. Возвращается курс в формате: сколько GEL стоит 1 RUB
 
-**Результат:**
+**API Endpoint:**
+```
+GET https://apigw.tbcbank.ge/api/v1/exchangeRates/getExchangeRate?Iso1=RUR&Iso2=GEL
+```
+
+**Формат ответа API:**
+```json
+{
+  "iso1": "RUR",
+  "iso2": "GEL",
+  "buyRate": 0.0289,
+  "sellRate": 0.0402,
+  "conversionType": 2,
+  "currencyWeight": 1.0,
+  "updateDate": "2025-11-22T01:59:01.0680368"
+}
+```
+
+**Результат сервиса:**
 ```json
 {
   "success": true,
-  "returnRate": 0.0289,
+  "returnRate": 0.0402,
+  "buyRate": 0.0289,
   "parsedAt": "2025-01-20T10:00:00.000Z",
-  "source": "tbcbank.ge/en/treasury-products",
-  "method": "playwright"
+  "updateDate": "2025-11-22T01:59:01.0680368",
+  "source": "apigw.tbcbank.ge/api/v1/exchangeRates/getExchangeRate",
+  "method": "api"
 }
 ```
+
+**Примечание:** Используется `sellRate` (0.0402) - это курс продажи рубля, который нужен для возврата баланса клиента.
 
 ### 2. n8n Workflow
 **Название:** `TBC Bank Return Rate Parser`
@@ -94,7 +114,7 @@ node setup/import_workflow_2025.mjs n8n-workflows/tbc-return-rate-parser.json
 
 ### 4. Активировать workflow в n8n UI
 
-**Примечание:** Workflow зависит от Playwright сервиса (порт 3001) и доступности сайта TBC Bank.
+**Примечание:** Workflow зависит от Playwright сервиса (порт 3001), который делает прямой API запрос к TBC Bank. API не требует аутентификации и доступен публично.
 
 ## Отличие от KoronaPay курса
 
@@ -104,6 +124,6 @@ node setup/import_workflow_2025.mjs n8n-workflows/tbc-return-rate-parser.json
 | **Направление** | RUB → GEL (покупка лари) | GEL → RUB (продажа лари) |
 | **Курс** | Верхний (покупка) | Нижний (продажа) |
 | **Источник** | koronapay.com/transfers/ | tbcbank.ge/en/treasury-products |
-| **Метод** | Прямой API запрос | Playwright парсинг |
+| **Метод** | Прямой API запрос | Прямой API запрос |
 | **Частота** | Каждые 4 часа | Каждые 6 часов |
 
