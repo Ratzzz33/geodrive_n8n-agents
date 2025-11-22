@@ -1,0 +1,215 @@
+{
+  "name": "KoronaPay Exchange Rates Parser",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8,12,16,20 * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every 4 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:3001/scrape-koronapay-rates",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "name": "Scrape KoronaPay via Playwright",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обработка ответа от Playwright сервиса\nconst response = $json;\n\nconsole.log('Processing KoronaPay rates from Playwright service...');\n\ntry {\n  if (!response.success) {\n    return [{\n      json: {\n        status: 'error',\n        error: response.error || 'Unknown error from Playwright service',\n        suggestion: response.suggestion || ''\n      }\n    }];\n  }\n  \n  const paymentRate = response.paymentRate; // Курс оплаты рублями (сколько RUB за 1 GEL)\n  const returnRate = response.returnRate || response.paymentRate; // Курс возврата\n  \n  if (!paymentRate || paymentRate <= 0) {\n    return [{\n      json: {\n        status: 'error',\n        error: 'Invalid exchange rate received from Playwright service'\n      }\n    }];\n  }\n  \n  console.log('Parsed rates:', { paymentRate, returnRate });\n  \n  return [{\n    json: {\n      koronapay_payment_rate: paymentRate,\n      koronapay_return_rate: returnRate,\n      raw_data: JSON.stringify({\n        parsed_at: response.parsedAt || new Date().toISOString(),\n        source: 'koronapay.com/transfers/',\n        method: 'playwright',\n        payment_rate: paymentRate,\n        return_rate: returnRate\n      })\n    }\n  }];\n  \n} catch (error) {\n  console.error('Parse error:', error);\n  return [{\n    json: {\n      status: 'error',\n      error: error.message\n    }\n  }];\n}"
+      },
+      "name": "Parse KoronaPay Rate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-error",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "error",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Check for Errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO exchange_rates (\n  branch,\n  koronapay_payment_rate,\n  koronapay_return_rate,\n  raw_data\n) VALUES (\n  'koronapay',\n  {{ $json.koronapay_payment_rate || 'NULL' }},\n  {{ $json.koronapay_return_rate || 'NULL' }},\n  '{{ ($json.raw_data || '{}').replace(/'/g, \"''\") }}'\n)\nRETURNING *",
+        "options": {}
+      },
+      "name": "Save to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1040, 200],
+      "credentials": {
+        "postgres": {
+          "name": "PostgreSQL Neon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO events (\n  branch,\n  type,\n  ext_id,\n  ok,\n  reason,\n  processed\n) VALUES (\n  'koronapay',\n  'koronapay.exchange_rate.parse.failed',\n  NULL,\n  FALSE,\n  '{{ ($json.error || 'Unknown error').replace(/'/g, \"''\") }}',\n  TRUE\n)",
+        "options": {}
+      },
+      "name": "Log Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1040, 400],
+      "credentials": {
+        "postgres": {
+          "name": "PostgreSQL Neon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const saved = $('Save to DB').first()?.json;\n\nconst rates = {\n  'Оплата (RUB за 1 GEL)': saved?.koronapay_payment_rate,\n  'Возврат (RUB за 1 GEL)': saved?.koronapay_return_rate\n};\n\nlet message = `💱 KORONAPAY EXCHANGE RATES\\n\\n`;\n\nObject.entries(rates).forEach(([pair, rate]) => {\n  if (rate) {\n    message += `${pair}: ${rate.toFixed(4)}\\n`;\n  }\n});\n\nmessage += `\\n✅ Saved at ${new Date().toISOString()}`;\n\nreturn [{ json: { message } }];"
+      },
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1240, 200]
+    },
+    {
+      "parameters": {},
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1440, 200]
+    }
+  ],
+  "connections": {
+    "Every 4 Hours": {
+      "main": [
+        [
+          {
+            "node": "Get KoronaPay Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape KoronaPay via Playwright": {
+      "main": [
+        [
+          {
+            "node": "Parse KoronaPay Rate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse KoronaPay Rate": {
+      "main": [
+        [
+          {
+            "node": "Check for Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {
+            "node": "Save to DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to DB": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "executionTimeout": 3600
+  }
+}
+

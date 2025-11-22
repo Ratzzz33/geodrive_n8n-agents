@@ -18,23 +18,34 @@ Jarvis - это единый интерфейс для сотрудников а
 
 ## 📚 Документация
 
+### Основная документация
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - Архитектура системы
 - [ORCHESTRATOR.md](./ORCHESTRATOR.md) - Описание оркестратора
 - [AGENTS.md](./AGENTS.md) - Описание агентов
+- [STRUCTURE.md](./STRUCTURE.md) - Структура данных и интеграций
+- [NEXT_STEPS.md](./NEXT_STEPS.md) - Roadmap и планы развития
+- [CHANGELOG.md](./CHANGELOG.md) - История изменений
+
+### Работа с n8n
 - [docs/N8N_WORKFLOW_IMPORT_GUIDE.md](./docs/N8N_WORKFLOW_IMPORT_GUIDE.md) - ⚠️ **ОБЯЗАТЕЛЬНАЯ инструкция** по работе с n8n workflow
+- [N8N_IMPORT_2025_FIX.md](./N8N_IMPORT_2025_FIX.md) - Исправления импорта workflow (2025)
+- [.cursorrules](./.cursorrules) - Правила работы с n8n для агента
+
+### Разработка
 - [docs/AGENT_INSTRUCTIONS.md](./docs/AGENT_INSTRUCTIONS.md) - Инструкции для агента Cursor
 - [docs/DATABASE_MIGRATIONS.md](./docs/DATABASE_MIGRATIONS.md) - Руководство по миграциям БД
+- [docs/TESTS_CREATED.md](./docs/TESTS_CREATED.md) - Unit-тесты (55 тестов)
+- [docs/LINTING_AND_TESTING.md](./docs/LINTING_AND_TESTING.md) - Рекомендации по линтингу
+- [docs/AGENT_PATTERNS_IMPROVEMENTS.md](./docs/AGENT_PATTERNS_IMPROVEMENTS.md) - Улучшения архитектуры агентов
+- [docs/CLEANUP_RECOMMENDATIONS.md](./docs/CLEANUP_RECOMMENDATIONS.md) - Рекомендации по очистке проекта
+- [docs/CLEANUP_COMPLETE.md](./docs/CLEANUP_COMPLETE.md) - ✅ Очистка проекта завершена (98 документов в архив, 11 файлов удалено)
+- [docs/SESSION_SUMMARY_2025-11-09.md](./docs/SESSION_SUMMARY_2025-11-09.md) - 📝 Итоги сессии: обновление документации, тестирование и очистка проекта
+- [docs/TAILWINDUI_PLUS_GUIDE.md](./docs/TAILWINDUI_PLUS_GUIDE.md) - 🎨 Руководство по использованию TailwindUI Plus Components 2025
+
+### CI/CD и настройка
 - [.github/secrets.md](./.github/secrets.md) - GitHub Secrets для CI/CD
 - [SETUP_GITHUB_SECRETS.md](./SETUP_GITHUB_SECRETS.md) - Пошаговая настройка secrets
-- [IMPORT_COMPLETE_2025-01-15.md](./IMPORT_COMPLETE_2025-01-15.md) - ✅ **ИМПОРТ ЗАВЕРШЕН** - изменения в n8n применены
-- [VERIFICATION_COMPLETE.md](./VERIFICATION_COMPLETE.md) - ✅ Верификация Production URL
-- [FINAL_WEBHOOKS_UPDATE_2025-01-15.md](./FINAL_WEBHOOKS_UPDATE_2025-01-15.md) - 📊 Итоговый отчет
-- [WEBHOOK_TEST_DOMAIN_SETUP.md](./WEBHOOK_TEST_DOMAIN_SETUP.md) - ⚠️ Настройка тестового домена (опционально)
-- [WEBHOOKS_UPDATE_REPORT_2025-01-15.md](./WEBHOOKS_UPDATE_REPORT_2025-01-15.md) - 📊 Полный отчет о проделанной работе
-- [WEBHOOKS_UPDATE_SUMMARY.md](./WEBHOOKS_UPDATE_SUMMARY.md) - 📌 Краткий отчет об обновлении вебхуков
-- [WEBHOOKS_SETUP_GUIDE.md](./WEBHOOKS_SETUP_GUIDE.md) - 🔗 Инструкция по настройке вебхуков в RentProg
-- [WEBHOOK_URLS_UPDATE.md](./WEBHOOK_URLS_UPDATE.md) - 📖 Техническое руководство по новым адресам
-- [WEBHOOKS_CHANGE_LOG_2025-01-15.md](./WEBHOOKS_CHANGE_LOG_2025-01-15.md) - 📅 Changelog (v1.x → v2.0)
+- [IMPORTANT_MEMORIES.md](./IMPORTANT_MEMORIES.md) - Критически важные заметки
 
 ## 🚀 Быстрый старт
 
@@ -148,14 +159,13 @@ https://webhook.rentflow.rentals
 **Настройка переменных окружения:**
 ```env
 WEBHOOK_URL=https://webhook.rentflow.rentals/
-WEBHOOK_TEST_URL=https://webhook-test.rentflow.rentals/
 N8N_WEBHOOK_URL=https://webhook.rentflow.rentals/
 ORCHESTRATOR_URL=http://46.224.17.15:3000
 ```
 
 📋 **Документация:**
-- [WEBHOOK_TEST_DOMAIN_SETUP.md](./WEBHOOK_TEST_DOMAIN_SETUP.md) - ⚠️ Настройка тестового домена
-- [WEBHOOK_URLS_UPDATE.md](./WEBHOOK_URLS_UPDATE.md) - Техническое руководство
+- [docs/RENTPROG_COMPLETE_GUIDE.md](./docs/RENTPROG_COMPLETE_GUIDE.md) - Полное руководство по RentProg
+- [claude.md](./claude.md) - Инструментальная документация (работа с n8n, SSH, БД)
 
 Подробнее см. [docs/RENTPROG_COMPLETE_GUIDE.md](./docs/RENTPROG_COMPLETE_GUIDE.md)
 
@@ -219,12 +229,9 @@ npm run db:push     # Push схемы напрямую (для разработ�
 3. Отправьте `/start` - должно прийти приветствие
 4. Отправьте `/status` - проверит подключение к БД и интеграциям
 
-## 📚 Документация
+## 📚 Дополнительная документация
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - Архитектура системы
-- [STRUCTURE.md](./STRUCTURE.md) - Структура данных и интеграций
-- [ORCHESTRATOR.md](./ORCHESTRATOR.md) - Оркестратор событий
-- [AGENTS.md](./AGENTS.md) - Список и описание агентов
+См. раздел "Документация" выше для полного списка документов.
 
 ## ⚠️ Статус
 

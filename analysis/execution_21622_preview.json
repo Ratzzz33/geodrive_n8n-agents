@@ -1,0 +1,23 @@
+{
+  "id": "21622",
+  "status": "success",
+  "nodes": {
+    "Save to DB": {
+      "status": "success",
+      "itemsOutput": 93,
+      "sampleOutput": [
+        {
+          "entity_id": "2df3427f-8b09-4361-bcc8-be770094fb6e",
+          "created": false,
+          "entity_type": "bookings"
+        },
+        {
+          "entity_id": "bc098a52-8368-41ad-ae26-010d2f8f2776",
+          "created": false,
+          "entity_type": "bookings"
+        }
+      ]
+    }
+  }
+}
+

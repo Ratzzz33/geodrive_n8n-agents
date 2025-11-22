@@ -667,6 +667,117 @@ app.post('/scrape-booking-details', async (req, res) => {
   }
 });
 
+// Endpoint 7: Парсинг курсов KoronaPay
+app.post('/scrape-koronapay-rates', async (req, res) => {
+  let browser;
+  
+  try {
+    browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    });
+    
+    const page = await browser.newPage();
+    
+    // Переход на страницу переводов
+    await page.goto('https://koronapay.com/transfers/', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(3000); // Ждем загрузки React
+    
+    // Парсим курс через заполнение формы
+    const rates = await page.evaluate(async () => {
+      // @ts-ignore - код выполняется в браузере
+      const result: { paymentRate: number | null; returnRate: number | null; error?: string } = {
+        paymentRate: null,
+        returnRate: null
+      };
+      
+      try {
+        // Ищем селекторы для выбора стран
+        // Россия → Грузия (RUB → GEL)
+        
+        // Вариант 1: Ищем элементы с текстом "Россия" и "Грузия"
+        const countrySelectors = Array.from(document.querySelectorAll('*')).filter(el => {
+          const text = el.textContent || '';
+          return /(Россия|Russia)/i.test(text) || /(Грузия|Georgia)/i.test(text);
+        });
+        
+        // Вариант 2: Ищем input поля для валют
+        const currencyInputs = Array.from(document.querySelectorAll('input[type="text"], input[type="number"]'));
+        const sendingInput = currencyInputs.find(inp => 
+          inp.id?.includes('sending') || inp.id?.includes('Currency') || inp.placeholder?.includes('отправ')
+        );
+        const receivingInput = currencyInputs.find(inp => 
+          inp.id?.includes('receiving') || inp.id?.includes('Currency') || inp.placeholder?.includes('получ')
+        );
+        
+        // Вариант 3: Ищем в window.__NEXT_DATA__ или других глобальных объектах
+        // @ts-ignore
+        if (window.__NEXT_DATA__) {
+          // @ts-ignore
+          const nextData = window.__NEXT_DATA__;
+          const searchForRates = (obj: any, depth = 0): number | null => {
+            if (depth > 10) return null;
+            if (typeof obj === 'number' && obj > 0.01 && obj < 1000) return obj;
+            if (typeof obj === 'object' && obj !== null) {
+              for (const value of Object.values(obj)) {
+                const found = searchForRates(value, depth + 1);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
+          
+          result.paymentRate = searchForRates(nextData);
+        }
+        
+        // Вариант 4: Ищем в тексте страницы паттерны курса
+        const bodyText = document.body.textContent || '';
+        const rateMatches = bodyText.match(/(\d+[.,]\d+)\s*(руб|RUB|₽|лари|GEL|₾)/gi);
+        if (rateMatches && rateMatches.length >= 2) {
+          // Пытаемся извлечь курс из текста
+          const rubMatch = bodyText.match(/1\s*(GEL|лари|₾)\s*[=≈]\s*(\d+[.,]\d+)\s*(RUB|руб|₽)/i);
+          if (rubMatch) {
+            result.paymentRate = parseFloat(rubMatch[2].replace(',', '.'));
+          }
+        }
+        
+        // Если не нашли, возвращаем ошибку
+        if (!result.paymentRate) {
+          result.error = 'Exchange rate not found. Page structure may have changed.';
+        } else {
+          // Для возврата используем тот же курс (можно уточнить позже)
+          result.returnRate = result.paymentRate;
+        }
+        
+      } catch (e: any) {
+        result.error = e.message;
+      }
+      
+      return result;
+    });
+    
+    await browser.close();
+    
+    if (rates.error || !rates.paymentRate) {
+      return res.status(500).json({ 
+        success: false, 
+        error: rates.error || 'Exchange rate not found',
+        suggestion: 'KoronaPay page structure may have changed. Need to update parsing logic.'
+      });
+    }
+    
+    res.json({
+      success: true,
+      paymentRate: rates.paymentRate,
+      returnRate: rates.returnRate || rates.paymentRate,
+      parsedAt: new Date().toISOString()
+    });
+  } catch (error: any) {
+    if (browser) await browser.close();
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'playwright-service' });

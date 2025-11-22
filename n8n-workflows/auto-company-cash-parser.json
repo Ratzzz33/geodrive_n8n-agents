@@ -16,7 +16,10 @@
       "name": "Every Hour",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 400]
+      "position": [
+        240,
+        400
+      ]
     },
     {
       "parameters": {
@@ -26,7 +29,10 @@
       "name": "Prepare Branches",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 400]
+      "position": [
+        440,
+        400
+      ]
     },
     {
       "parameters": {
@@ -40,7 +46,10 @@
       "name": "Scrape Branch",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [640, 400],
+      "position": [
+        640,
+        400
+      ],
       "onError": "continueRegularOutput",
       "retryOnFail": true,
       "maxTries": 3
@@ -53,7 +62,10 @@
       "name": "Format Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [840, 400]
+      "position": [
+        840,
+        400
+      ]
     },
     {
       "parameters": {
@@ -68,7 +80,10 @@
       "name": "Send to Telegram",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1040, 400],
+      "position": [
+        1040,
+        400
+      ],
       "credentials": {
         "telegramApi": {
           "id": "nONqDN52rBYnhODp",
@@ -125,9 +140,10 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   },
   "pinData": {},
   "tags": []
 }
-

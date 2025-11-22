@@ -1,0 +1,55 @@
+-- Расширение таблицы rentprog_car_states_snapshot всеми полями,
+-- которые приходят из парсера автомобилей.
+-- Типы колонок подобраны согласно основной таблице cars.
+
+ALTER TABLE rentprog_car_states_snapshot
+  ADD COLUMN IF NOT EXISTS branch_id uuid,
+  ADD COLUMN IF NOT EXISTS car_name text,
+  ADD COLUMN IF NOT EXISTS code text,
+  ADD COLUMN IF NOT EXISTS number text,
+  ADD COLUMN IF NOT EXISTS vin text,
+  ADD COLUMN IF NOT EXISTS color text,
+  ADD COLUMN IF NOT EXISTS year integer,
+  ADD COLUMN IF NOT EXISTS transmission text,
+  ADD COLUMN IF NOT EXISTS fuel text,
+  ADD COLUMN IF NOT EXISTS car_type text,
+  ADD COLUMN IF NOT EXISTS car_class text,
+  ADD COLUMN IF NOT EXISTS active boolean,
+  ADD COLUMN IF NOT EXISTS tank_state boolean,
+  ADD COLUMN IF NOT EXISTS clean_state boolean,
+  ADD COLUMN IF NOT EXISTS mileage integer,
+  ADD COLUMN IF NOT EXISTS tire_type integer,
+  ADD COLUMN IF NOT EXISTS tire_size text,
+  ADD COLUMN IF NOT EXISTS last_inspection text,
+  ADD COLUMN IF NOT EXISTS deposit bigint,
+  ADD COLUMN IF NOT EXISTS price_hour bigint,
+  ADD COLUMN IF NOT EXISTS hourly_deposit bigint,
+  ADD COLUMN IF NOT EXISTS monthly_deposit bigint,
+  ADD COLUMN IF NOT EXISTS investor_id bigint,
+  ADD COLUMN IF NOT EXISTS purchase_price bigint,
+  ADD COLUMN IF NOT EXISTS purchase_date text,
+  ADD COLUMN IF NOT EXISTS age_limit bigint,
+  ADD COLUMN IF NOT EXISTS driver_year_limit bigint,
+  ADD COLUMN IF NOT EXISTS franchise integer,
+  ADD COLUMN IF NOT EXISTS max_fine integer,
+  ADD COLUMN IF NOT EXISTS repair_cost integer,
+  ADD COLUMN IF NOT EXISTS is_air boolean,
+  ADD COLUMN IF NOT EXISTS climate_control boolean,
+  ADD COLUMN IF NOT EXISTS parktronic boolean,
+  ADD COLUMN IF NOT EXISTS parktronic_camera boolean,
+  ADD COLUMN IF NOT EXISTS heated_seats boolean,
+  ADD COLUMN IF NOT EXISTS audio_system boolean,
+  ADD COLUMN IF NOT EXISTS usb_system boolean,
+  ADD COLUMN IF NOT EXISTS rain_sensor boolean,
+  ADD COLUMN IF NOT EXISTS engine_capacity text,
+  ADD COLUMN IF NOT EXISTS number_doors integer,
+  ADD COLUMN IF NOT EXISTS tank_value integer,
+  ADD COLUMN IF NOT EXISTS pts text,
+  ADD COLUMN IF NOT EXISTS registration_certificate text,
+  ADD COLUMN IF NOT EXISTS body_number text,
+  ADD COLUMN IF NOT EXISTS data jsonb;
+
+-- Обновляем fetched_at чтобы видеть момент обновления записей
+ALTER TABLE rentprog_car_states_snapshot
+  ALTER COLUMN fetched_at SET DEFAULT now();
+

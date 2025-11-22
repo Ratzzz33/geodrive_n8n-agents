@@ -16,7 +16,10 @@
       "name": "Every 5 Minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [250, 300]
+      "position": [
+        250,
+        300
+      ]
     },
     {
       "parameters": {
@@ -36,7 +39,10 @@
       "name": "Set Tbilisi",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.3,
-      "position": [450, 200]
+      "position": [
+        450,
+        200
+      ]
     },
     {
       "parameters": {
@@ -56,7 +62,10 @@
       "name": "Set Batumi",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.3,
-      "position": [450, 350]
+      "position": [
+        450,
+        350
+      ]
     },
     {
       "parameters": {
@@ -76,7 +85,10 @@
       "name": "Set Kutaisi",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.3,
-      "position": [450, 500]
+      "position": [
+        450,
+        500
+      ]
     },
     {
       "parameters": {
@@ -96,7 +108,10 @@
       "name": "Set Service Center",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.3,
-      "position": [450, 650]
+      "position": [
+        450,
+        650
+      ]
     },
     {
       "parameters": {
@@ -106,7 +121,10 @@
       "name": "Scrape Events (Playwright)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [650, 400],
+      "position": [
+        650,
+        400
+      ],
       "alwaysOutputData": true
     },
     {
@@ -123,7 +141,10 @@
       "name": "Call Jarvis API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [850, 400]
+      "position": [
+        850,
+        400
+      ]
     },
     {
       "parameters": {
@@ -152,7 +173,10 @@
       "name": "If Error",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1050, 400]
+      "position": [
+        1050,
+        400
+      ]
     },
     {
       "parameters": {
@@ -164,7 +188,10 @@
       "name": "Send Error Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1250, 500],
+      "position": [
+        1250,
+        500
+      ],
       "credentials": {
         "telegramApi": {
           "id": "TELEGRAM_CREDENTIAL_ID",
@@ -178,7 +205,10 @@
       "name": "Success",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1250, 300]
+      "position": [
+        1250,
+        300
+      ]
     }
   ],
   "connections": {
@@ -294,7 +324,8 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   }
 }
-

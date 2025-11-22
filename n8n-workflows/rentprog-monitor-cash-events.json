@@ -16,7 +16,10 @@
       "name": "Every 5 Minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 400]
+      "position": [
+        240,
+        400
+      ]
     },
     {
       "parameters": {
@@ -26,7 +29,10 @@
       "name": "Prepare Branches",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 400]
+      "position": [
+        440,
+        400
+      ]
     },
     {
       "parameters": {
@@ -50,7 +56,10 @@
       "name": "Get Company Cash",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [640, 300],
+      "position": [
+        640,
+        300
+      ],
       "continueOnFail": true
     },
     {
@@ -88,7 +97,10 @@
       "name": "Get Recent Bookings",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [640, 500],
+      "position": [
+        640,
+        500
+      ],
       "continueOnFail": true
     },
     {
@@ -99,7 +111,10 @@
       "name": "Process & Format Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [840, 400]
+      "position": [
+        840,
+        400
+      ]
     },
     {
       "parameters": {
@@ -114,7 +129,10 @@
       "name": "Send to Error Handler",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [1040, 600]
+      "position": [
+        1040,
+        600
+      ]
     },
     {
       "parameters": {
@@ -143,7 +161,10 @@
       "name": "If Has Data",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1040, 400]
+      "position": [
+        1040,
+        400
+      ]
     },
     {
       "parameters": {
@@ -160,7 +181,10 @@
       "name": "Send to Jarvis API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1240, 300],
+      "position": [
+        1240,
+        300
+      ],
       "continueOnFail": true
     },
     {
@@ -171,7 +195,10 @@
       "name": "Format Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1440, 300]
+      "position": [
+        1440,
+        300
+      ]
     },
     {
       "parameters": {
@@ -200,7 +227,10 @@
       "name": "If Error",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1640, 400]
+      "position": [
+        1640,
+        400
+      ]
     },
     {
       "parameters": {
@@ -212,7 +242,10 @@
       "name": "Send Error Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1840, 500],
+      "position": [
+        1840,
+        500
+      ],
       "credentials": {
         "telegramApi": {
           "id": "nONqDN52rBYnhODp",
@@ -227,7 +260,10 @@
       "name": "Success",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1840, 300]
+      "position": [
+        1840,
+        300
+      ]
     },
     {
       "parameters": {},
@@ -235,7 +271,10 @@
       "name": "No Data to Process",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1240, 500]
+      "position": [
+        1240,
+        500
+      ]
     }
   ],
   "connections": {
@@ -368,7 +407,8 @@
     "errorWorkflow": "H3UBEp425F5SMyrX",
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
-    "saveManualExecutions": true
+    "saveManualExecutions": true,
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   }
 }
-

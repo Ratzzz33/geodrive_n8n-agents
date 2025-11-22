@@ -15,7 +15,10 @@
       "name": "Every 15 Minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 400]
+      "position": [
+        240,
+        400
+      ]
     },
     {
       "parameters": {
@@ -24,7 +27,10 @@
       "name": "Tbilisi Pages",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [448, 208]
+      "position": [
+        448,
+        208
+      ]
     },
     {
       "parameters": {
@@ -33,7 +39,10 @@
       "name": "Batumi Pages",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [448, 352]
+      "position": [
+        448,
+        352
+      ]
     },
     {
       "parameters": {
@@ -42,7 +51,10 @@
       "name": "Kutaisi Pages",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [448, 512]
+      "position": [
+        448,
+        512
+      ]
     },
     {
       "parameters": {
@@ -51,7 +63,10 @@
       "name": "Service Pages",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [448, 656]
+      "position": [
+        448,
+        656
+      ]
     },
     {
       "parameters": {
@@ -67,7 +82,10 @@
       "name": "Get Tbilisi",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [640, 208],
+      "position": [
+        640,
+        208
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -86,7 +104,10 @@
       "name": "Get Batumi",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [640, 352],
+      "position": [
+        640,
+        352
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -105,7 +126,10 @@
       "name": "Get Kutaisi",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [640, 512],
+      "position": [
+        640,
+        512
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -124,7 +148,10 @@
       "name": "Get Service",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [640, 656],
+      "position": [
+        640,
+        656
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -136,7 +163,10 @@
       "name": "Process Bookings",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1024, 400]
+      "position": [
+        1024,
+        400
+      ]
     },
     {
       "parameters": {
@@ -147,7 +177,10 @@
       "name": "Check Existing",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1216, 400],
+      "position": [
+        1216,
+        400
+      ],
       "credentials": {
         "postgres": {
           "name": "Neon PostgreSQL"
@@ -161,7 +194,10 @@
       "name": "Identify New",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1408, 400]
+      "position": [
+        1408,
+        400
+      ]
     },
     {
       "parameters": {
@@ -187,7 +223,10 @@
       "name": "If New Booking",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1600, 400]
+      "position": [
+        1600,
+        400
+      ]
     },
     {
       "parameters": {
@@ -203,7 +242,10 @@
       "name": "Scrape Details",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1792, 300],
+      "position": [
+        1792,
+        300
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -215,16 +257,22 @@
       "name": "Merge Details",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1984, 300]
+      "position": [
+        1984,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Подготавливаем данные для upsert в bookings\nconst booking = $input.first().json;\n\n// Формируем data JSONB с дополнительными полями\nconst dataJson = {\n  payment: {\n    status: booking.payment_status,\n    balance: booking.payment_balance,\n    color: booking.payment_color,\n    raw: booking.raw_payment\n  },\n  client: {\n    category: booking.client_category,\n    status_color: booking.client_status_color,\n    status_html: booking.client_status_html\n  },\n  booking: {\n    status_icon: booking.booking_status_icon,\n    status_color: booking.booking_status_color,\n    status_html: booking.status_icon_html\n  },\n  responsible: {\n    status: booking.responsible_status,\n    color: booking.responsible_color,\n    html: booking.responsible_html\n  },\n  detail_url: booking.detail_url,\n  details: booking.details || null\n};\n\n// Определяем статус брони\nlet status = 'planned';\nif (booking.is_active) {\n  status = booking.booking_status_icon === 'car' ? 'active' : 'planned';\n} else {\n  status = 'completed';\n}\n\nreturn [{\n  json: {\n    // Основные поля (только те, что точно есть в БД)\n    booking_number: booking.number,\n    branch_code: booking.branch,\n    status: status,\n    start_at: booking.start_at,\n    end_at: booking.end_at,\n    start_date: booking.raw_start_date,\n    end_date: booking.raw_end_date,\n    days: booking.days,\n    issue_location: booking.issue_location,\n    return_location: booking.return_location,\n    notes: booking.notes,\n    \n    // JSONB данные\n    data: JSON.stringify(dataJson),\n    \n    // Для external_refs\n    external_id: booking.booking_id,\n    system: 'rentprog',\n    \n    // Метаданные\n    is_new: booking.is_new,\n    is_active: booking.is_active\n  }\n}];"
+        "jsCode": "// Подготавливаем данные для upsert в bookings\nconst originalBooking = $input.first().json;\n\n// Функция конвертации даты DD-MM-YYYY HH:mm → ISO\nfunction convertDateToISO(dateStr) {\n  if (!dateStr || typeof dateStr !== 'string') return dateStr;\n\n  const match = dateStr.match(/^(\\d{2})-(\\d{2})-(\\d{4})(?:\\s+(\\d{2}):(\\d{2}))?$/);\n  if (!match) return dateStr;\n\n  const [, day, month, year, hours, minutes] = match;\n\n  if (hours && minutes) {\n    return `${year}-${month}-${day}T${hours}:${minutes}:00+04:00`;\n  }\n\n  return `${year}-${month}-${day}`;\n}\n\nfunction convertDatesInObject(obj) {\n  if (!obj || typeof obj !== 'object') return obj;\n\n  if (Array.isArray(obj)) {\n    return obj.map(item => convertDatesInObject(item));\n  }\n\n  const result = {};\n  for (const [key, value] of Object.entries(obj)) {\n    if (typeof value === 'string' && (key.includes('date') || key.includes('_at') || key === 'start' || key === 'end')) {\n      result[key] = convertDateToISO(value);\n    } else if (value && typeof value === 'object') {\n      result[key] = convertDatesInObject(value);\n    } else {\n      result[key] = value;\n    }\n  }\n  return result;\n}\n\nconst booking = convertDatesInObject(originalBooking);\n\n// Формируем data JSONB с дополнительными полями\nconst dataJson = {\n  payment: {\n    status: booking.payment_status,\n    balance: booking.payment_balance,\n    color: booking.payment_color,\n    raw: booking.raw_payment\n  },\n  client: {\n    category: booking.client_category,\n    status_color: booking.client_status_color,\n    status_html: booking.client_status_html\n  },\n  booking: {\n    status_icon: booking.booking_status_icon,\n    status_color: booking.booking_status_color,\n    status_html: booking.status_icon_html\n  },\n  responsible: {\n    status: booking.responsible_status,\n    color: booking.responsible_color,\n    html: booking.responsible_html\n  },\n  detail_url: booking.detail_url,\n  details: booking.details || null\n};\n\n// Определяем статус брони\nlet status = 'planned';\nif (booking.is_active) {\n  status = booking.booking_status_icon === 'car' ? 'active' : 'planned';\n} else {\n  status = 'completed';\n}\n\nreturn [{\n  json: {\n    // Основные поля (только те, что точно есть в БД)\n    booking_number: booking.number,\n    branch_code: booking.branch,\n    status: status,\n    start_at: booking.start_at,\n    end_at: booking.end_at,\n    start_date: booking.raw_start_date,\n    end_date: booking.raw_end_date,\n    days: booking.days,\n    issue_location: booking.issue_location,\n    return_location: booking.return_location,\n    notes: booking.notes,\n\n    // JSONB данные\n    data: JSON.stringify(dataJson),\n\n    // Для external_refs\n    external_id: booking.booking_id,\n    system: 'rentprog',\n\n    // Метаданные\n    is_new: booking.is_new,\n    is_active: booking.is_active\n  }\n}];"
       },
       "name": "Prepare Upsert",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2176, 300]
+      "position": [
+        2176,
+        300
+      ]
     },
     {
       "parameters": {
@@ -233,7 +281,10 @@
       "name": "Prepare Upsert Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2176, 300]
+      "position": [
+        2176,
+        300
+      ]
     },
     {
       "parameters": {
@@ -259,7 +310,10 @@
       "name": "If Existing",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2368, 300]
+      "position": [
+        2368,
+        300
+      ]
     },
     {
       "parameters": {
@@ -270,7 +324,10 @@
       "name": "Update Booking",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [2560, 200],
+      "position": [
+        2560,
+        200
+      ],
       "credentials": {
         "postgres": {
           "name": "Neon PostgreSQL"
@@ -286,7 +343,10 @@
       "name": "Insert Booking",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [2560, 400],
+      "position": [
+        2560,
+        400
+      ],
       "credentials": {
         "postgres": {
           "name": "Neon PostgreSQL"
@@ -302,7 +362,10 @@
       "name": "Upsert External Ref",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [2560, 300],
+      "position": [
+        2560,
+        300
+      ],
       "credentials": {
         "postgres": {
           "name": "Neon PostgreSQL"
@@ -316,7 +379,10 @@
       "name": "Skip Existing",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1600, 500]
+      "position": [
+        1600,
+        500
+      ]
     },
     {
       "parameters": {
@@ -325,7 +391,10 @@
       "name": "Format Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2560, 400]
+      "position": [
+        2560,
+        400
+      ]
     },
     {
       "parameters": {
@@ -352,7 +421,10 @@
       "name": "If Error",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2752, 400]
+      "position": [
+        2752,
+        400
+      ]
     },
     {
       "parameters": {
@@ -367,7 +439,10 @@
       "name": "Send Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [2944, 300],
+      "position": [
+        2944,
+        300
+      ],
       "credentials": {
         "telegramApi": {
           "name": "Telegram Alert Bot"
@@ -381,14 +456,20 @@
       "name": "Throw Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3136, 300]
+      "position": [
+        3136,
+        300
+      ]
     },
     {
       "parameters": {},
       "name": "Success",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [2944, 500]
+      "position": [
+        2944,
+        500
+      ]
     }
   ],
   "connections": {
@@ -705,7 +786,8 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   }
 }
-

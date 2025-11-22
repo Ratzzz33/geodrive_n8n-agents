@@ -1,0 +1,13 @@
+BEGIN;
+
+ALTER TABLE clients
+  DROP COLUMN IF EXISTS user_id;
+
+ALTER TABLE cars
+  DROP COLUMN IF EXISTS user_id;
+
+ALTER TABLE bookings
+  DROP COLUMN IF EXISTS user_id;
+
+COMMIT;
+

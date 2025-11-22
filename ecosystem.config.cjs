@@ -34,7 +34,7 @@ module.exports = {
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
-        HTTP_SCRAPER_PORT: 3002
+        HTTP_SCRAPER_PORT: 3004
       },
       error_file: './logs/http-scraper-service-error.log',
       out_file: './logs/http-scraper-service-out.log',

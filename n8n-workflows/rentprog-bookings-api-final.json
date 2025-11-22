@@ -15,7 +15,10 @@
       "name": "Every 15 Minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 400]
+      "position": [
+        240,
+        400
+      ]
     },
     {
       "parameters": {
@@ -24,19 +27,30 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":100}",
-        "options": {"timeout": 60000},
+        "options": {
+          "timeout": 60000
+        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTY2MCwiZXhwIjoxNzY1MDUxNjYwLCJqdGkiOiIxOTFjMDY4ZS1jOGNhLTQ4OWEtODk0OS1iMjJkMmUzODE2ZDIifQ.G4_I4D96Flv4rP3JwjwDPpEHaH6ShSb0YRRQG8PasXk"},
-            {"name": "Accept", "value": "application/json"}
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTY2MCwiZXhwIjoxNzY1MDUxNjYwLCJqdGkiOiIxOTFjMDY4ZS1jOGNhLTQ4OWEtODk0OS1iMjJkMmUzODE2ZDIifQ.G4_I4D96Flv4rP3JwjwDPpEHaH6ShSb0YRRQG8PasXk"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
           ]
         }
       },
       "name": "Get Tbilisi Active",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 200],
+      "position": [
+        480,
+        200
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -48,19 +62,30 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"model\":\"booking\",\"active\":false,\"page\":1,\"per_page\":100}",
-        "options": {"timeout": 60000},
+        "options": {
+          "timeout": 60000
+        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTY2MCwiZXhwIjoxNzY1MDUxNjYwLCJqdGkiOiIxOTFjMDY4ZS1jOGNhLTQ4OWEtODk0OS1iMjJkMmUzODE2ZDIifQ.G4_I4D96Flv4rP3JwjwDPpEHaH6ShSb0YRRQG8PasXk"},
-            {"name": "Accept", "value": "application/json"}
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTY2MCwiZXhwIjoxNzY1MDUxNjYwLCJqdGkiOiIxOTFjMDY4ZS1jOGNhLTQ4OWEtODk0OS1iMjJkMmUzODE2ZDIifQ.G4_I4D96Flv4rP3JwjwDPpEHaH6ShSb0YRRQG8PasXk"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
           ]
         }
       },
       "name": "Get Tbilisi Inactive",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 300],
+      "position": [
+        480,
+        300
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -72,19 +97,30 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":100}",
-        "options": {"timeout": 60000},
+        "options": {
+          "timeout": 60000
+        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDAyNSwiZXhwIjoxNzY1MDUyMDI1LCJqdGkiOiI0ZmQ2ODE4Yy0zYWNiLTRmZmQtOGZmYS0wZWMwZDkyMmIyMzgifQ.16s2ruRb3x_S7bgy4zF7TW9dSQ3ITqX3kei8recyH_8"},
-            {"name": "Accept", "value": "application/json"}
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDAyNSwiZXhwIjoxNzY1MDUyMDI1LCJqdGkiOiI0ZmQ2ODE4Yy0zYWNiLTRmZmQtOGZmYS0wZWMwZDkyMmIyMzgifQ.16s2ruRb3x_S7bgy4zF7TW9dSQ3ITqX3kei8recyH_8"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
           ]
         }
       },
       "name": "Get Batumi Active",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 400],
+      "position": [
+        480,
+        400
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -96,19 +132,30 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"model\":\"booking\",\"active\":false,\"page\":1,\"per_page\":100}",
-        "options": {"timeout": 60000},
+        "options": {
+          "timeout": 60000
+        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDAyNSwiZXhwIjoxNzY1MDUyMDI1LCJqdGkiOiI0ZmQ2ODE4Yy0zYWNiLTRmZmQtOGZmYS0wZWMwZDkyMmIyMzgifQ.16s2ruRb3x_S7bgy4zF7TW9dSQ3ITqX3kei8recyH_8"},
-            {"name": "Accept", "value": "application/json"}
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDAyNSwiZXhwIjoxNzY1MDUyMDI1LCJqdGkiOiI0ZmQ2ODE4Yy0zYWNiLTRmZmQtOGZmYS0wZWMwZDkyMmIyMzgifQ.16s2ruRb3x_S7bgy4zF7TW9dSQ3ITqX3kei8recyH_8"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
           ]
         }
       },
       "name": "Get Batumi Inactive",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 500],
+      "position": [
+        480,
+        500
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -120,19 +167,30 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":100}",
-        "options": {"timeout": 60000},
+        "options": {
+          "timeout": 60000
+        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDE3MiwiZXhwIjoxNzY1MDUyMTcyLCJqdGkiOiJmNzE1NGQ3MC0zZWFmLTRiNzItYTI3Ni0yZTg3MmQ4YjA0YmQifQ.1vd1kNbWB_qassLVqoxgyRsRJwtPsl7OR28gVsCxmwY"},
-            {"name": "Accept", "value": "application/json"}
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDE3MiwiZXhwIjoxNzY1MDUyMTcyLCJqdGkiOiJmNzE1NGQ3MC0zZWFmLTRiNzItYTI3Ni0yZTg3MmQ4YjA0YmQifQ.1vd1kNbWB_qassLVqoxgyRsRJwtPsl7OR28gVsCxmwY"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
           ]
         }
       },
       "name": "Get Kutaisi Active",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 600],
+      "position": [
+        480,
+        600
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -144,19 +202,30 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"model\":\"booking\",\"active\":false,\"page\":1,\"per_page\":100}",
-        "options": {"timeout": 60000},
+        "options": {
+          "timeout": 60000
+        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDE3MiwiZXhwIjoxNzY1MDUyMTcyLCJqdGkiOiJmNzE1NGQ3MC0zZWFmLTRiNzItYTI3Ni0yZTg3MmQ4YjA0YmQifQ.1vd1kNbWB_qassLVqoxgyRsRJwtPsl7OR28gVsCxmwY"},
-            {"name": "Accept", "value": "application/json"}
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDE3MiwiZXhwIjoxNzY1MDUyMTcyLCJqdGkiOiJmNzE1NGQ3MC0zZWFmLTRiNzItYTI3Ni0yZTg3MmQ4YjA0YmQifQ.1vd1kNbWB_qassLVqoxgyRsRJwtPsl7OR28gVsCxmwY"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
           ]
         }
       },
       "name": "Get Kutaisi Inactive",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 700],
+      "position": [
+        480,
+        700
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -168,19 +237,30 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":100}",
-        "options": {"timeout": 60000},
+        "options": {
+          "timeout": 60000
+        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTM4MSwiZXhwIjoxNzY1MDUxMzgxLCJqdGkiOiI4ZDdkYjYyNi1jNWJiLTQ0MWMtYTNlMy00YjQwOWFmODQ1NmUifQ.32BRzttLFFgOgMv-VusAXK8mmyvrk4X-pb_rHQHSFbw"},
-            {"name": "Accept", "value": "application/json"}
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTM4MSwiZXhwIjoxNzY1MDUxMzgxLCJqdGkiOiI4ZDdkYjYyNi1jNWJiLTQ0MWMtYTNlMy00YjQwOWFmODQ1NmUifQ.32BRzttLFFgOgMv-VusAXK8mmyvrk4X-pb_rHQHSFbw"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
           ]
         }
       },
       "name": "Get Service Active",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 800],
+      "position": [
+        480,
+        800
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -192,19 +272,30 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"model\":\"booking\",\"active\":false,\"page\":1,\"per_page\":100}",
-        "options": {"timeout": 60000},
+        "options": {
+          "timeout": 60000
+        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTM4MSwiZXhwIjoxNzY1MDUxMzgxLCJqdGkiOiI4ZDdkYjYyNi1jNWJiLTQ0MWMtYTNlMy00YjQwOWFmODQ1NmUifQ.32BRzttLFFgOgMv-VusAXK8mmyvrk4X-pb_rHQHSFbw"},
-            {"name": "Accept", "value": "application/json"}
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTM4MSwiZXhwIjoxNzY1MDUxMzgxLCJqdGkiOiI4ZDdkYjYyNi1jNWJiLTQ0MWMtYTNlMy00YjQwOWFmODQ1NmUifQ.32BRzttLFFgOgMv-VusAXK8mmyvrk4X-pb_rHQHSFbw"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
           ]
         }
       },
       "name": "Get Service Inactive",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 900],
+      "position": [
+        480,
+        900
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -216,19 +307,31 @@
       "name": "Process All Bookings",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [720, 500]
+      "position": [
+        720,
+        500
+      ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
         "query": "=INSERT INTO bookings (...) VALUES (...) ON CONFLICT (booking_number) DO UPDATE SET ...",
-        "options": {"queryBatching": "transaction"}
+        "options": {
+          "queryBatching": "transaction"
+        }
       },
       "name": "Save to DB",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [920, 500],
-      "credentials": {"postgres": {"name": "Neon PostgreSQL"}},
+      "position": [
+        920,
+        500
+      ],
+      "credentials": {
+        "postgres": {
+          "name": "Neon PostgreSQL"
+        }
+      },
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -240,33 +343,63 @@
       "name": "Format Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 500]
+      "position": [
+        1120,
+        500
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": {"caseSensitive": true, "typeValidation": "strict", "version": 1},
-          "conditions": [{"id": "check-error-count", "leftValue": "={{ $json.error_count }}", "rightValue": 0, "operator": {"type": "number", "operation": "gt"}}],
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check-error-count",
+              "leftValue": "={{ $json.error_count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
           "combinator": "and"
         }
       },
       "name": "If Error",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1320, 500]
+      "position": [
+        1320,
+        500
+      ]
     },
     {
       "parameters": {
         "operation": "sendMessage",
         "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
         "text": "={{ $json.message + '\\n\\n🔗 <a href=\"https://n8n.rentflow.rentals/workflow/' + $workflow.id + '/executions/' + $execution.id + '\">Открыть execution</a>' }}",
-        "additionalFields": {"appendAttribution": false, "parse_mode": "HTML"}
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
       },
       "name": "Send Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1520, 400],
-      "credentials": {"telegramApi": {"name": "Telegram Alert Bot"}}
+      "position": [
+        1520,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram Alert Bot"
+        }
+      }
     },
     {
       "parameters": {
@@ -275,50 +408,223 @@
       "name": "Throw Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1720, 400]
+      "position": [
+        1720,
+        400
+      ]
     },
     {
       "parameters": {},
       "name": "Success",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1520, 600]
+      "position": [
+        1520,
+        600
+      ]
     }
   ],
   "connections": {
     "Every 15 Minutes": {
-      "main": [[
-        {"node": "Get Tbilisi Active", "type": "main", "index": 0},
-        {"node": "Get Tbilisi Inactive", "type": "main", "index": 0},
-        {"node": "Get Batumi Active", "type": "main", "index": 0},
-        {"node": "Get Batumi Inactive", "type": "main", "index": 0},
-        {"node": "Get Kutaisi Active", "type": "main", "index": 0},
-        {"node": "Get Kutaisi Inactive", "type": "main", "index": 0},
-        {"node": "Get Service Active", "type": "main", "index": 0},
-        {"node": "Get Service Inactive", "type": "main", "index": 0}
-      ]]
-    },
-    "Get Tbilisi Active": {"main": [[{"node": "Process All Bookings", "type": "main", "index": 0}]]},
-    "Get Tbilisi Inactive": {"main": [[{"node": "Process All Bookings", "type": "main", "index": 0}]]},
-    "Get Batumi Active": {"main": [[{"node": "Process All Bookings", "type": "main", "index": 0}]]},
-    "Get Batumi Inactive": {"main": [[{"node": "Process All Bookings", "type": "main", "index": 0}]]},
-    "Get Kutaisi Active": {"main": [[{"node": "Process All Bookings", "type": "main", "index": 0}]]},
-    "Get Kutaisi Inactive": {"main": [[{"node": "Process All Bookings", "type": "main", "index": 0}]]},
-    "Get Service Active": {"main": [[{"node": "Process All Bookings", "type": "main", "index": 0}]]},
-    "Get Service Inactive": {"main": [[{"node": "Process All Bookings", "type": "main", "index": 0}]]},
-    "Process All Bookings": {"main": [[{"node": "Save to DB", "type": "main", "index": 0}]]},
-    "Save to DB": {"main": [[{"node": "Format Result", "type": "main", "index": 0}]]},
-    "Format Result": {"main": [[{"node": "If Error", "type": "main", "index": 0}]]},
-    "If Error": {
       "main": [
-        [{"node": "Send Alert", "type": "main", "index": 0}],
-        [{"node": "Success", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Get Tbilisi Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Tbilisi Inactive",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Batumi Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Batumi Inactive",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Kutaisi Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Kutaisi Inactive",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Service Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Service Inactive",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Send Alert": {"main": [[{"node": "Throw Error", "type": "main", "index": 0}]]}
+    "Get Tbilisi Active": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tbilisi Inactive": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Batumi Active": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Batumi Inactive": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Kutaisi Active": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Kutaisi Inactive": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Service Active": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Service Inactive": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process All Bookings": {
+      "main": [
+        [
+          {
+            "node": "Save to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to DB": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "If Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Alert": {
+      "main": [
+        [
+          {
+            "node": "Throw Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   }
 }
-

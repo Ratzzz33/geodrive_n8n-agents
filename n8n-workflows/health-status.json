@@ -16,7 +16,10 @@
       "name": "Cron",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
-      "position": [250, 300]
+      "position": [
+        250,
+        300
+      ]
     },
     {
       "parameters": {
@@ -28,7 +31,10 @@
       "name": "HTTP Request",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [450, 300]
+      "position": [
+        450,
+        300
+      ]
     },
     {
       "parameters": {
@@ -38,7 +44,10 @@
       "name": "Process Health",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [650, 300]
+      "position": [
+        650,
+        300
+      ]
     },
     {
       "parameters": {
@@ -59,7 +68,10 @@
       "name": "Save Health",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2,
-      "position": [850, 300],
+      "position": [
+        850,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "postgres-credentials",
@@ -94,7 +106,10 @@
       "name": "If Failed",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1050, 300]
+      "position": [
+        1050,
+        300
+      ]
     },
     {
       "parameters": {
@@ -106,7 +121,67 @@
       "name": "Telegram Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
-      "position": [1250, 400],
+      "position": [
+        1250,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "query",
+        "query": "WITH config AS (SELECT * FROM (VALUES ('starline'), ('starline-api')) AS c(branch)), latest AS (SELECT DISTINCT ON (branch) branch, ts, ok, reason FROM health WHERE branch IN (SELECT branch FROM config) ORDER BY branch, ts DESC) SELECT c.branch, l.ts, l.ok, l.reason FROM config c LEFT JOIN latest l ON l.branch = c.branch;"
+      },
+      "id": "fetch-workflow-health",
+      "name": "Fetch Workflow Health",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        450,
+        100
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Проверяем, что активные workflow присылают свежие статусы\nconst monitored = [\n  { branch: 'starline', label: 'Starline GPS Monitor', maxLagMinutes: 6 },\n  { branch: 'starline-api', label: 'Starline API Sync', maxLagMinutes: 3 }\n];\n\nconst latestByBranch = {};\nfor (const item of $input.all()) {\n  const data = item.json;\n  if (!data.branch) continue;\n  latestByBranch[data.branch] = data;\n}\n\nconst now = Date.now();\nconst issues = [];\n\nfor (const config of monitored) {\n  const latest = latestByBranch[config.branch];\n\n  if (!latest || !latest.ts) {\n    issues.push({\n      branch: config.branch,\n      label: config.label,\n      details: 'Нет записей в health — workflow мог перестать работать',\n      issue: 'no-data'\n    });\n    continue;\n  }\n\n  const lastTs = Date.parse(latest.ts);\n  const minutesSince = Math.round((now - lastTs) / 60000);\n\n  if (latest.ok === false) {\n    issues.push({\n      branch: config.branch,\n      label: config.label,\n      details: `Последнее выполнение завершилось с ошибкой: ${latest.reason || 'нет описания'}`,\n      lastTs: latest.ts,\n      minutesSince,\n      issue: 'failed'\n    });\n    continue;\n  }\n\n  if (minutesSince > config.maxLagMinutes) {\n    issues.push({\n      branch: config.branch,\n      label: config.label,\n      details: `Нет обновлений ${minutesSince} мин (лимит ${config.maxLagMinutes} мин). Последняя запись: ${latest.ts || 'нет данных'}`,\n      lastTs: latest.ts,\n      minutesSince,\n      issue: 'stale'\n    });\n  }\n}\n\nif (issues.length === 0) {\n  return [];\n}\n\nconst lines = [\n  '🚨 Мониторинг workflow: обнаружены проблемы',\n  '',\n  ...issues.map((issue) => `• ${issue.label} — ${issue.details}`)\n];\n\nreturn [{\n  json: {\n    message: lines.join('\\n'),\n    issues\n  }\n}];"
+      },
+      "id": "evaluate-workflows",
+      "name": "Evaluate Workflows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        650,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ $json.message + '\\n\\n🔗 <a href=\"https://n8n.rentflow.rentals/workflow/' + $workflow.id + '/executions/' + $execution.id + '\">Открыть execution</a>' }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "workflow-telegram-alert",
+      "name": "Workflow Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        850,
+        100
+      ],
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
@@ -117,29 +192,94 @@
   ],
   "connections": {
     "Cron": {
-      "main": [[{ "node": "HTTP Request", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Workflow Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "HTTP Request": {
-      "main": [[{ "node": "Process Health", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Process Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Process Health": {
-      "main": [[{ "node": "Save Health", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Save Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Save Health": {
-      "main": [[{ "node": "If Failed", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "If Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "If Failed": {
       "main": [
         [],
         [
-          { "node": "Telegram Alert", "type": "main", "index": 0 }
+          {
+            "node": "Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Workflow Health": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Workflows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Workflows": {
+      "main": [
+        [
+          {
+            "node": "Workflow Alert",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     }
   },
   "pinData": {},
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   },
   "staticData": null,
   "tags": [],
@@ -147,4 +287,3 @@
   "updatedAt": "2025-01-15T00:00:00.000Z",
   "versionId": "1"
 }
-

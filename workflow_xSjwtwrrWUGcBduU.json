@@ -1,0 +1,787 @@
+{
+  "updatedAt": "2025-11-20T11:43:11.732Z",
+  "createdAt": "2025-11-07T20:19:36.893Z",
+  "id": "xSjwtwrrWUGcBduU",
+  "name": "✅Парсинг истории операций по филиалам раз в 3 минуты",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 3
+            }
+          ]
+        }
+      },
+      "id": "trigger",
+      "name": "Every 3 Minutes",
+      "position": [
+        240,
+        400
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "jsCode": "const TOKENS = {\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs',\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc'\n};\n\nreturn [{ json: { branch: 'tbilisi', token: TOKENS.tbilisi, page: 1 } }];"
+      },
+      "id": "prep-tbilisi",
+      "name": "Tbilisi Pages",
+      "position": [
+        448,
+        208
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const TOKENS = {\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs',\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc'\n};\n\nreturn [{ json: { branch: 'batumi', token: TOKENS.batumi, page: 1 } }];"
+      },
+      "id": "prep-batumi",
+      "name": "Batumi Pages",
+      "position": [
+        448,
+        352
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const TOKENS = {\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs',\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc'\n};\n\nreturn [{ json: { branch: 'kutaisi', token: TOKENS.kutaisi, page: 1 } }];"
+      },
+      "id": "prep-kutaisi",
+      "name": "Kutaisi Pages",
+      "position": [
+        448,
+        512
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const TOKENS = {\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs',\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc'\n};\n\nreturn [{ json: { branch: 'service-center', token: TOKENS['service-center'], page: 1 } }];"
+      },
+      "id": "prep-service",
+      "name": "Service Pages",
+      "position": [
+        448,
+        656
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/search_operations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"page\":{{ $json.page }},\"per_page\":100,\"sort_by\":\"id\",\"direction\":\"desc\",\"search\":null}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "get-tbilisi",
+      "name": "Get Tbilisi",
+      "position": [
+        640,
+        208
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/search_operations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"page\":{{ $json.page }},\"per_page\":100,\"sort_by\":\"id\",\"direction\":\"desc\",\"search\":null}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "get-batumi",
+      "name": "Get Batumi",
+      "position": [
+        640,
+        352
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/search_operations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"page\":{{ $json.page }},\"per_page\":100,\"sort_by\":\"id\",\"direction\":\"desc\",\"search\":null}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "get-kutaisi",
+      "name": "Get Kutaisi",
+      "position": [
+        640,
+        512
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/search_operations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"page\":{{ $json.page }},\"per_page\":100,\"sort_by\":\"id\",\"direction\":\"desc\",\"search\":null}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "get-service",
+      "name": "Get Service",
+      "position": [
+        640,
+        656
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Собираем ВСЕ responses со всех 4 филиалов и распаковываем operations\nconst processed = [];\n\n// Функция для обработки одного филиала с проверкой ошибок\nfunction processItems(items, branchName) {\n  if (!items || items.length === 0) {\n    processed.push({ json: { branch: branchName, error: true, error_reason: 'no_response', error_message: 'Нет ответа от API' } });\n    return;\n  }\n  \n  items.forEach(item => {\n    // Проверка на ошибку HTTP запроса\n    if (item.error) {\n      processed.push({ json: { branch: branchName, error: true, error_reason: 'http_error', error_message: item.error.message || 'HTTP ошибка' } });\n      return;\n    }\n    \n    // Проверка на ошибку в JSON\n    if (item.json?.error) {\n      processed.push({ json: { branch: branchName, error: true, error_reason: 'api_error', error_message: item.json.error.message || JSON.stringify(item.json.error) } });\n      return;\n    }\n    \n    // Проверка на таймаут (пустой ответ или статус ошибки)\n    if (!item.json || (item.json.statusCode && item.json.statusCode >= 400)) {\n      processed.push({ json: { branch: branchName, error: true, error_reason: 'timeout_or_error', error_message: `HTTP ${item.json?.statusCode || 'timeout'}` } });\n      return;\n    }\n    \n    const operations = item.json?.operations?.data || item.json?.data || [];\n    \n    // Если нет операций - это не ошибка, просто пустой ответ\n    if (operations.length === 0) {\n      processed.push({ json: { branch: branchName, status: 'no_data' } });\n      return;\n    }\n    \n    // Обрабатываем операции\n    operations.forEach(op_item => {\n      const op = op_item.attributes || op_item;\n      processed.push({\n        json: {\n          branch: branchName,\n          operation_type: op.operation_type || op.type || 'unknown',\n          operation_id: op.id ? String(op.id) : null,\n          description: op.description || '',\n          entity_type: op.entity_type || null,\n          entity_id: op.entity_id ? String(op.entity_id) : null,\n          user_name: op.user_name || null,\n          created_at: op.created_at || new Date().toISOString(),\n          raw_data: JSON.stringify(op)\n        }\n      });\n    });\n  });\n}\n\n// Обрабатываем все 4 филиала\nprocessItems($('Get Tbilisi').all(), 'tbilisi');\nprocessItems($('Get Batumi').all(), 'batumi');\nprocessItems($('Get Kutaisi').all(), 'kutaisi');\nprocessItems($('Get Service').all(), 'service-center');\n\nreturn processed;"
+      },
+      "id": "merge-and-process",
+      "name": "Merge & Process",
+      "position": [
+        976,
+        400
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Проверяем ошибки сохранения в БД и объединяем с исходными данными\nconst originalData = $('Merge & Process').all();\nconst saveResults = $input.all();\n\n// Создаем мапу для быстрого поиска ошибок сохранения\nconst saveErrors = {};\n\n// Проверяем результаты сохранения\nsaveResults.forEach((result, index) => {\n  // Проверяем различные форматы ошибок от Postgres node с continueOnFail\n  const hasError = result.error || \n                   (result.json && result.json.error) ||\n                   (result.json && result.json.message && result.json.message.includes('error')) ||\n                   (result.json && !result.json.success && result.json.success !== undefined);\n  \n  if (hasError) {\n    // Пытаемся найти соответствующий элемент из исходных данных\n    const originalItem = originalData[index];\n    let branch = null;\n    \n    if (originalItem && originalItem.json && originalItem.json.branch) {\n      branch = originalItem.json.branch;\n    } else {\n      // Если не можем найти branch из исходных данных, пробуем из всех\n      const allBranches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];\n      branch = allBranches[index % allBranches.length];\n    }\n    \n    if (branch) {\n      if (!saveErrors[branch]) saveErrors[branch] = [];\n      saveErrors[branch].push({\n        error: true,\n        error_reason: 'db_save_error',\n        error_message: result.error?.message || result.json?.error?.message || result.json?.message || 'Ошибка сохранения в БД'\n      });\n    }\n  }\n});\n\n// Объединяем исходные данные с ошибками сохранения\nconst combined = [...originalData];\n\n// Добавляем ошибки сохранения для каждого филиала\nObject.keys(saveErrors).forEach(branch => {\n  saveErrors[branch].forEach(err => {\n    combined.push({ json: { branch, ...err } });\n  });\n});\n\nreturn combined;"
+      },
+      "id": "pass-through-data",
+      "name": "Pass Through Data",
+      "position": [
+        1232,
+        400
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const saved = $input.all();\nconst successCount = saved.filter(s => !s.json.error && s.json.operation_id).length;\nconst errorCount = saved.filter(s => s.json.error).length;\n\nconst byBranch = {};\nconst errorDetails = {};\n\nsaved.forEach(item => {\n  if (item.json.branch) {\n    const branch = item.json.branch;\n    if (!byBranch[branch]) byBranch[branch] = { success: 0, error: 0 };\n    \n    if (item.json.error) {\n      byBranch[branch].error++;\n      if (!errorDetails[branch]) errorDetails[branch] = [];\n      errorDetails[branch].push({\n        reason: item.json.error_reason || 'unknown',\n        message: item.json.error_message || 'Неизвестная ошибка'\n      });\n    } else if (item.json.operation_id) {\n      byBranch[branch].success++;\n    }\n  }\n});\n\nlet message = '📜 Парсинг истории операций по филиалам раз в 3 минуты:\\n';\nObject.keys(byBranch).forEach(branch => {\n  const stats = byBranch[branch];\n  message += `${branch.toUpperCase()}: ${stats.success} ✓`;\n  if (stats.error > 0) {\n    message += ` / ${stats.error} ✗`;\n    if (errorDetails[branch]) {\n      const uniqueErrors = [...new Set(errorDetails[branch].map(e => e.message))];\n      uniqueErrors.forEach(errMsg => {\n        message += `\\n  ❌ ${errMsg}`;\n      });\n    }\n  }\n  message += '\\n';\n});\nmessage += `\\nВсего: ${successCount} операций / ${saved.length} записей`;\nif (errorCount > 0) {\n  message += `\\n\\n🚨 ОШИБОК: ${errorCount}`;\n}\n\nreturn [{ json: { message, success: errorCount === 0, saved_count: successCount, error_count: errorCount, by_branch: byBranch, error_details: errorDetails } }];"
+      },
+      "id": "format-result",
+      "name": "Format Result",
+      "position": [
+        1360,
+        400
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.error_count }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": 1,
+              "id": "a8d461ac-15b2-4191-a7ed-896eadc18115"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-error",
+      "name": "If Error",
+      "position": [
+        1488,
+        400
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "chatId": "=-1003484642420",
+        "text": "={{ $json.message }}\n\n🔗 <a href=\"https://n8n.rentflow.rentals/workflow/{{ $workflow.id }}/executions/{{ $execution.id }}\">Открыть execution</a>",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "send-alert",
+      "name": "Send Alert",
+      "position": [
+        1680,
+        288
+      ],
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "webhookId": "fefbafdd-c6d9-43ac-83fd-9bb584e468bd",
+      "credentials": {
+        "telegramApi": {
+          "id": "1tKryXxL5Gq395nN",
+          "name": "Telegram account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Помечаем workflow как ошибочный, выбрасывая ошибку\nconst errorData = $input.first().json;\nconst errorMessage = errorData.message || 'Ошибка парсинга истории операций';\nthrow new Error(errorMessage);"
+      },
+      "id": "throw-error",
+      "name": "Throw Error",
+      "position": [
+        1856,
+        288
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {},
+      "id": "e8f10fa0-a3f6-4f66-9d6a-0f85c703a26c",
+      "name": "Success",
+      "position": [
+        1712,
+        496
+      ],
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "id": "26e9aca7-cb19-4ed6-9da4-4741b9fe87e5",
+      "name": "Merge All Branches",
+      "position": [
+        832,
+        368
+      ],
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO health (ts, branch, ok, reason) VALUES (NOW(), 'history-parser', TRUE, 'success')",
+        "options": {}
+      },
+      "id": "c700c14f-2f7e-4cb1-88cd-ba6e46667390",
+      "name": "Log Success to Health",
+      "position": [
+        2000,
+        496
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "query": "=INSERT INTO history (branch, operation_type, operation_id, description, entity_type, entity_id, user_name, created_at, raw_data, matched, processed) VALUES ('{{ $json.branch }}', '{{ ($json.operation_type || 'unknown').replace(/'/g, \"''\") }}', {{ $json.operation_id ? \"'\" + $json.operation_id + \"'\" : \"NULL\" }}, '{{ ($json.description || '').replace(/'/g, \"''\") }}', {{ $json.entity_type ? \"'\" + $json.entity_type.replace(/'/g, \"''\") + \"'\" : \"NULL\" }}, {{ $json.entity_id ? \"'\" + $json.entity_id + \"'\" : \"NULL\" }}, {{ $json.user_name ? \"'\" + $json.user_name.replace(/'/g, \"''\") + \"'\" : \"NULL\" }}, '{{ $json.created_at }}', '{{ ($json.raw_data || '{}').replace(/'/g, \"''\") }}'::jsonb, FALSE, FALSE) ON CONFLICT (branch, operation_id) DO UPDATE SET operation_type = EXCLUDED.operation_type, description = EXCLUDED.description, entity_type = EXCLUDED.entity_type, entity_id = EXCLUDED.entity_id, user_name = EXCLUDED.user_name, created_at = EXCLUDED.created_at, raw_data = EXCLUDED.raw_data, ts = NOW()"
+      },
+      "id": "4d1b5f5d-8a83-49ec-b9c0-1efcb33578b7",
+      "name": "Save to History1",
+      "position": [
+        1104,
+        400
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "save-history-audit",
+      "name": "Save to History Audit",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1280,
+        400
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO history_audit (branch, operation_type, operation_id, description, entity_type, entity_id, user_name, created_at, raw_data, processed) VALUES ('{{ $json.branch }}', '{{ ($json.operation_type || 'unknown').replace(/'/g, \"''\") }}', {{ $json.operation_id ? \"'\" + $json.operation_id + \"'\" : \"NULL\" }}, '{{ ($json.description || '').replace(/'/g, \"''\") }}', {{ $json.entity_type ? \"'\" + $json.entity_type.replace(/'/g, \"''\") + \"'\" : \"NULL\" }}, {{ $json.entity_id ? \"'\" + $json.entity_id + \"'\" : \"NULL\" }}, {{ $json.user_name ? \"'\" + $json.user_name.replace(/'/g, \"''\") + \"'\" : \"NULL\" }}, '{{ $json.created_at }}', '{{ ($json.raw_data || '{}').replace(/'/g, \"''\") }}'::jsonb, FALSE)",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Every 3 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Tbilisi Pages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Batumi Pages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Kutaisi Pages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Service Pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tbilisi Pages": {
+      "main": [
+        [
+          {
+            "node": "Get Tbilisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batumi Pages": {
+      "main": [
+        [
+          {
+            "node": "Get Batumi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kutaisi Pages": {
+      "main": [
+        [
+          {
+            "node": "Get Kutaisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Service Pages": {
+      "main": [
+        [
+          {
+            "node": "Get Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tbilisi": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Batumi": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Kutaisi": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Get Service": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merge All Branches": {
+      "main": [
+        [
+          {
+            "node": "Merge & Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge & Process": {
+      "main": [
+        [
+          {
+            "node": "Save to History1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pass Through Data": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "If Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Alert": {
+      "main": [
+        [
+          {
+            "node": "Throw Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success": {
+      "main": [
+        [
+          {
+            "node": "Log Success to Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to History1": {
+      "main": [
+        [
+          {
+            "node": "Save to History Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to History Audit": {
+      "main": [
+        [
+          {
+            "node": "Pass Through Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "timezone": "Asia/Tbilisi",
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Every 3 Minutes": {
+      "recurrenceRules": []
+    },
+    "node:Every 2 Minutes": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "pinData": {},
+  "versionId": "a5267e3c-7fa6-4458-8242-bba8a077f721",
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2025-11-07T20:19:36.893Z",
+      "createdAt": "2025-11-07T20:19:36.893Z",
+      "role": "workflow:owner",
+      "workflowId": "xSjwtwrrWUGcBduU",
+      "projectId": "YeYimRJroeGbDN4w",
+      "project": {
+        "updatedAt": "2025-10-31T22:08:34.100Z",
+        "createdAt": "2025-10-31T21:59:17.618Z",
+        "id": "YeYimRJroeGbDN4w",
+        "name": "Aleksey Eliseev <33pokrov33@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-10-31T21:59:17.618Z",
+            "createdAt": "2025-10-31T21:59:17.618Z",
+            "userId": "7d62b373-201b-47f3-859a-cdc69ddea44a",
+            "projectId": "YeYimRJroeGbDN4w",
+            "user": {
+              "updatedAt": "2025-11-19T20:00:50.021Z",
+              "createdAt": "2025-10-31T21:58:30.097Z",
+              "id": "7d62b373-201b-47f3-859a-cdc69ddea44a",
+              "email": "33pokrov33@gmail.com",
+              "firstName": "Aleksey",
+              "lastName": "Eliseev",
+              "personalizationAnswers": {
+                "version": "v4",
+                "personalization_survey_submitted_at": "2025-10-31T22:14:18.419Z",
+                "personalization_survey_n8n_version": "1.117.3",
+                "companyIndustryExtended": [
+                  "physical-retail-or-services"
+                ],
+                "companySize": "<20",
+                "companyType": "other",
+                "role": "business-owner",
+                "reportedSource": "friend"
+              },
+              "settings": {
+                "userActivated": true,
+                "firstSuccessfulWorkflowId": "gNXRKIQpNubEazH7",
+                "userActivatedAt": 1762108796654,
+                "easyAIWorkflowOnboarded": true
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2025-11-19",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": []
+}

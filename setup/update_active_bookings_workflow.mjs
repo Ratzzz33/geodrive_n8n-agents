@@ -1,115 +1,399 @@
-#!/usr/bin/env node
-/**
- * Обновление workflow "Парсинг активных броней раз в час"
- * Исправляет структуру согласно правилам 2025 года
- */
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
-import https from 'https';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+const workflowPath = path.resolve('n8n-workflows/_RentProg__Active_Bookings.json');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const fetchCode = `// Загружаем все страницы активных/новых броней по каждому филиалу
+const branches = [
+  {
+    branch: 'tbilisi',
+    active: true,
+    token: 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTY2MCwiZXhwIjoxNzY1MDUxNjYwLCJqdGkiOiIxOTFjMDY4ZS1jOGNhLTQ4OWEtODk0OS1iMjJkMmUzODE2ZDIifQ.G4_I4D96Flv4rP3JwjwDPpEHaH6ShSb0YRRQG8PasXk',
+    extraHeaders: {
+      Origin: 'https://web.rentprog.ru',
+      Referer: 'https://web.rentprog.ru/'
+    }
+  },
+  {
+    branch: 'batumi',
+    active: true,
+    token: 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDAyNSwiZXhwIjoxNzY1MDUyMDI1LCJqdGkiOiI0ZmQ2ODE4Yy0zYWNiLTRmZmQtOGZmYS0wZWMwZDkyMmIyMzgifQ.16s2ruRb3x_S7bgy4zF7TW9dSQ3ITqX3kei8recyH_8'
+  },
+  {
+    branch: 'kutaisi',
+    active: true,
+    token: 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDE3MiwiZXhwIjoxNzY1MDUyMTcyLCJqdGkiOiJmNzE1NGQ3MC0zZWFmLTRiNzItYTI3Ni0yZTg3MmQ4YjA0YmQifQ.1vd1kNbWB_qassLVqoxgyRsRJwtPsl7OR28gVsCxmwY'
+  },
+  {
+    branch: 'service-center',
+    active: true,
+    token: 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTM4MSwiZXhwIjoxNzY1MDUxMzgxLCJqdGkiOiI4ZDdkYjYyNi1jNWJiLTQ0MWMtYTNlMy00YjQwOWFmODQ1NmUifQ.32BRzttLFFgOgMv-VusAXK8mmyvrk4X-pb_rHQHSFbw'
+  }
+];
 
-const N8N_HOST = process.env.N8N_HOST || 'https://n8n.rentflow.rentals/api/v1';
-const N8N_API_KEY = process.env.N8N_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZDYyYjM3My0yMDFiLTQ3ZjMtODU5YS1jZGM2OWRkZWE0NGEiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYyMDg0MjY4LCJleHAiOjE3NjQ2NTE2MDB9.gsdxltowlQShNi9mil074-cMhnuJJLI5lN6MP7FQEcI';
-const WORKFLOW_ID = 'GMKZJpL9mF1iMEGV';
+const perPage = 50;
+const filters = {
+  start_date_from: '2025-10-14',
+  state: ['Активная', 'Новая']
+};
 
-function n8nRequest(method, path, data = null) {
-  return new Promise((resolve, reject) => {
-    const url = new URL(path, N8N_HOST);
-    const options = {
-      method,
-      headers: {
-        'X-N8N-API-KEY': N8N_API_KEY,
-        'Content-Type': 'application/json',
-      },
+const results = [];
+
+for (const config of branches) {
+  const aggregated = [];
+  let page = 1;
+
+  while (true) {
+    const body = {
+      model: 'booking',
+      page,
+      per_page: perPage,
+      filters
     };
 
-    const req = https.request(url, options, (res) => {
-      let body = '';
-      res.on('data', (chunk) => { body += chunk; });
-      res.on('end', () => {
-        try {
-          const parsed = body ? JSON.parse(body) : {};
-          resolve({ statusCode: res.statusCode, data: parsed });
-        } catch (e) {
-          resolve({ statusCode: res.statusCode, data: { error: body } });
-        }
-      });
+    const response = await this.helpers.httpRequest({
+      method: 'POST',
+      uri: 'https://rentprog.net/api/v1/index_with_search',
+      headers: {
+        Authorization: config.token,
+        Accept: 'application/json',
+        ...(config.extraHeaders || {})
+      },
+      body,
+      json: true,
+      timeout: 60000
     });
 
-    req.on('error', reject);
-    if (data) {
-      req.write(JSON.stringify(data));
+    const pageData = response?.bookings?.data || [];
+    aggregated.push(...pageData);
+
+    if (pageData.length < perPage) {
+      break;
     }
-    req.end();
+
+    page += 1;
+    if (page > 50) {
+      throw new Error(\`Too many pages for \${config.branch}\`);
+    }
+  }
+
+  console.log(\`Fetched \${aggregated.length} bookings for \${config.branch}\`);
+
+  results.push({
+    json: {
+      branch: config.branch,
+      active: config.active,
+      bookings: {
+        data: aggregated
+      }
+    }
   });
 }
 
-async function updateWorkflow() {
-  console.log('🔄 Обновление workflow "Парсинг активных броней раз в час"...\n');
+return results;`;
 
-  // Читаем исправленный файл
-  const workflowFile = join(__dirname, '..', 'n8n-workflows', 'active-bookings-hourly-sync.json');
-  const workflowData = JSON.parse(readFileSync(workflowFile, 'utf8'));
+const processCode = `// Обрабатываем все брони по филиалам + карта автомобилей
+const branchItems = (() => {
+  try {
+    return $input.all(0);
+  } catch (err) {
+    console.warn('⚠️  Нет данных от Fetch Branch Bookings');
+    return [];
+  }
+})();
 
-  // Получаем текущий workflow для сохранения credentials
-  console.log('   📥 Получаю текущий workflow...');
-  const currentResponse = await n8nRequest('GET', `/workflows/${WORKFLOW_ID}`);
-  
-  if (currentResponse.statusCode !== 200) {
-    throw new Error(`Ошибка получения workflow: ${currentResponse.statusCode}`);
+const carItems = (() => {
+  try {
+    return $items('Get Car IDs', 'main', 0, { returnAll: true }) || [];
+  } catch (err) {
+    console.warn('⚠️  Нет данных из Get Car IDs');
+    return [];
+  }
+})();
+
+function normalizeCode(value) {
+  return (value ?? '').toString().trim().toLowerCase();
+}
+
+const carIdMap = new Map();
+carItems.forEach(item => {
+  const code = normalizeCode(item.json?.code || item.json?.car_code);
+  const id = item.json?.id;
+  if (code && id) {
+    carIdMap.set(code, id);
+  }
+});
+console.log('Car codes in map:', carIdMap.size);
+
+function convertDateToISO(rawValue) {
+  if (!rawValue) {
+    return null;
   }
 
-  const currentWorkflow = currentResponse.data.data;
-  const currentNodes = currentWorkflow.nodes || [];
+  const value = rawValue.toString().trim();
+  if (!value) {
+    return null;
+  }
 
-  // Восстанавливаем credentials из существующих нод
-  workflowData.nodes = workflowData.nodes.map(node => {
-    const existingNode = currentNodes.find(n => n.name === node.name && n.type === node.type);
-    if (existingNode && existingNode.credentials) {
-      node.credentials = existingNode.credentials;
-    }
-    return node;
-  });
-
-  // Обновляем settings - убираем errorWorkflow если он ссылается на несуществующий workflow
-  const updatedSettings = {
-    ...workflowData.settings,
-    timezone: 'Asia/Tbilisi',
-    executionOrder: 'v1'
+  const tryParse = (input) => {
+    const parsed = new Date(input);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
   };
-  
-  // Удаляем errorWorkflow если он есть (может ссылаться на несуществующий workflow)
-  if (currentWorkflow.settings?.errorWorkflow) {
-    console.log('   ⚠️  Удаляю ссылку на errorWorkflow (может вызывать ошибки)');
-    delete updatedSettings.errorWorkflow;
+
+  if (value.includes('T')) {
+    const iso = tryParse(value);
+    if (iso) {
+      return iso;
+    }
   }
 
-  workflowData.settings = updatedSettings;
+  const match = value.match(/^(\\d{2})-(\\d{2})-(\\d{4})(?:\\s+(\\d{2}):(\\d{2}))?$/);
+  if (match) {
+    const day = match[1];
+    const month = match[2];
+    const year = match[3];
+    const hours = match[4] || '00';
+    const minutes = match[5] || '00';
+    const offsetDate = year + '-' + month + '-' + day + 'T' + hours + ':' + minutes + ':00+04:00';
+    const iso = tryParse(offsetDate);
+    return iso || offsetDate;
+  }
 
-  // Обновляем workflow
-  console.log('   💾 Обновляю workflow...');
-  const updateResponse = await n8nRequest('PUT', `/workflows/${WORKFLOW_ID}`, workflowData);
+  return tryParse(value);
+}
 
-  if (updateResponse.statusCode >= 200 && updateResponse.statusCode < 300) {
-    console.log(`   ✅ Workflow успешно обновлен!`);
-    console.log(`   🔗 URL: https://n8n.rentflow.rentals/workflow/${WORKFLOW_ID}\n`);
-    return { success: true };
-  } else {
-    throw new Error(`Ошибка обновления: ${updateResponse.statusCode}\n${JSON.stringify(updateResponse.data, null, 2)}`);
+const branchMapping = [
+  { branch: 'tbilisi', active: true },
+  { branch: 'batumi', active: true },
+  { branch: 'kutaisi', active: true },
+  { branch: 'service-center', active: true },
+];
+
+const branchMappingByName = new Map(branchMapping.map(item => [item.branch, item]));
+
+function getTechnicalType(attrs) {
+  const firstName = (attrs.first_name || '').toLowerCase();
+  const lastName = (attrs.last_name || '').toLowerCase();
+  const clientName = (firstName + ' ' + lastName).trim().toLowerCase();
+  const description = (attrs.description || '').toLowerCase();
+  const locationStart = (attrs.location_start || '').toLowerCase();
+
+  const isTechnical =
+    clientName.includes('сервис') ||
+    clientName.includes('сотрудник') ||
+    clientName.includes('service') ||
+    clientName.includes('employee') ||
+    attrs.rental_cost === 0;
+
+  if (!isTechnical) {
+    return {
+      is_technical: false,
+      technical_type: 'regular',
+      technical_purpose: null,
+    };
+  }
+
+  const isRepair =
+    clientName.includes('сервис') ||
+    description.includes('ремонт') ||
+    description.includes('repair') ||
+    description.includes('fix') ||
+    description.includes('сто') ||
+    locationStart.includes('сервис') ||
+    locationStart.includes('service');
+
+  if (isRepair) {
+    return {
+      is_technical: true,
+      technical_type: 'technical_repair',
+      technical_purpose: 'repair',
+    };
+  }
+
+  return {
+    is_technical: true,
+    technical_type: 'technical',
+    technical_purpose: 'employee_trip',
+  };
+}
+
+const results = [];
+
+branchItems.forEach((item, index) => {
+  const json = item.json;
+  const branchKey = json.branch || branchMapping[index]?.branch;
+  const fallback = branchMapping[index] || { branch: branchKey || 'unknown', active: null };
+  const mapping = branchMappingByName.get(branchKey) || fallback;
+  const isActiveFlag = mapping.active ?? json.active ?? null;
+
+  if (json.error) {
+    results.push({
+      json: {
+        branch: mapping.branch,
+        error: true,
+        error_message: json.error || 'Unknown error',
+      },
+    });
+    return;
+  }
+
+  const bookingsData = json.bookings?.data || [];
+  bookingsData.forEach(booking => {
+    const attrs = booking.attributes || booking;
+    const bookingId = booking.id || attrs.id || null;
+
+    if (!bookingId) {
+      return;
+    }
+
+    const technicalInfo = getTechnicalType(attrs);
+    const clientName = [attrs.first_name, attrs.middle_name, attrs.last_name]
+      .filter(Boolean)
+      .join(' ');
+
+    const carCode = attrs.car_code || '';
+    const rentprogCarIdRaw = attrs.car_id ?? attrs.carId ?? null;
+    const rentprogCarId = rentprogCarIdRaw !== null && rentprogCarIdRaw !== undefined
+      ? String(rentprogCarIdRaw)
+      : null;
+    const carId = carIdMap.get(normalizeCode(carCode)) || null;
+    const payloadObject = attrs ? JSON.parse(JSON.stringify(attrs)) : {};
+    delete payloadObject.id;
+    payloadObject.rentprog_id = String(bookingId);
+
+    const startAtISO = convertDateToISO(attrs.start_date_formatted || attrs.start_date);
+    const endAtISO = convertDateToISO(attrs.end_date_formatted || attrs.end_date);
+
+    payloadObject.branch = mapping.branch;
+    payloadObject.start_at = startAtISO;
+    payloadObject.end_at = endAtISO;
+    payloadObject.client_name = clientName;
+    payloadObject.car_code = carCode;
+    payloadObject.car_name = attrs.car_name || payloadObject.car_name;
+    payloadObject.location_start = attrs.location_start;
+    payloadObject.location_end = attrs.location_end;
+    payloadObject.total = attrs.total;
+    payloadObject.deposit = attrs.deposit;
+    payloadObject.rental_cost = attrs.rental_cost;
+    payloadObject.days = attrs.days;
+    payloadObject.state = attrs.state;
+    payloadObject.in_rent = attrs.in_rent;
+    payloadObject.archive = attrs.archive;
+    payloadObject.description = attrs.description;
+    payloadObject.source = attrs.source;
+
+    const payloadJson = JSON.stringify(payloadObject);
+
+    results.push({
+      json: {
+        table_name: 'bookings',
+        branch: mapping.branch,
+        booking_id: String(bookingId),
+        number: attrs.number,
+        is_active: isActiveFlag,
+        start_date: attrs.start_date,
+        end_date: attrs.end_date,
+        start_date_formatted: attrs.start_date_formatted,
+        end_date_formatted: attrs.end_date_formatted,
+        start_at: startAtISO,
+        end_at: endAtISO,
+        created_at: attrs.created_at,
+        client_name: clientName,
+        client_category: attrs.client_category,
+        car_name: attrs.car_name,
+        car_code: carCode,
+        rentprog_car_id: rentprogCarId,
+        car_id: carId,
+        location_start: attrs.location_start,
+        location_end: attrs.location_end,
+        total: attrs.total,
+        deposit: attrs.deposit,
+        rental_cost: attrs.rental_cost,
+        days: attrs.days,
+        state: attrs.state,
+        in_rent: attrs.in_rent,
+        archive: attrs.archive,
+        start_worker_id: attrs.start_worker_id,
+        end_worker_id: attrs.end_worker_id,
+        responsible: attrs.responsible,
+        description: attrs.description,
+        source: attrs.source,
+        is_technical: technicalInfo.is_technical,
+        technical_type: technicalInfo.technical_type,
+        technical_purpose: technicalInfo.technical_purpose,
+        data: payloadObject,
+        payload_json: payloadJson,
+      },
+    });
+  });
+});
+
+console.log('Total results:', results.length);
+
+return results;`;
+
+const workflow = JSON.parse(await fs.readFile(workflowPath, 'utf8'));
+
+const nodesToRemove = new Set([
+  'Get Tbilisi Active',
+  'Get Batumi Active',
+  'Get Kutaisi Active',
+  'Get Service Active',
+  'Merge All Branches',
+]);
+
+workflow.nodes = workflow.nodes
+  .filter((node) => !nodesToRemove.has(node.name) && node.name !== 'Fetch Branch Bookings');
+
+workflow.nodes.push({
+  parameters: { jsCode: fetchCode },
+  name: 'Fetch Branch Bookings',
+  type: 'n8n-nodes-base.code',
+  typeVersion: 2,
+  position: [560, 448],
+  id: 'e3b2309b-0113-4cb9-9b28-1d4dc1ff33a5',
+});
+
+const processNode = workflow.nodes.find((node) => node.name === 'Process All Bookings');
+if (!processNode) {
+  throw new Error('Process All Bookings node not found');
+}
+processNode.parameters.jsCode = processCode;
+
+for (const key of Object.keys(workflow.connections)) {
+  if (nodesToRemove.has(key)) {
+    delete workflow.connections[key];
   }
 }
 
-updateWorkflow()
-  .then(() => {
-    console.log('✅ Обновление завершено успешно!');
-    process.exit(0);
-  })
-  .catch(error => {
-    console.error(`\n❌ Ошибка:`, error.message);
-    process.exit(1);
-  });
+workflow.connections['Fetch Branch Bookings'] = {
+  main: [
+    [
+      {
+        node: 'Process All Bookings',
+        type: 'main',
+        index: 0,
+      },
+    ],
+  ],
+};
 
+workflow.connections['Every 5 Minutes'] = {
+  main: [
+    [
+      {
+        node: 'Fetch Branch Bookings',
+        type: 'main',
+        index: 0,
+      },
+      {
+        node: 'Get Car IDs',
+        type: 'main',
+        index: 0,
+      },
+    ],
+  ],
+};
+
+await fs.writeFile(workflowPath, JSON.stringify(workflow, null, 2) + '\n', 'utf8');
+console.log('✅ Workflow updated with pagination and new branching logic.');

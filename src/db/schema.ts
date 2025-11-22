@@ -3,7 +3,7 @@
  * Наша модель данных с UUID как первичными ключами
  */
 
-import { pgTable, text, uuid, timestamp, integer, jsonb, unique, index, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, text, uuid, timestamp, integer, jsonb, unique, index, boolean, bigserial, primaryKey } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 // Филиалы
@@ -66,9 +66,18 @@ export const cars = pgTable('cars', {
   data: jsonb('data'), // Временное поле для raw данных (очищается после извлечения)
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull(),
+  // Поля для отслеживания источника изменений
+  updated_by_source: text('updated_by_source'), // 'rentprog_webhook', 'rentprog_history', 'snapshot_workflow', 'jarvis_api', 'manual', 'n8n_workflow', 'trigger', 'migration'
+  updated_by_workflow: text('updated_by_workflow'), // ID или название workflow/скрипта
+  updated_by_function: text('updated_by_function'), // Название функции/метода
+  updated_by_execution_id: text('updated_by_execution_id'), // ID execution в n8n
+  updated_by_user: text('updated_by_user'), // Пользователь
+  updated_by_metadata: jsonb('updated_by_metadata'), // Дополнительные метаданные
 }, (table) => ({
   branchIdx: index('cars_branch_idx').on(table.branch_id),
   plateIdx: index('cars_plate_idx').on(table.plate),
+  sourceIdx: index('idx_cars_updated_by_source').on(table.updated_by_source),
+  workflowIdx: index('idx_cars_updated_by_workflow').on(table.updated_by_workflow),
 }));
 
 // Бронирования
@@ -84,12 +93,21 @@ export const bookings = pgTable('bookings', {
   data: jsonb('data').default(sql`'{}'::jsonb`), // Временное поле для raw данных
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull(),
+  // Поля для отслеживания источника изменений
+  updated_by_source: text('updated_by_source'), // 'rentprog_webhook', 'rentprog_history', 'snapshot_workflow', 'jarvis_api', 'manual', 'n8n_workflow', 'trigger', 'migration'
+  updated_by_workflow: text('updated_by_workflow'), // ID или название workflow/скрипта
+  updated_by_function: text('updated_by_function'), // Название функции/метода
+  updated_by_execution_id: text('updated_by_execution_id'), // ID execution в n8n
+  updated_by_user: text('updated_by_user'), // Пользователь
+  updated_by_metadata: jsonb('updated_by_metadata'), // Дополнительные метаданные
 }, (table) => ({
   branchIdx: index('bookings_branch_idx').on(table.branch_id),
   carIdx: index('bookings_car_idx').on(table.car_id),
   clientIdx: index('bookings_client_idx').on(table.client_id),
   responsibleIdx: index('bookings_responsible_idx').on(table.responsible_id),
   statusIdx: index('bookings_status_idx').on(table.status),
+  sourceIdx: index('idx_bookings_updated_by_source').on(table.updated_by_source),
+  workflowIdx: index('idx_bookings_updated_by_workflow').on(table.updated_by_workflow),
 }));
 
 // Универсальная таблица внешних ссылок
@@ -173,9 +191,6 @@ export const payments = pgTable('payments', {
   cashless: text('cashless'), // Часть payment_method (безналичные)
   group: text('group'), // Alias для payment_type
   subgroup: text('subgroup'), // Alias для payment_subgroup
-  car_id: integer('car_id'), // Alias для rp_car_id
-  client_id: integer('client_id'), // Alias для rp_client_id
-  user_id: integer('user_id'), // Alias для rp_user_id
   
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull(),
@@ -196,13 +211,54 @@ export const payments = pgTable('payments', {
   carCodeIdx: index('payments_car_code_idx').on(table.car_code),
   // Индексы для alias-колонок (workflow)
   paymentIdIdx: index('idx_payments_payment_id').on(table.payment_id),
-  carIdIdx: index('idx_payments_car_id').on(table.car_id),
-  clientIdIdx: index('idx_payments_client_id').on(table.client_id),
-  userIdIdx: index('idx_payments_user_id').on(table.user_id),
   groupIdx: index('idx_payments_group').on(table.group),
   // UNIQUE constraints для дедупликации
   branchPaymentUnique: unique('payments_branch_payment_id_unique').on(table.branch, table.rp_payment_id), // Основной
   branchPaymentIdAliasUnique: unique('payments_branch_payment_id_alias_unique').on(table.branch, table.payment_id), // Для alias-колонки (workflow)
+}));
+
+// Задачи (Jarvis Tasks)
+export const tasks = pgTable('tasks', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  title: text('title').notNull(),
+  description: text('description'),
+  status: text('status').notNull().default('todo'),
+  priority: text('priority').notNull().default('normal'),
+  creator_id: uuid('creator_id').references(() => employees.id),
+  assignee_id: uuid('assignee_id').references(() => employees.id),
+  branch_id: uuid('branch_id').references(() => branches.id),
+  due_at: timestamp('due_at', { withTimezone: true }),
+  snooze_until: timestamp('snooze_until', { withTimezone: true }),
+  source: text('source').notNull().default('agent'),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  statusIdx: index('idx_tasks_status').on(table.status),
+  branchIdx: index('idx_tasks_branch').on(table.branch_id),
+  assigneeIdx: index('idx_tasks_assignee').on(table.assignee_id),
+  sourceIdx: index('idx_tasks_source').on(table.source),
+}));
+
+// Связи задач с сущностями
+export const taskLinks = pgTable('task_links', {
+  task_id: uuid('task_id').references(() => tasks.id, { onDelete: 'cascade' }).notNull(),
+  entity_type: text('entity_type').notNull(),
+  entity_id: uuid('entity_id').notNull(),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  pk: primaryKey({ name: 'task_links_pkey', columns: [table.task_id, table.entity_type, table.entity_id] }),
+  entityIdx: index('idx_task_links_entity').on(table.entity_type, table.entity_id),
+}));
+
+// Журнал событий задач
+export const taskEvents = pgTable('task_events', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  task_id: uuid('task_id').references(() => tasks.id, { onDelete: 'cascade' }).notNull(),
+  event: text('event').notNull(),
+  payload: jsonb('payload').notNull().default(sql`'{}'::jsonb`),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  taskIdx: index('idx_task_events_task').on(table.task_id),
 }));
 
 // Дедупликация вебхуков
@@ -318,4 +374,8 @@ export type EventLink = typeof eventLinks.$inferSelect;
 export type EventLinkInsert = typeof eventLinks.$inferInsert;
 export type EntityTimeline = typeof entityTimeline.$inferSelect;
 export type EntityTimelineInsert = typeof entityTimeline.$inferInsert;
+export type Task = typeof tasks.$inferSelect;
+export type TaskInsert = typeof tasks.$inferInsert;
+export type TaskLink = typeof taskLinks.$inferSelect;
+export type TaskEvent = typeof taskEvents.$inferSelect;
 

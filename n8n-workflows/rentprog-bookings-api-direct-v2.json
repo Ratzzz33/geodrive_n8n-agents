@@ -15,7 +15,10 @@
       "name": "Every 15 Minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 500]
+      "position": [
+        240,
+        500
+      ]
     },
     {
       "parameters": {
@@ -44,7 +47,10 @@
       "name": "Get Tbilisi Active",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 300],
+      "position": [
+        480,
+        300
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -76,7 +82,10 @@
       "name": "Get Tbilisi Inactive",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 400],
+      "position": [
+        480,
+        400
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -108,7 +117,10 @@
       "name": "Get Batumi Active",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 500],
+      "position": [
+        480,
+        500
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -140,7 +152,10 @@
       "name": "Get Batumi Inactive",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 600],
+      "position": [
+        480,
+        600
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -172,7 +187,10 @@
       "name": "Get Kutaisi Active",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 700],
+      "position": [
+        480,
+        700
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -204,7 +222,10 @@
       "name": "Get Kutaisi Inactive",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 800],
+      "position": [
+        480,
+        800
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -236,7 +257,10 @@
       "name": "Get Service Active",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 900],
+      "position": [
+        480,
+        900
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -268,7 +292,10 @@
       "name": "Get Service Inactive",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 1000],
+      "position": [
+        480,
+        1000
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "continueOnFail": true
@@ -280,7 +307,10 @@
       "name": "Process All Bookings",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [720, 600]
+      "position": [
+        720,
+        600
+      ]
     },
     {
       "parameters": {
@@ -293,7 +323,10 @@
       "name": "Save to DB",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [920, 600],
+      "position": [
+        920,
+        600
+      ],
       "credentials": {
         "postgres": {
           "name": "Neon PostgreSQL"
@@ -310,7 +343,10 @@
       "name": "Format Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 600]
+      "position": [
+        1120,
+        600
+      ]
     },
     {
       "parameters": {
@@ -337,7 +373,10 @@
       "name": "If Error",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1320, 600]
+      "position": [
+        1320,
+        600
+      ]
     },
     {
       "parameters": {
@@ -352,7 +391,10 @@
       "name": "Send Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1520, 500],
+      "position": [
+        1520,
+        500
+      ],
       "credentials": {
         "telegramApi": {
           "name": "Telegram Alert Bot"
@@ -366,14 +408,20 @@
       "name": "Throw Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1720, 500]
+      "position": [
+        1720,
+        500
+      ]
     },
     {
       "parameters": {},
       "name": "Success",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1520, 700]
+      "position": [
+        1520,
+        700
+      ]
     }
   ],
   "connections": {
@@ -575,7 +623,8 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   }
 }
-

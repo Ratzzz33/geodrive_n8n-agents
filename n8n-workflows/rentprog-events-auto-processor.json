@@ -1,0 +1,358 @@
+{
+  "name": "RentProg Events Auto Processor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/5 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Cron Trigger (Every 5 min)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, ts, type, event_name, entity_type, operation, rentprog_id, ext_id, company_id, payload, metadata FROM events WHERE (processed = false OR processed IS NULL) ORDER BY ts ASC LIMIT 50",
+        "options": {}
+      },
+      "id": "get-unprocessed-events",
+      "name": "Get Unprocessed Events",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        450,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Определение branch по company_id\nconst companyToBranch = {\n  9247: 'tbilisi',\n  9248: 'kutaisi',\n  9506: 'batumi',\n  11163: 'service-center',\n  11157: 'batumi',\n  11158: 'batumi',\n  9110: 'tbilisi'\n};\n\nconst event = $input.item.json;\nconst companyId = event.company_id;\nlet branch = 'tbilisi'; // по умолчанию\n\nif (companyId && companyToBranch[companyId]) {\n  branch = companyToBranch[companyId];\n} else if (event.metadata && typeof event.metadata === 'object') {\n  const metadata = typeof event.metadata === 'string' ? JSON.parse(event.metadata) : event.metadata;\n  if (metadata.branch) {\n    branch = metadata.branch;\n  }\n}\n\n// Определение ext_id\nconst extId = event.rentprog_id || event.ext_id || \n  (event.payload && typeof event.payload === 'object' \n    ? (event.payload.id || event.payload.car_id || event.payload.client_id || event.payload.booking_id)\n    : null);\n\n// Определение type события\nconst eventType = event.event_name || event.type || 'unknown';\n\nreturn {\n  json: {\n    eventId: event.id,\n    branch: branch,\n    type: eventType,\n    ext_id: String(extId || ''),\n    rentprog_id: String(extId || '')\n  }\n};"
+      },
+      "id": "prepare-event-data",
+      "name": "Prepare Event Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-ext-id",
+              "leftValue": "={{ $json.ext_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-has-ext-id",
+      "name": "If Has Ext ID",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        850,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.JARVIS_API_URL || 'http://46.224.17.15:3000' }}/process-event",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Source",
+              "value": "n8n_workflow"
+            },
+            {
+              "name": "X-Workflow-Id",
+              "value": "={{ $workflow.id }}"
+            },
+            {
+              "name": "X-Workflow-Name",
+              "value": "={{ $workflow.name || 'RentProg Events Auto Processor' }}"
+            },
+            {
+              "name": "X-Execution-Id",
+              "value": "={{ $execution.id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "branch",
+              "value": "={{ $json.branch }}"
+            },
+            {
+              "name": "type",
+              "value": "={{ $json.type }}"
+            },
+            {
+              "name": "ext_id",
+              "value": "={{ $json.ext_id }}"
+            },
+            {
+              "name": "rentprog_id",
+              "value": "={{ $json.rentprog_id }}"
+            },
+            {
+              "name": "eventId",
+              "value": "={{ $json.eventId }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        },
+        "retryOnFail": true,
+        "maxTries": 2,
+        "continueOnFail": true
+      },
+      "id": "process-event",
+      "name": "Process Event via Jarvis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1050,
+        400
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-success",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-success",
+      "name": "If Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1250,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE events SET processed = true, ok = true WHERE id = $1",
+        "options": {
+          "queryReplacement": "={{ $('Prepare Event Data').item.json.eventId }}"
+        }
+      },
+      "id": "mark-processed",
+      "name": "Mark as Processed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1450,
+        350
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE events SET processed = true, ok = false, reason = $1 WHERE id = $2",
+        "options": {
+          "queryReplacement": "={{ ($json.error || 'Unknown error').substring(0, 500) }},={{ $('Prepare Event Data').item.json.eventId }}"
+        }
+      },
+      "id": "mark-error",
+      "name": "Mark as Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1450,
+        450
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "success",
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1650,
+        350
+      ]
+    }
+  ],
+  "connections": {
+    "Cron Trigger (Every 5 min)": {
+      "main": [
+        [
+          {
+            "node": "Get Unprocessed Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Unprocessed Events": {
+      "main": [
+        [
+          {
+            "node": "Prepare Event Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Event Data": {
+      "main": [
+        [
+          {
+            "node": "If Has Ext ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Has Ext ID": {
+      "main": [
+        [
+          {
+            "node": "Process Event via Jarvis",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Event via Jarvis": {
+      "main": [
+        [
+          {
+            "node": "If Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Success": {
+      "main": [
+        [
+          {
+            "node": "Mark as Processed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark as Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark as Processed": {
+      "main": [
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark as Error": {
+      "main": [
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
+  }
+}

@@ -47,13 +47,34 @@ class ServerSSH:
         self.ssh = None
     
     def connect(self, timeout: int = 30) -> bool:
-        """Подключение к серверу"""
+        """Подключение к серверу (сначала пробует ключ, потом пароль)"""
         try:
             self.ssh = paramiko.SSHClient()
             self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             
             print(f"Connecting to {self.user}@{self.ip}...", end=" ", flush=True)
             
+            # Путь к SSH ключу
+            ssh_key_path = os.path.expanduser("~/.ssh/id_rsa")
+            
+            # Пробуем подключиться с ключом (если есть)
+            if os.path.exists(ssh_key_path):
+                try:
+                    self.ssh.connect(
+                        self.ip,
+                        username=self.user,
+                        key_filename=ssh_key_path,
+                        timeout=timeout,
+                        look_for_keys=True,
+                        allow_agent=False
+                    )
+                    print("OK (key)")
+                    return True
+                except (paramiko.AuthenticationException, paramiko.SSHException):
+                    # Если ключ не сработал, пробуем пароль
+                    pass
+            
+            # Подключаемся с паролем (fallback)
             self.ssh.connect(
                 self.ip,
                 username=self.user,
@@ -63,7 +84,7 @@ class ServerSSH:
                 allow_agent=False
             )
             
-            print("OK")
+            print("OK (password)")
             return True
             
         except paramiko.AuthenticationException:
@@ -190,7 +211,7 @@ class ServerSSH:
             return False
 
 
-def run_command_on_server(command: str, show_output: bool = True) -> bool:
+def run_command_on_server(command: str, show_output: bool = True, live_output: bool = False) -> bool:
     """Быстрая функция для выполнения одной команды"""
     ssh = ServerSSH()
     
@@ -199,20 +220,59 @@ def run_command_on_server(command: str, show_output: bool = True) -> bool:
         return False
     print("OK", flush=True)
     
-    result = ssh.execute(command, wait=True)
-    ssh.close()
-    
-    if result:
-        output, error, exit_status = result
-        if show_output and output:
-            # Filter to ASCII only for Windows terminal
-            clean_output = ''.join(c if ord(c) < 128 else '?' for c in output)
-            print(clean_output)
-        if error:
-            print(error, file=sys.stderr)
-        return exit_status == 0
-    
-    return False
+    if live_output:
+        # Режим вывода в реальном времени
+        try:
+            stdin, stdout, stderr = ssh.ssh.exec_command(command, get_pty=True)
+            
+            import time
+            while True:
+                if stdout.channel.recv_ready():
+                    chunk = stdout.channel.recv(4096).decode('utf-8', errors='ignore')
+                    if chunk:
+                        sys.stdout.write(chunk)
+                        sys.stdout.flush()
+                
+                if stderr.channel.recv_stderr_ready():
+                    chunk = stderr.channel.recv_stderr(4096).decode('utf-8', errors='ignore')
+                    if chunk:
+                        sys.stderr.write(chunk)
+                        sys.stderr.flush()
+                
+                if stdout.channel.exit_status_ready():
+                    # Читаем остатки
+                    while stdout.channel.recv_ready():
+                        chunk = stdout.channel.recv(4096).decode('utf-8', errors='ignore')
+                        if chunk:
+                            sys.stdout.write(chunk)
+                            sys.stdout.flush()
+                    break
+                
+                time.sleep(0.05)
+            
+            exit_status = stdout.channel.recv_exit_status()
+            ssh.close()
+            return exit_status == 0
+        except Exception as e:
+            print(f"ERROR: {e}", file=sys.stderr)
+            ssh.close()
+            return False
+    else:
+        # Обычный режим
+        result = ssh.execute(command, wait=True)
+        ssh.close()
+        
+        if result:
+            output, error, exit_status = result
+            if show_output and output:
+                # Filter to ASCII only for Windows terminal
+                clean_output = ''.join(c if ord(c) < 128 else '?' for c in output)
+                print(clean_output)
+            if error:
+                print(error, file=sys.stderr)
+            return exit_status == 0
+        
+        return False
 
 
 def main():
@@ -230,8 +290,17 @@ def main():
         print("  ssh.close()")
         sys.exit(1)
     
+    # Проверяем флаг --live для вывода в реальном времени
+    live_output = '--live' in sys.argv
+    if live_output:
+        sys.argv.remove('--live')
+    
     command = " ".join(sys.argv[1:])
-    success = run_command_on_server(command)
+    if not command:
+        print("ERROR: No command provided", file=sys.stderr)
+        sys.exit(1)
+    
+    success = run_command_on_server(command, live_output=live_output)
     sys.exit(0 if success else 1)
 
 

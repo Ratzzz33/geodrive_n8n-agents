@@ -1,0 +1,507 @@
+{
+  "name": "API Starline parser 1 min",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/1 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every 1 Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [256, 304]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Подготовка данных для получения кода приложения\n// ВАЖНО: secret должен быть MD5 хешем от app_secret\nconst crypto = require('crypto');\n\nconst APP_ID = '40884';\nconst APP_SECRET = '55t6wDYPs800o3UCRfjd_kW27f2eI1fL';\n\n// Хешируем secret MD5\nconst secretHash = crypto.createHash('md5').update(APP_SECRET).digest('hex');\n\nreturn [{\n  json: {\n    appId: APP_ID,\n    appSecret: APP_SECRET,\n    secretHash: secretHash\n  }\n}];"
+      },
+      "name": "Prepare App Code Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [464, 304]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://id.starline.ru/apiV3/application/getCode/?appId={{ $json.appId }}&secret={{ $json.secretHash }}",
+        "authentication": "none",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "name": "Get App Code",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [672, 304],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Извлекаем код из ответа\nconst response = $input.item.json;\n\n// Проверяем наличие ошибок\nif (response.state !== 1) {\n  if (response.desc && response.desc.message) {\n    throw new Error(`Ошибка получения кода: ${response.desc.message}`);\n  }\n  throw new Error(`Ошибка получения кода: ${JSON.stringify(response)}`);\n}\n\nif (!response.desc || !response.desc.code) {\n  throw new Error(`Код не найден в ответе: ${JSON.stringify(response)}`);\n}\n\nreturn [{\n  json: {\n    code: response.desc.code,\n    appId: '40884',\n    appSecret: '55t6wDYPs800o3UCRfjd_kW27f2eI1fL'\n  }\n}];"
+      },
+      "name": "Extract Code",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 304]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Подготовка данных для получения токена приложения\n// ВАЖНО: secret = MD5(app_secret + app_code)\nconst crypto = require('crypto');\n\nconst appSecret = $input.item.json.appSecret;\nconst appCode = $input.item.json.code;\n\n// Хешируем secret + code MD5\nconst secretHash = crypto.createHash('md5').update(appSecret + appCode).digest('hex');\n\nreturn [{\n  json: {\n    appId: $input.item.json.appId,\n    secretHash: secretHash,\n    code: appCode\n  }\n}];"
+      },
+      "name": "Prepare App Token Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1088, 304]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://id.starline.ru/apiV3/application/getToken/?appId={{ $json.appId }}&secret={{ $json.secretHash }}",
+        "authentication": "none",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "name": "Get App Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1296, 304],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Извлекаем токен приложения из ответа\nconst response = $input.item.json;\n\nif (response.state !== 1) {\n  throw new Error(`Ошибка получения токена приложения: ${JSON.stringify(response)}`);\n}\n\nif (!response.desc || !response.desc.token) {\n  throw new Error(`Токен приложения не найден в ответе: ${JSON.stringify(response)}`);\n}\n\nreturn [{\n  json: {\n    app_token: response.desc.token,\n    user_email: '33pokrov33@gmail.com',\n    user_password: '7733Alex'\n  }\n}];"
+      },
+      "name": "Extract App Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1504, 304]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Подготовка данных для авторизации пользователя\n// ВАЖНО: pass должен быть SHA1 хешем от password\nconst crypto = require('crypto');\n\nconst password = $input.item.json.user_password;\n\n// Хешируем password SHA1\nconst passwordHash = crypto.createHash('sha1').update(password).digest('hex');\n\nreturn [{\n  json: {\n    app_token: $input.item.json.app_token,\n    login: $input.item.json.user_email,\n    pass: passwordHash\n  }\n}];"
+      },
+      "name": "Prepare Login Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1712, 304]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://id.starline.ru/apiV3/user/login/?token={{ $json.app_token }}",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "login",
+              "value": "={{ $json.login }}"
+            },
+            {
+              "name": "pass",
+              "value": "={{ $json.pass }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "name": "Login User",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1920, 304],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Извлекаем user_token из ответа\nconst response = $input.item.json;\n\nif (response.state !== 1) {\n  throw new Error(`Ошибка авторизации пользователя: ${JSON.stringify(response)}`);\n}\n\nif (!response.desc || !response.desc.user_token) {\n  throw new Error(`user_token не найден в ответе: ${JSON.stringify(response)}`);\n}\n\nreturn [{\n  json: {\n    slid_token: response.desc.user_token\n  }\n}];"
+      },
+      "name": "Extract User Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2128, 304]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://developer.starline.ru/json/v2/auth.slid",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"slid_token\": \"{{ $json.slid_token }}\"\n} }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "name": "Get WebAPI Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2336, 304],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Извлекаем slnet токен из cookie\n// ВАЖНО: токен возвращается в cookie \"slnet\", не в JSON!\n// В n8n HTTP Request нода возвращает заголовки в $response.headers\nconst response = $input.item.json;\nconst responseHeaders = $response?.headers || {};\n\n// Пытаемся извлечь токен из cookie в заголовках ответа\nlet slnetToken = null;\n\n// Проверяем все возможные форматы заголовков\nconst setCookieHeader = responseHeaders['set-cookie'] || responseHeaders['Set-Cookie'] || responseHeaders['SET-COOKIE'];\n\nif (setCookieHeader) {\n  const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];\n  for (const cookie of cookies) {\n    const match = cookie.match(/slnet=([^;]+)/);\n    if (match) {\n      slnetToken = match[1];\n      break;\n    }\n  }\n}\n\n// Если не нашли в заголовках, пробуем извлечь из response (если есть)\nif (!slnetToken && response.slnet_token) {\n  slnetToken = response.slnet_token;\n}\n\nif (!slnetToken) {\n  // Логируем для отладки\n  console.log('Response:', JSON.stringify(response));\n  console.log('Headers:', JSON.stringify(responseHeaders));\n  throw new Error(`slnet токен не найден в cookie. Проверьте заголовки ответа.`);\n}\n\n// Вычисляем время истечения токена (24 часа по документации)\nconst expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();\n\nreturn [{\n  json: {\n    access_token: slnetToken,\n    slnet_token: slnetToken,\n    expires_in: 86400,\n    expires_at: expiresAt\n  }\n}];"
+      },
+      "name": "Process Token Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2544, 304]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://developer.starline.ru/json/v1/devices",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "=slnet={{ $json.slnet_token }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "name": "Get Devices List",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2128, 304],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check-error",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notExists"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Check Devices Response",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, 304]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "devices",
+        "options": {}
+      },
+      "name": "Split Devices",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [1088, 208]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://developer.starline.ru/json/v1/device/{{ $json.device_id }}/data",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "=slnet={{ $('Process Token Response').item.json.slnet_token }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "retry": {
+            "maxTries": 2,
+            "retryOnFail": true
+          }
+        }
+      },
+      "name": "Get Device Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1296, 208],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обработка данных устройства и подготовка для сохранения в БД\nconst device = $input.item.json;\nconst deviceId = $('Split Devices').item.json.device_id;\nconst alias = $('Split Devices').item.json.alias;\n\n// Извлекаем данные из ответа API\nconst position = device.position || {};\nconst status = device.status || {};\nconst sensors = device.sensors || {};\n\n// Подготавливаем данные для gps_tracking\nconst gpsData = {\n  starline_device_id: deviceId,\n  starline_alias: alias,\n  current_lat: position.lat || null,\n  current_lng: position.lng || null,\n  current_sat_qty: position.sat_qty || null,\n  current_timestamp: position.timestamp ? new Date(position.timestamp * 1000).toISOString() : null,\n  speed: device.speed || 0,\n  course: device.course || null,\n  gps_level: sensors.gps_level || null,\n  gsm_level: sensors.gsm_level || null,\n  battery_voltage: sensors.battery_voltage || null,\n  ignition_on: status.ignition_on || false,\n  engine_running: status.engine_running || false,\n  parking_brake: status.parking_brake || false,\n  alarm_state: status.alarm_state || null,\n  last_activity: position.timestamp ? new Date(position.timestamp * 1000).toISOString() : null,\n  last_sync: new Date().toISOString()\n};\n\n// Определяем статус\nlet statusText = 'offline';\nif (position.lat && position.lng) {\n  if (gpsData.speed > 0) {\n    statusText = 'moving';\n  } else if (status.ignition_on) {\n    statusText = 'parked_on';\n  } else {\n    statusText = 'parked_off';\n  }\n} else if (position.sat_qty === 0) {\n  statusText = 'gps_offline';\n}\n\ngpsData.status = statusText;\ngpsData.is_moving = gpsData.speed > 0;\n\n// Формируем ссылку на Google Maps\nif (gpsData.current_lat && gpsData.current_lng) {\n  gpsData.google_maps_link = `https://www.google.com/maps?q=${gpsData.current_lat},${gpsData.current_lng}`;\n}\n\nreturn [{\n  json: gpsData\n}];"
+      },
+      "name": "Process Device Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1504, 208]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO gps_tracking (\n  starline_device_id,\n  starline_alias,\n  current_lat,\n  current_lng,\n  current_sat_qty,\n  current_timestamp,\n  speed,\n  course,\n  gps_level,\n  gsm_level,\n  battery_voltage,\n  ignition_on,\n  engine_running,\n  parking_brake,\n  alarm_state,\n  status,\n  is_moving,\n  google_maps_link,\n  last_activity,\n  last_sync\n) VALUES (\n  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20\n)\nON CONFLICT (starline_device_id)\nDO UPDATE SET\n  previous_lat = gps_tracking.current_lat,\n  previous_lng = gps_tracking.current_lng,\n  previous_sat_qty = gps_tracking.current_sat_qty,\n  previous_timestamp = gps_tracking.current_timestamp,\n  current_lat = EXCLUDED.current_lat,\n  current_lng = EXCLUDED.current_lng,\n  current_sat_qty = EXCLUDED.current_sat_qty,\n  current_timestamp = EXCLUDED.current_timestamp,\n  speed = EXCLUDED.speed,\n  course = EXCLUDED.course,\n  gps_level = EXCLUDED.gps_level,\n  gsm_level = EXCLUDED.gsm_level,\n  battery_voltage = EXCLUDED.battery_voltage,\n  ignition_on = EXCLUDED.ignition_on,\n  engine_running = EXCLUDED.engine_running,\n  parking_brake = EXCLUDED.parking_brake,\n  alarm_state = EXCLUDED.alarm_state,\n  status = EXCLUDED.status,\n  is_moving = EXCLUDED.is_moving,\n  google_maps_link = EXCLUDED.google_maps_link,\n  last_activity = EXCLUDED.last_activity,\n  last_sync = EXCLUDED.last_sync,\n  distance_moved = CASE\n    WHEN gps_tracking.current_lat IS NOT NULL AND EXCLUDED.current_lat IS NOT NULL\n    THEN (\n      6371000 * acos(\n        cos(radians(gps_tracking.current_lat)) *\n        cos(radians(EXCLUDED.current_lat)) *\n        cos(radians(EXCLUDED.current_lng) - radians(gps_tracking.current_lng)) +\n        sin(radians(gps_tracking.current_lat)) *\n        sin(radians(EXCLUDED.current_lat))\n      )\n    )\n    ELSE NULL\n  END",
+        "options": {},
+        "additionalFields": {
+          "queryParams": "={{ [\n  $json.starline_device_id,\n  $json.starline_alias,\n  $json.current_lat,\n  $json.current_lng,\n  $json.current_sat_qty,\n  $json.current_timestamp,\n  $json.speed,\n  $json.course,\n  $json.gps_level,\n  $json.gsm_level,\n  $json.battery_voltage,\n  $json.ignition_on,\n  $json.engine_running,\n  $json.parking_brake,\n  $json.alarm_state,\n  $json.status,\n  $json.is_moving,\n  $json.google_maps_link,\n  $json.last_activity,\n  $json.last_sync\n] }}"
+        }
+      },
+      "name": "Upsert GPS Tracking",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1712, 208],
+      "credentials": {
+        "postgres": {
+          "name": "PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "updated",
+              "value": "={{ $('Split Devices').all().length }}",
+              "type": "number"
+            },
+            {
+              "id": "a2",
+              "name": "errors",
+              "value": "={{ [] }}",
+              "type": "array"
+            },
+            {
+              "id": "a3",
+              "name": "ok",
+              "value": "=true",
+              "type": "boolean"
+            }
+          ]
+        }
+      },
+      "name": "Format Result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1920, 208]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check-errors",
+              "leftValue": "={{ $json.errors.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "If Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2128, 208]
+    },
+    {
+      "parameters": {
+        "chatId": "=-5004140602",
+        "text": "={{ '🚨 **Starline API Sync - Ошибки**\\n\\n' + '✅ Обновлено: ' + $json.updated + ' устройств\\n' + '❌ Ошибок: ' + $json.errors.length + '\\n\\n' + ($json.errors.length > 0 ? '**Список ошибок:**\\n' + $json.errors.join('\\n') + '\\n\\n' : '') + '🕐 ' + $now.toISO() }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Send Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2336, 320],
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "errorMessage": "={{ '❌ Starline API Sync завершился с ошибками: ' + $json.errors.join(', ') }}"
+      },
+      "name": "Throw Error",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [2544, 320]
+    },
+    {
+      "parameters": {},
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2336, 96]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "ok",
+              "value": "={{ $json.errors.length === 0 }}",
+              "type": "boolean"
+            },
+            {
+              "id": "a2",
+              "name": "reason",
+              "value": "={{ $json.errors.length > 0 ? 'Errors: ' + $json.errors.length : 'OK' }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "Prepare Health Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2544, 96]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO health (ts, branch, ok, reason) VALUES (NOW(), 'starline-api', $1, $2)",
+        "options": {},
+        "additionalFields": {
+          "queryParams": "={{ [$json.ok, $json.reason] }}"
+        }
+      },
+      "name": "Log to Health Table",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [2752, 96],
+      "credentials": {
+        "postgres": {
+          "name": "PostgreSQL"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 1 Minute": {
+      "main": [[{"node": "Prepare App Code Request", "type": "main", "index": 0}]]
+    },
+    "Prepare App Code Request": {
+      "main": [[{"node": "Get App Code", "type": "main", "index": 0}]]
+    },
+    "Get App Code": {
+      "main": [[{"node": "Extract Code", "type": "main", "index": 0}]]
+    },
+    "Extract Code": {
+      "main": [[{"node": "Prepare App Token Request", "type": "main", "index": 0}]]
+    },
+    "Prepare App Token Request": {
+      "main": [[{"node": "Get App Token", "type": "main", "index": 0}]]
+    },
+    "Get App Token": {
+      "main": [[{"node": "Extract App Token", "type": "main", "index": 0}]]
+    },
+    "Extract App Token": {
+      "main": [[{"node": "Prepare Login Request", "type": "main", "index": 0}]]
+    },
+    "Prepare Login Request": {
+      "main": [[{"node": "Login User", "type": "main", "index": 0}]]
+    },
+    "Login User": {
+      "main": [[{"node": "Extract User Token", "type": "main", "index": 0}]]
+    },
+    "Extract User Token": {
+      "main": [[{"node": "Get WebAPI Token", "type": "main", "index": 0}]]
+    },
+    "Get WebAPI Token": {
+      "main": [[{"node": "Process Token Response", "type": "main", "index": 0}]]
+    },
+    "Process Token Response": {
+      "main": [[{"node": "Get Devices List", "type": "main", "index": 0}]]
+    },
+    "Get Devices List": {
+      "main": [[{"node": "Check Devices Response", "type": "main", "index": 0}]]
+    },
+    "Check Devices Response": {
+      "main": [
+        [{"node": "Split Devices", "type": "main", "index": 0}],
+        [{"node": "Format Result", "type": "main", "index": 0}]
+      ]
+    },
+    "Split Devices": {
+      "main": [[{"node": "Get Device Data", "type": "main", "index": 0}]]
+    },
+    "Get Device Data": {
+      "main": [[{"node": "Process Device Data", "type": "main", "index": 0}]]
+    },
+    "Process Device Data": {
+      "main": [[{"node": "Upsert GPS Tracking", "type": "main", "index": 0}]]
+    },
+    "Upsert GPS Tracking": {
+      "main": [[{"node": "Format Result", "type": "main", "index": 0}]]
+    },
+    "Format Result": {
+      "main": [[{"node": "If Error", "type": "main", "index": 0}]]
+    },
+    "If Error": {
+      "main": [
+        [{"node": "Send Telegram Alert", "type": "main", "index": 0}],
+        [{"node": "Success", "type": "main", "index": 0}]
+      ]
+    },
+    "Send Telegram Alert": {
+      "main": [[{"node": "Throw Error", "type": "main", "index": 0}]]
+    },
+    "Throw Error": {
+      "main": []
+    },
+    "Success": {
+      "main": [[{"node": "Prepare Health Data", "type": "main", "index": 0}]]
+    },
+    "Prepare Health Data": {
+      "main": [[{"node": "Log to Health Table", "type": "main", "index": 0}]]
+    },
+    "Log to Health Table": {
+      "main": []
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true,
+    "executionTimeout": 3600
+  }
+}
+

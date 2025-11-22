@@ -46,6 +46,7 @@
 - HTTP Request к `/rentprog/health`
 - Сохраняет статус каждого филиала в Data Table "health"
 - Отправляет Telegram алерты при !ok
+- Дополнительно контролирует активные workflow (Starline API/GPS) и шлет алерты при отсутствии свежих записей в `health`
 
 **Структура таблицы `health`:**
 - `id BIGSERIAL PRIMARY KEY`

@@ -1,0 +1,164 @@
+{
+  "name": "✅ Парсинг автомобилей search_cars раз в час",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "trigger",
+      "name": "Every Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const TOKENS = {\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs',\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc'\n};\n\nconst branches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];\n\nreturn branches.map(branch => ({\n  json: {\n    branch: branch,\n    token: TOKENS[branch],\n    page: 1\n  }\n}));"
+      },
+      "id": "prep-branches",
+      "name": "Prepare Branches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/search_cars",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"page\":{{ $json.page }},\"per_page\":100,\"sort_by\":\"id\",\"direction\":\"desc\",\"search\":null}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "get-cars",
+      "name": "Get Cars",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        400
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\n\nfor (const item of $input.all()) {\n  const branch = $('Prepare Branches').item.json.branch;\n  const responseData = item.json;\n  \n  let carsData = [];\n  if (Array.isArray(responseData)) {\n    carsData = responseData;\n  } else if (responseData.data && Array.isArray(responseData.data)) {\n    carsData = responseData.data;\n  } else if (responseData.cars && Array.isArray(responseData.cars)) {\n    carsData = responseData.cars;\n  }\n  \n  if (carsData.length === 0) {\n    results.push({\n      json: { branch, error: true, error_message: 'No cars data' }\n    });\n    continue;\n  }\n  \n  for (const car of carsData) {\n    results.push({\n      json: {\n        branch,\n        rentprog_id: car.id,\n        car_name: car.name || car.car_name,\n        code: car.code,\n        number: car.number,\n        color: car.color,\n        year: car.year,\n        price: car.price || 0,\n        deposit: car.deposit || 0,\n        data: car,\n        error: false\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "process-cars",
+      "name": "Process Cars",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO cars (\n  branch, rentprog_id, car_name, code, number, color, year, price, deposit, is_active, data\n) VALUES (\n  $1, $2, $3, $4, $5, $6, $7, $8, $9, true, $10::jsonb\n)\nON CONFLICT (branch, rentprog_id) \nDO UPDATE SET\n  car_name = EXCLUDED.car_name,\n  code = EXCLUDED.code,\n  number = EXCLUDED.number,\n  color = EXCLUDED.color,\n  year = EXCLUDED.year,\n  price = EXCLUDED.price,\n  deposit = EXCLUDED.deposit,\n  is_active = EXCLUDED.is_active,\n  data = EXCLUDED.data,\n  updated_at = NOW()\nRETURNING id;",
+        "options": {}
+      },
+      "id": "save-to-db",
+      "name": "Save to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        880,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Every Hour": {
+      "main": [
+        [
+          {
+            "node": "Prepare Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Branches": {
+      "main": [
+        [
+          {
+            "node": "Get Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Cars": {
+      "main": [
+        [
+          {
+            "node": "Process Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Cars": {
+      "main": [
+        [
+          {
+            "node": "Save to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
+  }
+}

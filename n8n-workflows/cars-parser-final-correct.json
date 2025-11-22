@@ -1,0 +1,1009 @@
+{
+  "name": "✅ Парсинг HTML страницы автомобилей раз в час",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "trigger",
+      "name": "Every Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const TOKENS = {\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs',\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc'\n};\n\nreturn [{ json: { branch: 'tbilisi', branch_id: '277eaada-1428-4c04-9cd7-5e614e43bedc', token: TOKENS.tbilisi, page: 1 } }];"
+      },
+      "id": "prep-tbilisi",
+      "name": "Tbilisi Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const TOKENS = {\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs',\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc'\n};\n\nreturn [{ json: { branch: 'batumi', branch_id: '627c4c88-d8a1-47bf-b9a6-2e9ad33112a4', token: TOKENS.batumi, page: 1 } }];"
+      },
+      "id": "prep-batumi",
+      "name": "Batumi Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const TOKENS = {\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs',\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc'\n};\n\nreturn [{ json: { branch: 'kutaisi', branch_id: '5e551b32-934c-498f-a4a1-a90079985c0a', token: TOKENS.kutaisi, page: 1 } }];"
+      },
+      "id": "prep-kutaisi",
+      "name": "Kutaisi Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const TOKENS = {\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs',\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc'\n};\n\nreturn [{ json: { branch: 'service-center', branch_id: '6026cff7-eee8-4fb9-be26-604f308911f0', token: TOKENS['service-center'], page: 1 } }];"
+      },
+      "id": "prep-service",
+      "name": "Service Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        656
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://rentprog.net/api/v1/all_cars_with_bookings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "get-tbilisi",
+      "name": "Get Tbilisi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        208
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "options": {
+          "keepOnlySet": false
+        },
+        "values": {
+          "string": [
+            {
+              "name": "branch",
+              "value": "tbilisi"
+            },
+            {
+              "name": "branch_id",
+              "value": "277eaada-1428-4c04-9cd7-5e614e43bedc"
+            }
+          ]
+        }
+      },
+      "id": "set-tbilisi-branch",
+      "name": "Set Tbilisi Branch",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        768,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://rentprog.net/api/v1/all_cars_with_bookings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "get-batumi",
+      "name": "Get Batumi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        352
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "options": {
+          "keepOnlySet": false
+        },
+        "values": {
+          "string": [
+            {
+              "name": "branch",
+              "value": "batumi"
+            },
+            {
+              "name": "branch_id",
+              "value": "627c4c88-d8a1-47bf-b9a6-2e9ad33112a4"
+            }
+          ]
+        }
+      },
+      "id": "set-batumi-branch",
+      "name": "Set Batumi Branch",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        768,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://rentprog.net/api/v1/all_cars_with_bookings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "get-kutaisi",
+      "name": "Get Kutaisi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        512
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "options": {
+          "keepOnlySet": false
+        },
+        "values": {
+          "string": [
+            {
+              "name": "branch",
+              "value": "kutaisi"
+            },
+            {
+              "name": "branch_id",
+              "value": "5e551b32-934c-498f-a4a1-a90079985c0a"
+            }
+          ]
+        }
+      },
+      "id": "set-kutaisi-branch",
+      "name": "Set Kutaisi Branch",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        768,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://rentprog.net/api/v1/all_cars_with_bookings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "get-service",
+      "name": "Get Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        656
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "options": {
+          "keepOnlySet": false
+        },
+        "values": {
+          "string": [
+            {
+              "name": "branch",
+              "value": "service-center"
+            },
+            {
+              "name": "branch_id",
+              "value": "6026cff7-eee8-4fb9-be26-604f308911f0"
+            }
+          ]
+        }
+      },
+      "id": "set-service-branch",
+      "name": "Set Service Branch",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        768,
+        656
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "mergeByPosition"
+      },
+      "id": "wait-for-all",
+      "name": "Wait for All Branches",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        768,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\n\n// Маппинг branch code → UUID\nconst BRANCH_MAP = {\n  'tbilisi': '277eaada-1428-4c04-9cd7-5e614e43bedc',\n  'batumi': '627c4c88-d8a1-47bf-b9a6-2e9ad33112a4',\n  'kutaisi': '5e551b32-934c-498f-a4a1-a90079985c0a',\n  'service-center': '6026cff7-eee8-4fb9-be26-604f308911f0'\n};\n\nfor (const item of $input.all()) {\n  const branchCode = item.json.branch;\n  const branchId = BRANCH_MAP[branchCode];\n  const responseData = item.json;\n  \n  // API возвращает массив cars или объект с data.cars\n  let carsData = [];\n  \n  if (Array.isArray(responseData)) {\n    carsData = responseData;\n  } else if (responseData.data && Array.isArray(responseData.data)) {\n    carsData = responseData.data;\n  } else if (responseData.cars && Array.isArray(responseData.cars)) {\n    carsData = responseData.cars;\n  } else if (responseData.cars && Array.isArray(responseData.cars.data)) {\n    carsData = responseData.cars.data;\n  } else if (responseData.data && responseData.data.cars && Array.isArray(responseData.data.cars)) {\n    carsData = responseData.data.cars;\n  } else if (responseData.data && responseData.data.cars && Array.isArray(responseData.data.cars.data)) {\n    carsData = responseData.data.cars.data;\n  }\n  \n  if (carsData.length === 0) {\n    results.push({\n      json: {\n        branch_code: branchCode,\n        branch_id: branchId,\n        error: true,\n        error_message: 'No cars data in response'\n      }\n    });\n    continue;\n  }\n  \n  // Обрабатываем каждый автомобиль\n  for (const car of carsData) {\n    // Извлекаем attributes если это JSON:API формат\n    const attrs = car.attributes || car;\n    \n    results.push({\n      json: {\n        branch_code: branchCode,\n        branch_id: branchId,\n        rentprog_id: attrs.id || car.id,\n        car_name: attrs.car_name || attrs.name,\n        code: attrs.code,\n        number: attrs.number,\n        \n        // Основные характеристики\n        vin: attrs.vin,\n        color: attrs.color,\n        year: attrs.year,\n        transmission: attrs.transmission,\n        fuel: attrs.fuel,\n        car_type: attrs.car_type,\n        car_class: attrs.car_class,\n        \n        // Состояния и статусы\n        active: attrs.active,\n        state: attrs.state, // 1=доступен, 2=внимание, 3=нельзя выдавать\n        tank_state: attrs.tank_state, // состояние бака\n        clean_state: attrs.clean_state, // чистота\n        \n        // Пробег и ТО\n        mileage: attrs.mileage,\n        tire_type: attrs.tire_type, // 1=лето, 2=зима, 3=всесезон\n        tire_size: attrs.tire_size,\n        last_inspection: attrs.last_inspection,\n        \n        // Цены и финансы\n        deposit: attrs.deposit,\n        price_hour: attrs.price_hour,\n        hourly_deposit: attrs.hourly_deposit,\n        monthly_deposit: attrs.monthly_deposit,\n        investor_id: attrs.investor_id,\n        purchase_price: attrs.purchase_price,\n        purchase_date: attrs.purchase_date,\n        \n        // Ограничения\n        age_limit: attrs.age_limit,\n        driver_year_limit: attrs.driver_year_limit,\n        franchise: attrs.franchise,\n        max_fine: attrs.max_fine,\n        repair_cost: attrs.repair_cost,\n        \n        // Опции и оборудование (boolean)\n        is_air: attrs.is_air,\n        climate_control: attrs.climate_control,\n        parktronic: attrs.parktronic,\n        parktronic_camera: attrs.parktronic_camera,\n        heated_seats: attrs.heated_seats,\n        audio_system: attrs.audio_system,\n        usb_system: attrs.usb_system,\n        rain_sensor: attrs.rain_sensor,\n        \n        // Технические детали\n        engine_capacity: attrs.engine_capacity,\n        number_doors: attrs.number_doors,\n        tank_value: attrs.tank_value,\n        \n        // Документы\n        pts: attrs.pts,\n        registration_certificate: attrs.registration_certificate,\n        body_number: attrs.body_number,\n        \n        // Полный JSON для всех остальных полей\n        data: attrs,\n        error: false\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "merge-and-process",
+      "name": "Merge & Process",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list"
+        },
+        "table": {
+          "__rl": true,
+          "value": "rentprog_car_states_snapshot",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "branch_id": "={{ $json.branch_id }}",
+            "rentprog_id": "={{ $json.rentprog_id }}",
+            "car_name": "={{ $json.car_name }}",
+            "code": "={{ $json.code }}",
+            "number": "={{ $json.number }}",
+            "vin": "={{ $json.vin }}",
+            "color": "={{ $json.color }}",
+            "year": "={{ $json.year }}",
+            "transmission": "={{ $json.transmission }}",
+            "fuel": "={{ $json.fuel }}",
+            "car_type": "={{ $json.car_type }}",
+            "car_class": "={{ $json.car_class }}",
+            "active": "={{ $json.active }}",
+            "state": "={{ $json.state }}",
+            "tank_state": "={{ $json.tank_state }}",
+            "clean_state": "={{ $json.clean_state }}",
+            "mileage": "={{ $json.mileage }}",
+            "tire_type": "={{ $json.tire_type }}",
+            "tire_size": "={{ $json.tire_size }}",
+            "last_inspection": "={{ $json.last_inspection }}",
+            "deposit": "={{ $json.deposit }}",
+            "price_hour": "={{ $json.price_hour }}",
+            "hourly_deposit": "={{ $json.hourly_deposit }}",
+            "monthly_deposit": "={{ $json.monthly_deposit }}",
+            "investor_id": "={{ $json.investor_id }}",
+            "purchase_price": "={{ $json.purchase_price }}",
+            "purchase_date": "={{ $json.purchase_date }}",
+            "age_limit": "={{ $json.age_limit }}",
+            "driver_year_limit": "={{ $json.driver_year_limit }}",
+            "franchise": "={{ $json.franchise }}",
+            "max_fine": "={{ $json.max_fine }}",
+            "repair_cost": "={{ $json.repair_cost }}",
+            "is_air": "={{ $json.is_air }}",
+            "climate_control": "={{ $json.climate_control }}",
+            "parktronic": "={{ $json.parktronic }}",
+            "parktronic_camera": "={{ $json.parktronic_camera }}",
+            "heated_seats": "={{ $json.heated_seats }}",
+            "audio_system": "={{ $json.audio_system }}",
+            "usb_system": "={{ $json.usb_system }}",
+            "rain_sensor": "={{ $json.rain_sensor }}",
+            "engine_capacity": "={{ $json.engine_capacity }}",
+            "number_doors": "={{ $json.number_doors }}",
+            "tank_value": "={{ $json.tank_value }}",
+            "pts": "={{ $json.pts }}",
+            "registration_certificate": "={{ $json.registration_certificate }}",
+            "body_number": "={{ $json.body_number }}",
+            "data": "={{ $json.data ? JSON.stringify($json.data) : null }}"
+          },
+          "matchingColumns": [
+            "rentprog_id"
+          ],
+          "schema": []
+        },
+        "options": {
+          "onConflict": "update",
+          "updateColumns": [
+            "branch_id",
+            "car_name",
+            "code",
+            "number",
+            "vin",
+            "color",
+            "year",
+            "transmission",
+            "fuel",
+            "car_type",
+            "car_class",
+            "active",
+            "state",
+            "tank_state",
+            "clean_state",
+            "mileage",
+            "tire_type",
+            "tire_size",
+            "last_inspection",
+            "deposit",
+            "price_hour",
+            "hourly_deposit",
+            "monthly_deposit",
+            "investor_id",
+            "purchase_price",
+            "purchase_date",
+            "age_limit",
+            "driver_year_limit",
+            "franchise",
+            "max_fine",
+            "repair_cost",
+            "is_air",
+            "climate_control",
+            "parktronic",
+            "parktronic_camera",
+            "heated_seats",
+            "audio_system",
+            "usb_system",
+            "rain_sensor",
+            "engine_capacity",
+            "number_doors",
+            "tank_value",
+            "pts",
+            "registration_certificate",
+            "body_number",
+            "data"
+          ]
+        }
+      },
+      "id": "save-history",
+      "name": "Save Snapshot",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1024,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list"
+        },
+        "table": {
+          "__rl": true,
+          "value": "cars",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "branch_id": "={{ $json.branch_id }}",
+            "rentprog_id": "={{ $json.rentprog_id }}",
+            "car_name": "={{ $json.car_name }}",
+            "code": "={{ $json.code }}",
+            "number": "={{ $json.number }}",
+            "vin": "={{ $json.vin }}",
+            "color": "={{ $json.color }}",
+            "year": "={{ $json.year }}",
+            "transmission": "={{ $json.transmission }}",
+            "fuel": "={{ $json.fuel }}",
+            "car_type": "={{ $json.car_type }}",
+            "car_class": "={{ $json.car_class }}",
+            "active": "={{ $json.active }}",
+            "state": "={{ $json.state }}",
+            "tank_state": "={{ $json.tank_state }}",
+            "clean_state": "={{ $json.clean_state }}",
+            "mileage": "={{ $json.mileage }}",
+            "tire_type": "={{ $json.tire_type }}",
+            "tire_size": "={{ $json.tire_size }}",
+            "last_inspection": "={{ $json.last_inspection }}",
+            "deposit": "={{ $json.deposit }}",
+            "price_hour": "={{ $json.price_hour }}",
+            "hourly_deposit": "={{ $json.hourly_deposit }}",
+            "monthly_deposit": "={{ $json.monthly_deposit }}",
+            "investor_id": "={{ $json.investor_id }}",
+            "purchase_price": "={{ $json.purchase_price }}",
+            "purchase_date": "={{ $json.purchase_date }}",
+            "age_limit": "={{ $json.age_limit }}",
+            "driver_year_limit": "={{ $json.driver_year_limit }}",
+            "franchise": "={{ $json.franchise }}",
+            "max_fine": "={{ $json.max_fine }}",
+            "repair_cost": "={{ $json.repair_cost }}",
+            "is_air": "={{ $json.is_air }}",
+            "climate_control": "={{ $json.climate_control }}",
+            "parktronic": "={{ $json.parktronic }}",
+            "parktronic_camera": "={{ $json.parktronic_camera }}",
+            "heated_seats": "={{ $json.heated_seats }}",
+            "audio_system": "={{ $json.audio_system }}",
+            "usb_system": "={{ $json.usb_system }}",
+            "rain_sensor": "={{ $json.rain_sensor }}",
+            "engine_capacity": "={{ $json.engine_capacity }}",
+            "number_doors": "={{ $json.number_doors }}",
+            "tank_value": "={{ $json.tank_value }}",
+            "pts": "={{ $json.pts }}",
+            "registration_certificate": "={{ $json.registration_certificate }}",
+            "body_number": "={{ $json.body_number }}",
+            "data": "={{ $json.data ? JSON.stringify($json.data) : null }}"
+          },
+          "matchingColumns": [
+            "rentprog_id"
+          ],
+          "schema": []
+        },
+        "options": {
+          "onConflict": "update",
+          "updateColumns": [
+            "branch_id",
+            "car_name",
+            "code",
+            "number",
+            "vin",
+            "color",
+            "year",
+            "transmission",
+            "fuel",
+            "car_type",
+            "car_class",
+            "active",
+            "state",
+            "tank_state",
+            "clean_state",
+            "mileage",
+            "tire_type",
+            "tire_size",
+            "last_inspection",
+            "deposit",
+            "price_hour",
+            "hourly_deposit",
+            "monthly_deposit",
+            "investor_id",
+            "purchase_price",
+            "purchase_date",
+            "age_limit",
+            "driver_year_limit",
+            "franchise",
+            "max_fine",
+            "repair_cost",
+            "is_air",
+            "climate_control",
+            "parktronic",
+            "parktronic_camera",
+            "heated_seats",
+            "audio_system",
+            "usb_system",
+            "rain_sensor",
+            "engine_capacity",
+            "number_doors",
+            "tank_value",
+            "pts",
+            "registration_certificate",
+            "body_number",
+            "data"
+          ]
+        }
+      },
+      "id": "sync-cars",
+      "name": "Sync Cars",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1096,
+        544
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const originalData = $('Merge & Process').all();\nconst saveResults = $input.all();\n\nconst saveErrors = {};\n\nsaveResults.forEach((result, index) => {\n  const hasError = result.error || \n                   (result.json && result.json.error) ||\n                   (result.json && result.json.message && result.json.message.includes('error')) ||\n                   (result.json && !result.json.success && result.json.success !== undefined);\n  \n  if (hasError) {\n    const originalItem = originalData[index];\n    let branch = null;\n    \n    if (originalItem && originalItem.json && originalItem.json.branch_code) {\n      branch = originalItem.json.branch_code;\n    } else {\n      const branchMatch = result.json?.message?.match(/(tbilisi|batumi|kutaisi|service-center)/i);\n      if (branchMatch) branch = branchMatch[1].toLowerCase();\n    }\n    \n    if (branch) {\n      if (!saveErrors[branch]) saveErrors[branch] = [];\n      saveErrors[branch].push({\n        error: result.json?.message || result.error || 'Unknown error',\n        item: originalItem?.json\n      });\n    }\n  }\n});\n\nconst allItems = originalData.map((item, index) => {\n  const saveResult = saveResults[index];\n  const hasError = saveResult?.error || \n                   (saveResult?.json && saveResult.json.error) ||\n                   (saveResult?.json && saveResult.json.message && saveResult.json.message.includes('error'));\n  \n  return {\n    json: {\n      ...item.json,\n      saved: !hasError,\n      save_error: hasError ? (saveResult?.json?.message || saveResult?.error || 'Unknown error') : null\n    }\n  };\n});\n\nreturn allItems;"
+      },
+      "id": "pass-through-data",
+      "name": "Pass Through Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const saved = $input.all();\nconst successCount = saved.filter(s => s.json.saved).length;\nconst errorCount = saved.filter(s => !s.json.saved).length;\n\nconst byBranch = {};\nconst errorDetails = {};\n\nsaved.forEach(item => {\n  if (item.json.branch_code) {\n    const branch = item.json.branch_code;\n    if (!byBranch[branch]) byBranch[branch] = { success: 0, error: 0 };\n    \n    if (!item.json.saved) {\n      byBranch[branch].error++;\n      if (!errorDetails[branch]) errorDetails[branch] = [];\n      errorDetails[branch].push({\n        car: item.json.rentprog_id || 'unknown',\n        error: item.json.save_error || 'Unknown error'\n      });\n    } else {\n      byBranch[branch].success++;\n    }\n  }\n});\n\nlet message = '🚗 Парсинг автомобилей раз в час:\\n';\nObject.keys(byBranch).forEach(branch => {\n  const stats = byBranch[branch];\n  message += `${branch.toUpperCase()}: ${stats.success} ✓`;\n  if (stats.error > 0) {\n    message += ` / ${stats.error} ✗`;\n  }\n  message += '\\n';\n});\n\nmessage += `\\nВсего: ${successCount} сохранено`;\nif (errorCount > 0) {\n  message += ` / ${errorCount} ошибок`;\n}\n\nreturn [{\n  json: {\n    message: message,\n    success_count: successCount,\n    error_count: errorCount,\n    by_branch: byBranch,\n    error_details: errorDetails\n  }\n}];"
+      },
+      "id": "format-result",
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-error-count",
+              "leftValue": "={{ $json.error_count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-error",
+      "name": "If Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1488,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+        "text": "={{ $json.message }}\\n\\n🔗 <a href=\"https://n8n.rentflow.rentals/workflow/{{ $workflow.id }}/executions/{{ $execution.id }}\">Открыть execution</a>",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "send-alert",
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1648,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-alert-bot",
+          "name": "Telegram Alert Bot"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "success",
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1648,
+        500
+      ]
+    }
+  ],
+  "connections": {
+    "Every Hour": {
+      "main": [
+        [
+          {
+            "node": "Tbilisi Pages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Batumi Pages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Kutaisi Pages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Service Pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tbilisi Pages": {
+      "main": [
+        [
+          {
+            "node": "Get Tbilisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batumi Pages": {
+      "main": [
+        [
+          {
+            "node": "Get Batumi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kutaisi Pages": {
+      "main": [
+        [
+          {
+            "node": "Get Kutaisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Service Pages": {
+      "main": [
+        [
+          {
+            "node": "Get Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tbilisi": {
+      "main": [
+        [
+          {
+            "node": "Set Tbilisi Branch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Batumi": {
+      "main": [
+        [
+          {
+            "node": "Set Batumi Branch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Kutaisi": {
+      "main": [
+        [
+          {
+            "node": "Set Kutaisi Branch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Service": {
+      "main": [
+        [
+          {
+            "node": "Set Service Branch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Tbilisi Branch": {
+      "main": [
+        [
+          {
+            "node": "Wait for All Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Batumi Branch": {
+      "main": [
+        [
+          {
+            "node": "Wait for All Branches",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Set Kutaisi Branch": {
+      "main": [
+        [
+          {
+            "node": "Wait for All Branches",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Set Service Branch": {
+      "main": [
+        [
+          {
+            "node": "Wait for All Branches",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Wait for All Branches": {
+      "main": [
+        [
+          {
+            "node": "Merge & Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge & Process": {
+      "main": [
+        [
+          {
+            "node": "Save Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Snapshot": {
+      "main": [
+        [
+          {
+            "node": "Sync Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync Cars": {
+      "main": [
+        [
+          {
+            "node": "Pass Through Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pass Through Data": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "If Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
+  }
+}

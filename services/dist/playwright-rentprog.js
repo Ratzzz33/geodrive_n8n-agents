@@ -79,6 +79,313 @@ app.post('/scrape-events', async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
+// Endpoint 2: Парсинг броней (активных и неактивных)
+app.post('/scrape-bookings', async (req, res) => {
+    const { branch } = req.body;
+    if (!branch || !CREDENTIALS[branch]) {
+        return res.status(400).json({ success: false, error: 'Invalid branch' });
+    }
+    const creds = CREDENTIALS[branch];
+    let browser;
+    try {
+        browser = await playwright_1.chromium.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        });
+        const page = await browser.newPage();
+        // Логин
+        await page.goto(`https://web.rentprog.ru/${branch}/login`);
+        await page.fill('[name="email"]', creds.login);
+        await page.fill('[name="password"]', creds.password);
+        await page.click('button[type="submit"]');
+        await page.waitForNavigation();
+        // Переход на страницу броней
+        await page.goto('https://web.rentprog.ru/bookings');
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(2000);
+        // Парсим активные брони
+        const activeBookings = await page.evaluate(() => {
+            const rows = Array.from(document.querySelectorAll('table tbody tr'));
+            const bookings = [];
+            rows.forEach((row) => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 14)
+                    return;
+                const booking = {
+                    number: cells[0]?.textContent?.trim() || null,
+                    created: cells[1]?.textContent?.trim() || null,
+                    status_icon_html: cells[2]?.innerHTML || null,
+                    client_status_html: cells[3]?.innerHTML || null,
+                    payment: cells[4]?.textContent?.trim() || null,
+                    car_name: cells[5]?.textContent?.trim() || null,
+                    client_name: cells[6]?.textContent?.trim() || null,
+                    start_date: cells[7]?.textContent?.trim() || null,
+                    end_date: cells[8]?.textContent?.trim() || null,
+                    days: cells[9]?.textContent?.trim() || null,
+                    issue_location: cells[10]?.textContent?.trim() || null,
+                    return_location: cells[11]?.textContent?.trim() || null,
+                    notes: cells[12]?.textContent?.trim() || null,
+                    responsible_html: cells[13]?.innerHTML || null,
+                    responsible: cells[13]?.textContent?.trim() || null,
+                };
+                // Извлекаем payment status и color
+                const paymentBtn = cells[4]?.querySelector('button');
+                if (paymentBtn) {
+                    const classes = paymentBtn.className;
+                    booking.payment_color = classes.match(/(success|error|warning|disabled|outlined)/)?.[1] || null;
+                    booking.payment_is_elevated = classes.includes('v-btn--is-elevated');
+                    booking.payment_is_disabled = classes.includes('v-btn--disabled');
+                }
+                // Извлекаем client category и color
+                const clientStatusBtn = cells[3]?.querySelector('button');
+                if (clientStatusBtn) {
+                    const icon = clientStatusBtn.querySelector('i');
+                    if (icon) {
+                        const iconName = icon.className.match(/mdi-([a-z0-9-]+)/)?.[1] || null;
+                        booking.client_status_icon = iconName;
+                        const textColor = icon.className.match(/(light-blue|green|primary|success|error|warning)--text/)?.[1] || null;
+                        booking.client_status_color = textColor;
+                        // Определяем категорию клиента
+                        if (iconName === 'new-box')
+                            booking.client_category = 'new';
+                        else if (iconName === 'alpha-a-circle-outline')
+                            booking.client_category = 'A';
+                        else if (iconName === 'account-remove-outline')
+                            booking.client_category = 'blocked';
+                        else if (iconName === 'cancel')
+                            booking.client_category = 'cancelled';
+                        else
+                            booking.client_category = null;
+                    }
+                }
+                // Извлекаем booking status icon и color
+                const statusIcon = cells[2]?.querySelector('i');
+                if (statusIcon) {
+                    const iconName = statusIcon.className.match(/mdi-([a-z0-9-]+)/)?.[1] || null;
+                    booking.booking_status_icon = iconName;
+                    const textColor = statusIcon.className.match(/(primary|success|error|warning|secondary)--text/)?.[1] || null;
+                    booking.booking_status_color = textColor || 'primary';
+                }
+                // Извлекаем responsible status и color
+                const responsibleIcon = cells[13]?.querySelector('i');
+                if (responsibleIcon) {
+                    const iconName = responsibleIcon.className.match(/mdi-([a-z0-9-]+)/)?.[1] || null;
+                    booking.responsible_icon = iconName;
+                    const textColor = responsibleIcon.className.match(/(success|secondary|error|warning)--text/)?.[1] || null;
+                    booking.responsible_color = textColor || 'secondary';
+                    if (iconName === 'account-check')
+                        booking.responsible_status = 'assigned';
+                    else if (iconName === 'account-question')
+                        booking.responsible_status = 'not_assigned';
+                    else
+                        booking.responsible_status = null;
+                }
+                // Определяем payment status и balance
+                const paymentText = booking.payment;
+                if (paymentText === 'Оплачено') {
+                    booking.payment_status = 'paid';
+                    booking.payment_balance = 0;
+                }
+                else if (paymentText === 'Не оплачено') {
+                    booking.payment_status = 'unpaid';
+                    booking.payment_balance = null;
+                }
+                else if (paymentText?.startsWith('+')) {
+                    booking.payment_status = 'overpaid';
+                    booking.payment_balance = parseFloat(paymentText.replace(/[+\s]/g, '')) || 0;
+                }
+                else if (paymentText?.startsWith('-') || paymentText === '0') {
+                    booking.payment_status = 'underpaid';
+                    booking.payment_balance = parseFloat(paymentText.replace(/[-\s]/g, '')) || 0;
+                }
+                else {
+                    booking.payment_status = null;
+                    booking.payment_balance = null;
+                }
+                // Извлекаем booking_id из ссылки
+                const link = row.querySelector('a[href*="/bookings/"]');
+                if (link) {
+                    booking.detail_url = link.href;
+                    booking.booking_id = booking.detail_url.match(/\/bookings\/(\d+)/)?.[1] || null;
+                }
+                bookings.push(booking);
+            });
+            return bookings;
+        });
+        // Переключаемся на неактивные брони
+        const inactiveTab = await page.$('button:has-text("Неактивные брони")');
+        if (inactiveTab) {
+            await inactiveTab.click();
+            await page.waitForTimeout(2000);
+            await page.waitForLoadState('networkidle');
+        }
+        // Парсим неактивные брони
+        const inactiveBookings = await page.evaluate(() => {
+            const rows = Array.from(document.querySelectorAll('table tbody tr'));
+            const bookings = [];
+            rows.forEach((row) => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 13)
+                    return;
+                // В неактивных бронях нет колонки "Сост." в начале
+                const booking = {
+                    number: cells[0]?.textContent?.trim() || null,
+                    created: cells[1]?.textContent?.trim() || null,
+                    client_status_html: cells[2]?.innerHTML || null,
+                    payment: cells[3]?.textContent?.trim() || null,
+                    car_name: cells[4]?.textContent?.trim() || null,
+                    client_name: cells[5]?.textContent?.trim() || null,
+                    start_date: cells[6]?.textContent?.trim() || null,
+                    end_date: cells[7]?.textContent?.trim() || null,
+                    days: cells[8]?.textContent?.trim() || null,
+                    issue_location: cells[9]?.textContent?.trim() || null,
+                    return_location: cells[10]?.textContent?.trim() || null,
+                    notes: cells[11]?.textContent?.trim() || null,
+                    responsible_html: cells[12]?.innerHTML || null,
+                    responsible: cells[12]?.textContent?.trim() || null,
+                };
+                // Аналогичная обработка payment, client status, responsible
+                const paymentBtn = cells[3]?.querySelector('button');
+                if (paymentBtn) {
+                    const classes = paymentBtn.className;
+                    booking.payment_color = classes.match(/(success|error|warning|disabled|outlined)/)?.[1] || null;
+                }
+                const clientStatusBtn = cells[2]?.querySelector('button');
+                if (clientStatusBtn) {
+                    const icon = clientStatusBtn.querySelector('i');
+                    if (icon) {
+                        const iconName = icon.className.match(/mdi-([a-z0-9-]+)/)?.[1] || null;
+                        booking.client_status_icon = iconName;
+                        const textColor = icon.className.match(/(light-blue|green|primary)--text/)?.[1] || null;
+                        booking.client_status_color = textColor;
+                        if (iconName === 'new-box')
+                            booking.client_category = 'new';
+                        else if (iconName === 'alpha-a-circle-outline')
+                            booking.client_category = 'A';
+                        else if (iconName === 'account-remove-outline')
+                            booking.client_category = 'blocked';
+                        else if (iconName === 'cancel')
+                            booking.client_category = 'cancelled';
+                    }
+                }
+                const responsibleIcon = cells[12]?.querySelector('i');
+                if (responsibleIcon) {
+                    const iconName = responsibleIcon.className.match(/mdi-([a-z0-9-]+)/)?.[1] || null;
+                    booking.responsible_icon = iconName;
+                    const textColor = responsibleIcon.className.match(/(success|secondary)--text/)?.[1] || null;
+                    booking.responsible_color = textColor || 'secondary';
+                    if (iconName === 'account-check')
+                        booking.responsible_status = 'assigned';
+                    else if (iconName === 'account-question')
+                        booking.responsible_status = 'not_assigned';
+                }
+                const paymentText = booking.payment;
+                if (paymentText === 'Оплачено') {
+                    booking.payment_status = 'paid';
+                    booking.payment_balance = 0;
+                }
+                else if (paymentText === 'Не оплачено') {
+                    booking.payment_status = 'unpaid';
+                    booking.payment_balance = null;
+                }
+                else if (paymentText?.startsWith('+')) {
+                    booking.payment_status = 'overpaid';
+                    booking.payment_balance = parseFloat(paymentText.replace(/[+\s]/g, '')) || 0;
+                }
+                else if (paymentText?.startsWith('-') || paymentText === '0') {
+                    booking.payment_status = 'underpaid';
+                    booking.payment_balance = parseFloat(paymentText.replace(/[-\s]/g, '')) || 0;
+                }
+                const link = row.querySelector('a[href*="/bookings/"]');
+                if (link) {
+                    booking.detail_url = link.href;
+                    booking.booking_id = booking.detail_url.match(/\/bookings\/(\d+)/)?.[1] || null;
+                }
+                booking.is_active = false;
+                bookings.push(booking);
+            });
+            return bookings;
+        });
+        // Помечаем активные брони
+        activeBookings.forEach((b) => { b.is_active = true; });
+        // Парсим даты из русского формата
+        const parseRussianDate = (dateStr) => {
+            if (!dateStr)
+                return null;
+            try {
+                const date = parseDateFromRussian(dateStr);
+                return date.toISOString();
+            }
+            catch {
+                return null;
+            }
+        };
+        // Обрабатываем все брони
+        [...activeBookings, ...inactiveBookings].forEach((booking) => {
+            booking.created_at = parseRussianDate(booking.created);
+            booking.start_at = parseRussianDate(booking.start_date);
+            booking.end_at = parseRussianDate(booking.end_date);
+            booking.days = booking.days ? parseFloat(booking.days) : null;
+            booking.branch_code = branch;
+        });
+        await browser.close();
+        res.json({
+            success: true,
+            branch,
+            active: activeBookings,
+            inactive: inactiveBookings,
+            total: activeBookings.length + inactiveBookings.length
+        });
+    }
+    catch (error) {
+        if (browser)
+            await browser.close();
+        res.status(500).json({ success: false, error: error.message, branch });
+    }
+});
+// Endpoint 3: Парсинг детальной страницы брони
+app.post('/scrape-booking-details', async (req, res) => {
+    const { branch, booking_id } = req.body;
+    if (!branch || !CREDENTIALS[branch] || !booking_id) {
+        return res.status(400).json({ success: false, error: 'Invalid branch or booking_id' });
+    }
+    const creds = CREDENTIALS[branch];
+    let browser;
+    try {
+        browser = await playwright_1.chromium.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        });
+        const page = await browser.newPage();
+        // Логин
+        await page.goto(`https://web.rentprog.ru/${branch}/login`);
+        await page.fill('[name="email"]', creds.login);
+        await page.fill('[name="password"]', creds.password);
+        await page.click('button[type="submit"]');
+        await page.waitForNavigation();
+        // Переход на детальную страницу брони
+        await page.goto(`https://web.rentprog.ru/bookings/${booking_id}`);
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(2000);
+        // Парсим все данные со страницы
+        const details = await page.evaluate(() => {
+            // Здесь нужно будет добавить парсинг всех полей детальной страницы
+            // Пока возвращаем базовую структуру
+            return {
+                booking_id: window.location.pathname.match(/\/bookings\/(\d+)/)?.[1] || null,
+                // TODO: Добавить парсинг всех полей детальной страницы
+                raw_html: document.body.innerHTML.substring(0, 5000) // Для отладки
+            };
+        });
+        await browser.close();
+        res.json({ success: true, branch, booking_id, details });
+    }
+    catch (error) {
+        if (browser)
+            await browser.close();
+        res.status(500).json({ success: false, error: error.message, branch, booking_id });
+    }
+});
 // Endpoint 2: Парсинг кассы сотрудника
 app.post('/scrape-employee-cash', async (req, res) => {
     const { employeeName, employeeId, branch } = req.body;

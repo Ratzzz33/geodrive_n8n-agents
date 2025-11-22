@@ -1,0 +1,2426 @@
+{
+  "updatedAt": "2025-11-14T19:45:10.590Z",
+  "createdAt": "2025-11-12T22:21:50.632Z",
+  "id": "P3BnmX7Nrmh1cusF",
+  "name": "✅Парсинг броней RentProg (активные и неактивные) раз в час",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTY2MCwiZXhwIjoxNzY1MDUxNjYwLCJqdGkiOiIxOTFjMDY4ZS1jOGNhLTQ4OWEtODk0OS1iMjJkMmUzODE2ZDIifQ.G4_I4D96Flv4rP3JwjwDPpEHaH6ShSb0YRRQG8PasXk"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":50,\"filters\":{\"start_date_from\":\"2025-10-14\"}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Tbilisi Active",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        208
+      ],
+      "id": "beecf1a5-0f09-4050-8384-bb35eab9657c"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTY2MCwiZXhwIjoxNzY1MDUxNjYwLCJqdGkiOiIxOTFjMDY4ZS1jOGNhLTQ4OWEtODk0OS1iMjJkMmUzODE2ZDIifQ.G4_I4D96Flv4rP3JwjwDPpEHaH6ShSb0YRRQG8PasXk"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":false,\"page\":1,\"per_page\":50,\"filters\":{\"start_date_from\":\"2025-10-14\"}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Tbilisi Inactive",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        304
+      ],
+      "id": "9d2a0380-45fe-45e3-add7-076c0af40d72"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDAyNSwiZXhwIjoxNzY1MDUyMDI1LCJqdGkiOiI0ZmQ2ODE4Yy0zYWNiLTRmZmQtOGZmYS0wZWMwZDkyMmIyMzgifQ.16s2ruRb3x_S7bgy4zF7TW9dSQ3ITqX3kei8recyH_8"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":50,\"filters\":{\"start_date_from\":\"2025-10-14\"}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Batumi Active",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        400
+      ],
+      "id": "70ebd6b7-e7bb-4f9d-b1e0-11801d6deaab"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDAyNSwiZXhwIjoxNzY1MDUyMDI1LCJqdGkiOiI0ZmQ2ODE4Yy0zYWNiLTRmZmQtOGZmYS0wZWMwZDkyMmIyMzgifQ.16s2ruRb3x_S7bgy4zF7TW9dSQ3ITqX3kei8recyH_8"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":false,\"page\":1,\"per_page\":50,\"filters\":{\"start_date_from\":\"2025-10-14\"}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Batumi Inactive",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        512
+      ],
+      "id": "a10f7a53-efb9-4cbe-a486-c51965014364"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDE3MiwiZXhwIjoxNzY1MDUyMTcyLCJqdGkiOiJmNzE1NGQ3MC0zZWFmLTRiNzItYTI3Ni0yZTg3MmQ4YjA0YmQifQ.1vd1kNbWB_qassLVqoxgyRsRJwtPsl7OR28gVsCxmwY"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":50,\"filters\":{\"start_date_from\":\"2025-10-14\"}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Kutaisi Active",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        608
+      ],
+      "id": "9be4d35d-a557-4074-9a02-e36be8ac8ec9"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDE3MiwiZXhwIjoxNzY1MDUyMTcyLCJqdGkiOiJmNzE1NGQ3MC0zZWFmLTRiNzItYTI3Ni0yZTg3MmQ4YjA0YmQifQ.1vd1kNbWB_qassLVqoxgyRsRJwtPsl7OR28gVsCxmwY"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":false,\"page\":1,\"per_page\":50,\"filters\":{\"start_date_from\":\"2025-10-14\"}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Kutaisi Inactive",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        704
+      ],
+      "id": "b7f6e1de-1624-4e31-8aff-04a077039ab7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTM4MSwiZXhwIjoxNzY1MDUxMzgxLCJqdGkiOiI4ZDdkYjYyNi1jNWJiLTQ0MWMtYTNlMy00YjQwOWFmODQ1NmUifQ.32BRzttLFFgOgMv-VusAXK8mmyvrk4X-pb_rHQHSFbw"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":50,\"filters\":{\"start_date_from\":\"2025-10-14\"}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Service Active",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        800
+      ],
+      "id": "3dcd2b9d-3795-4c33-a9c6-808acd0acd32"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTM4MSwiZXhwIjoxNzY1MDUxMzgxLCJqdGkiOiI4ZDdkYjYyNi1jNWJiLTQ0MWMtYTNlMy00YjQwOWFmODQ1NmUifQ.32BRzttLFFgOgMv-VusAXK8mmyvrk4X-pb_rHQHSFbw"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":false,\"page\":1,\"per_page\":50,\"filters\":{\"start_date_from\":\"2025-10-14\"}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Service Inactive",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        912
+      ],
+      "id": "9832f777-5514-4078-8416-041af5a68301"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обрабатываем все брони по филиалам + карта автомобилей\nconst branchItems = (() => {\n  try {\n    return $input.all(0);\n  } catch (err) {\n    console.warn('⚠️  Нет данных от Merge All Branches');\n    return [];\n  }\n})();\n\nconst carItems = (() => {\n  try {\n    return $items('Get Car IDs', 'main', 0, { returnAll: true }) || [];\n  } catch (err) {\n    console.warn('⚠️  Нет данных из Get Car IDs');\n    return [];\n  }\n})();\n\nfunction normalizeCode(value) {\n  return (value ?? '').toString().trim().toLowerCase();\n}\n\nconst carIdMap = new Map();\ncarItems.forEach(item => {\n  const code = normalizeCode(item.json?.code || item.json?.car_code);\n  const id = item.json?.id;\n  if (code && id) {\n    carIdMap.set(code, id);\n  }\n});\nconsole.log('Car codes in map:', carIdMap.size);\n\nconst branchMapping = [\n  { branch: 'tbilisi', active: true },\n  { branch: 'tbilisi', active: false },\n  { branch: 'batumi', active: true },\n  { branch: 'batumi', active: false },\n  { branch: 'kutaisi', active: true },\n  { branch: 'kutaisi', active: false },\n  { branch: 'service-center', active: true },\n  { branch: 'service-center', active: false },\n];\n\nfunction getTechnicalType(attrs) {\n  const firstName = (attrs.first_name || '').toLowerCase();\n  const lastName = (attrs.last_name || '').toLowerCase();\n  const clientName = `${firstName} ${lastName}`.toLowerCase();\n  const description = (attrs.description || '').toLowerCase();\n  const locationStart = (attrs.location_start || '').toLowerCase();\n\n  const isTechnical =\n    clientName.includes('сервис') ||\n    clientName.includes('сотрудник') ||\n    clientName.includes('service') ||\n    clientName.includes('employee') ||\n    attrs.rental_cost === 0;\n\n  if (!isTechnical) {\n    return {\n      is_technical: false,\n      technical_type: 'regular',\n      technical_purpose: null,\n    };\n  }\n\n  const isRepair =\n    clientName.includes('сервис') ||\n    description.includes('ремонт') ||\n    description.includes('repair') ||\n    description.includes('fix') ||\n    description.includes('сто') ||\n    locationStart.includes('сервис') ||\n    locationStart.includes('service');\n\n  if (isRepair) {\n    return {\n      is_technical: true,\n      technical_type: 'technical_repair',\n      technical_purpose: 'repair',\n    };\n  }\n\n  return {\n    is_technical: true,\n    technical_type: 'technical',\n    technical_purpose: 'employee_trip',\n  };\n}\n\nconst results = [];\n\nbranchItems.forEach((item, index) => {\n  const json = item.json;\n  const mapping = branchMapping[index] || { branch: 'unknown', active: null };\n\n  if (json.error) {\n    results.push({\n      json: {\n        branch: mapping.branch,\n        error: true,\n        error_message: json.error || 'Unknown error',\n      },\n    });\n    return;\n  }\n\n  const bookingsData = json.bookings?.data || [];\n  bookingsData.forEach(booking => {\n    const attrs = booking.attributes || booking;\n    const technicalInfo = getTechnicalType(attrs);\n    const clientName = [attrs.first_name, attrs.middle_name, attrs.last_name]\n      .filter(Boolean)\n      .join(' ');\n\n    const carCode = attrs.car_code || '';\n    const rentprogCarIdRaw = attrs.car_id ?? attrs.carId ?? null;\n    const rentprogCarId = rentprogCarIdRaw !== null && rentprogCarIdRaw !== undefined\n      ? String(rentprogCarIdRaw)\n      : null;\n    const carId = carIdMap.get(normalizeCode(carCode)) || null;\n\n    results.push({\n      json: {\n        branch: mapping.branch,\n        number: attrs.number,\n        is_active: mapping.active,\n        start_date: attrs.start_date,\n        end_date: attrs.end_date,\n        start_date_formatted: attrs.start_date_formatted,\n        end_date_formatted: attrs.end_date_formatted,\n        created_at: attrs.created_at,\n        client_name: clientName,\n        client_category: attrs.client_category,\n        car_name: attrs.car_name,\n        car_code: carCode,\n        rentprog_car_id: rentprogCarId,\n        car_id: carId,\n        location_start: attrs.location_start,\n        location_end: attrs.location_end,\n        total: attrs.total,\n        deposit: attrs.deposit,\n        rental_cost: attrs.rental_cost,\n        days: attrs.days,\n        state: attrs.state,\n        in_rent: attrs.in_rent,\n        archive: attrs.archive,\n        start_worker_id: attrs.start_worker_id,\n        end_worker_id: attrs.end_worker_id,\n        responsible: attrs.responsible,\n        description: attrs.description,\n        source: attrs.source,\n        is_technical: technicalInfo.is_technical,\n        technical_type: technicalInfo.technical_type,\n        technical_purpose: technicalInfo.technical_purpose,\n        data: attrs,\n      },\n    });\n  });\n});\n\nconsole.log('Total results:', results.length);\n\nreturn results;"
+      },
+      "name": "Process All Bookings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        368
+      ],
+      "id": "f045841f-5b80-4480-9dd6-6bb94265f05b"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Быстрое форматирование результата без тяжелых операций\nconst items = $input.all();\n\n// Просто считаем количество успешных и неудачных\nconst successCount = items.filter(item => !item.json.error).length;\nconst errorCount = items.filter(item => item.json.error).length;\n\n// Формируем простое сообщение\nlet message = '📊 Парсинг броней RentProg завершён\\n\\n';\nmessage += `✅ Успешно: ${successCount}\\n`;\n\nif (errorCount > 0) {\n  message += `❌ Ошибок: ${errorCount}\\n`;\n}\n\nmessage += `\\n📈 Всего обработано: ${items.length} items`;\n\nreturn [{\n  json: {\n    success: errorCount === 0,\n    message: message,\n    total_items: items.length,\n    success_count: successCount,\n    error_count: errorCount\n  }\n}];"
+      },
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        464
+      ],
+      "onError": "continueRegularOutput",
+      "id": "bc913c5e-4738-46aa-ac2d-24b2501f2cac"
+    },
+    {
+      "parameters": {},
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        800
+      ],
+      "id": "7f6c3a1c-3a4c-45c9-90f7-150ec6e1285f"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "bookings"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "mp3": false,
+            "demo": false,
+            "ride": false,
+            "kasko": false,
+            "osago": false,
+            "theft": false,
+            "active": false,
+            "entity": false,
+            "hourly": false,
+            "repair": false,
+            "weekly": false,
+            "archive": false,
+            "charger": false,
+            "failure": false,
+            "in_rent": false,
+            "monthly": false,
+            "aggr_paid": false,
+            "clean_end": false,
+            "navigator": false,
+            "technical": false,
+            "clean_start": false,
+            "super_kasko": false,
+            "wifi_router": false,
+            "fast_booking": false,
+            "gas_end_full": false,
+            "no_franchise": false,
+            "auto_archived": false,
+            "client_debtor": false,
+            "client_decline": false,
+            "gas_start_full": false,
+            "manual_editing": false,
+            "created_from_api": false,
+            "updated_from_api": false,
+            "chair_less_1_year": false,
+            "send_accept_email": false,
+            "send_cancel_email": false,
+            "send_custom_email": false,
+            "only_manual_editing": false,
+            "part_return_deposit": false,
+            "technical_check_end": false,
+            "apply_current_prices": false,
+            "job_start_first_time": false,
+            "technical_check_start": false,
+            "is_active": false,
+            "is_technical": false,
+            "rentprog_car_id": false
+          },
+          "matchingColumns": [
+            "branch",
+            "number"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": false,
+              "display": false,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "branch_id",
+              "displayName": "branch_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "car_id",
+              "displayName": "car_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "client_id",
+              "displayName": "client_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "start_at",
+              "displayName": "start_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "end_at",
+              "displayName": "end_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "data",
+              "displayName": "data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "car",
+              "displayName": "car",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "fio",
+              "displayName": "fio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "gas",
+              "displayName": "gas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "grm",
+              "displayName": "grm",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "mp3",
+              "displayName": "mp3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "days",
+              "displayName": "days",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "demo",
+              "displayName": "demo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "fine",
+              "displayName": "fine",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "ride",
+              "displayName": "ride",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "sale",
+              "displayName": "sale",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "chair",
+              "displayName": "chair",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "kasko",
+              "displayName": "kasko",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "osago",
+              "displayName": "osago",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "other",
+              "displayName": "other",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "price",
+              "displayName": "price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "state",
+              "displayName": "state",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "theft",
+              "displayName": "theft",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "total",
+              "displayName": "total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "active",
+              "displayName": "active",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "client",
+              "displayName": "client",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "counts",
+              "displayName": "counts",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "damage",
+              "displayName": "damage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "entity",
+              "displayName": "entity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "grm_km",
+              "displayName": "grm_km",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "hourly",
+              "displayName": "hourly",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "number",
+              "displayName": "number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "repair",
+              "displayName": "repair",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "weekly",
+              "displayName": "weekly",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "archive",
+              "displayName": "archive",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "booster",
+              "displayName": "booster",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "charger",
+              "displayName": "charger",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "deposit",
+              "displayName": "deposit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "failure",
+              "displayName": "failure",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "gas_end",
+              "displayName": "gas_end",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "in_rent",
+              "displayName": "in_rent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "monthly",
+              "displayName": "monthly",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "sign_id",
+              "displayName": "sign_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "updater",
+              "displayName": "updater",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "accepted",
+              "displayName": "accepted",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "agent_id",
+              "displayName": "agent_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "car_code",
+              "displayName": "car_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "car_name",
+              "displayName": "car_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "rentprog_car_id",
+              "displayName": "rentprog_car_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "delivery",
+              "displayName": "delivery",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "end_date",
+              "displayName": "end_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "price_id",
+              "displayName": "price_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "prolongs",
+              "displayName": "prolongs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "aggr_paid",
+              "displayName": "aggr_paid",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "amocrm_id",
+              "displayName": "amocrm_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "car_state",
+              "displayName": "car_state",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "clean_end",
+              "displayName": "clean_end",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "equipment",
+              "displayName": "equipment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "gas_start",
+              "displayName": "gas_start",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "insurance",
+              "displayName": "insurance",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "last_name",
+              "displayName": "last_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "navigator",
+              "displayName": "navigator",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "other_end",
+              "displayName": "other_end",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "sale_cash",
+              "displayName": "sale_cash",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "tariff_id",
+              "displayName": "tariff_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "technical",
+              "displayName": "technical",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "company_id",
+              "displayName": "company_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "first_name",
+              "displayName": "first_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "hours_cost",
+              "displayName": "hours_cost",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "oil_engine",
+              "displayName": "oil_engine",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "price_hour",
+              "displayName": "price_hour",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "start_date",
+              "displayName": "start_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "add_drivers",
+              "displayName": "add_drivers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "clean_start",
+              "displayName": "clean_start",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "end_mileage",
+              "displayName": "end_mileage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "entity_name",
+              "displayName": "entity_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "middle_name",
+              "displayName": "middle_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "rental_cost",
+              "displayName": "rental_cost",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "responsible",
+              "displayName": "responsible",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "start_price",
+              "displayName": "start_price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "super_kasko",
+              "displayName": "super_kasko",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "wifi_router",
+              "displayName": "wifi_router",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "delivery_end",
+              "displayName": "delivery_end",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "fast_booking",
+              "displayName": "fast_booking",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "from_partner",
+              "displayName": "from_partner",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "gas_end_full",
+              "displayName": "gas_end_full",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "hourly_hours",
+              "displayName": "hourly_hours",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "localrent_id",
+              "displayName": "localrent_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "location_end",
+              "displayName": "location_end",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "mileage_cost",
+              "displayName": "mileage_cost",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "no_franchise",
+              "displayName": "no_franchise",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "weekly_weeks",
+              "displayName": "weekly_weeks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "archived_date",
+              "displayName": "archived_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "auto_archived",
+              "displayName": "auto_archived",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "clean_payment",
+              "displayName": "clean_payment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "client_debtor",
+              "displayName": "client_debtor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "decision_date",
+              "displayName": "decision_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "end_worker_id",
+              "displayName": "end_worker_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "oil_engine_km",
+              "displayName": "oil_engine_km",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "payments_type",
+              "displayName": "payments_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "price_no_sale",
+              "displayName": "price_no_sale",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "serial_number",
+              "displayName": "serial_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "start_mileage",
+              "displayName": "start_mileage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "state_updater",
+              "displayName": "state_updater",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "vseprokaty_id",
+              "displayName": "vseprokaty_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "client_decline",
+              "displayName": "client_decline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "custom_field_1",
+              "displayName": "custom_field_1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "custom_field_2",
+              "displayName": "custom_field_2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "custom_field_3",
+              "displayName": "custom_field_3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "failure_reason",
+              "displayName": "failure_reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "gas_start_full",
+              "displayName": "gas_start_full",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "hourly_deposit",
+              "displayName": "hourly_deposit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "hours_cost_end",
+              "displayName": "hours_cost_end",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "location_start",
+              "displayName": "location_start",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "manual_editing",
+              "displayName": "manual_editing",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "monthly_months",
+              "displayName": "monthly_months",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "weekly_deposit",
+              "displayName": "weekly_deposit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "aggr_commission",
+              "displayName": "aggr_commission",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "booking_mileage",
+              "displayName": "booking_mileage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "chairs_quantity",
+              "displayName": "chairs_quantity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "client_category",
+              "displayName": "client_category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "end_location_id",
+              "displayName": "end_location_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "location_end_id",
+              "displayName": "location_end_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "main_company_id",
+              "displayName": "main_company_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "monthly_deposit",
+              "displayName": "monthly_deposit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "other_equipment",
+              "displayName": "other_equipment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "payments_period",
+              "displayName": "payments_period",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "start_worker_id",
+              "displayName": "start_worker_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "add_drivers_cost",
+              "displayName": "add_drivers_cost",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "additional_hours",
+              "displayName": "additional_hours",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_from_api",
+              "displayName": "created_from_api",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "last_balanced_at",
+              "displayName": "last_balanced_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "rental_cost_sale",
+              "displayName": "rental_cost_sale",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "updated_from_api",
+              "displayName": "updated_from_api",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "boosters_quantity",
+              "displayName": "boosters_quantity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "chair_less_1_year",
+              "displayName": "chair_less_1_year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "location_start_id",
+              "displayName": "location_start_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "payment_job_count",
+              "displayName": "payment_job_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "send_accept_email",
+              "displayName": "send_accept_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "send_cancel_email",
+              "displayName": "send_cancel_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "send_custom_email",
+              "displayName": "send_custom_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "start_location_id",
+              "displayName": "start_location_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "taxi_booking_data",
+              "displayName": "taxi_booking_data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "amocrm_last_update",
+              "displayName": "amocrm_last_update",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "commission_percent",
+              "displayName": "commission_percent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "end_date_formatted",
+              "displayName": "end_date_formatted",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "taxi_payment_model",
+              "displayName": "taxi_payment_model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "booking_photos_data",
+              "displayName": "booking_photos_data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "only_manual_editing",
+              "displayName": "only_manual_editing",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "part_return_deposit",
+              "displayName": "part_return_deposit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "technical_check_end",
+              "displayName": "technical_check_end",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "apply_current_prices",
+              "displayName": "apply_current_prices",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "job_start_first_time",
+              "displayName": "job_start_first_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "start_date_formatted",
+              "displayName": "start_date_formatted",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "booking_message_state",
+              "displayName": "booking_message_state",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "rental_cost_sale_cash",
+              "displayName": "rental_cost_sale_cash",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "technical_check_start",
+              "displayName": "technical_check_start",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "technical_check_end_comment",
+              "displayName": "technical_check_end_comment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "technical_check_start_comment",
+              "displayName": "technical_check_start_comment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "responsible_id",
+              "displayName": "responsible_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "history_log",
+              "displayName": "history_log",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "test_field",
+              "displayName": "test_field",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "payload_json",
+              "displayName": "payload_json",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "test_marker",
+              "displayName": "test_marker",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "is_active",
+              "displayName": "is_active",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "client_name",
+              "displayName": "client_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "branch",
+              "displayName": "branch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "is_technical",
+              "displayName": "is_technical",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "technical_type",
+              "displayName": "technical_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "technical_purpose",
+              "displayName": "technical_purpose",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "name": "Save to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        944,
+        592
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "id": "c66ed1ff-d484-46f3-9ae0-a3ac7a9d3da2"
+    },
+    {
+      "parameters": {
+        "chatId": "=-1003484642420",
+        "text": "={{ $json.message + '\\n\\n🔗 <a href=\"https://n8n.rentflow.rentals/workflow/' + $workflow.id + '/executions/' + $execution.id + '\">Открыть execution</a>' }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1360,
+        496
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1tKryXxL5Gq395nN",
+          "name": "Telegram account"
+        }
+      },
+      "id": "b7448359-b64b-4e8a-bcd4-ff801dcbafae"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Выбрасываем ошибку чтобы execution был помечен как failed\nconst errorData = $input.first().json;\nconst errorMessage = errorData.message || 'Ошибка при парсинге броней RentProg';\n\nconsole.error('❌ Workflow failed:', errorMessage);\n\nthrow new Error(errorMessage);"
+      },
+      "name": "Throw Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        640
+      ],
+      "id": "e1b22959-4ff0-48ff-afaf-948f3167cc91"
+    },
+    {
+      "parameters": {
+        "numberInputs": 8
+      },
+      "name": "Merge All Branches",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        720,
+        560
+      ],
+      "id": "47f1e52e-e16a-43e5-92cf-ddccfca305d4"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 60
+            }
+          ]
+        }
+      },
+      "name": "Every 60 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        400
+      ],
+      "id": "f2b3bfe9-3dea-4194-9273-06f8484c04e9"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.error_count }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": 0,
+              "id": "a8d461ac-15b2-4191-a7ed-896eadc18115"
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "If Error",
+      "position": [
+        1184,
+        656
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "id": "b4fbb9a3-0ece-40c3-a49b-25f0d64c89cb"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT code, id FROM cars WHERE code IS NOT NULL"
+      },
+      "name": "Get Car IDs",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        720,
+        240
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "id": "25d14dfd-ba89-4458-92b0-05e9b4c3713f"
+    }
+  ],
+  "connections": {
+    "Get Tbilisi Active": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tbilisi Inactive": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Batumi Active": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Get Batumi Inactive": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Get Kutaisi Active": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "Get Kutaisi Inactive": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 5
+          }
+        ]
+      ]
+    },
+    "Get Service Active": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 6
+          }
+        ]
+      ]
+    },
+    "Get Service Inactive": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 7
+          }
+        ]
+      ]
+    },
+    "Process All Bookings": {
+      "main": [
+        [
+          {
+            "node": "Save to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "If Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Save to DB": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Alert": {
+      "main": [
+        [
+          {
+            "node": "Throw Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All Branches": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 60 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Get Tbilisi Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Tbilisi Inactive",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Batumi Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Batumi Inactive",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Kutaisi Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Kutaisi Inactive",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Service Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Service Inactive",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Car IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Car IDs": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "staticData": {
+    "node:Every 60 Minutes": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "pinData": {},
+  "versionId": "a7ee1004-892b-45dc-b1f9-a6e6f30a7da2",
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2025-11-12T22:21:50.632Z",
+      "createdAt": "2025-11-12T22:21:50.632Z",
+      "role": "workflow:owner",
+      "workflowId": "P3BnmX7Nrmh1cusF",
+      "projectId": "YeYimRJroeGbDN4w",
+      "project": {
+        "updatedAt": "2025-10-31T22:08:34.100Z",
+        "createdAt": "2025-10-31T21:59:17.618Z",
+        "id": "YeYimRJroeGbDN4w",
+        "name": "Aleksey Eliseev <33pokrov33@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-10-31T21:59:17.618Z",
+            "createdAt": "2025-10-31T21:59:17.618Z",
+            "userId": "7d62b373-201b-47f3-859a-cdc69ddea44a",
+            "projectId": "YeYimRJroeGbDN4w",
+            "user": {
+              "updatedAt": "2025-11-14T20:00:40.890Z",
+              "createdAt": "2025-10-31T21:58:30.097Z",
+              "id": "7d62b373-201b-47f3-859a-cdc69ddea44a",
+              "email": "33pokrov33@gmail.com",
+              "firstName": "Aleksey",
+              "lastName": "Eliseev",
+              "personalizationAnswers": {
+                "version": "v4",
+                "personalization_survey_submitted_at": "2025-10-31T22:14:18.419Z",
+                "personalization_survey_n8n_version": "1.117.3",
+                "companyIndustryExtended": [
+                  "physical-retail-or-services"
+                ],
+                "companySize": "<20",
+                "companyType": "other",
+                "role": "business-owner",
+                "reportedSource": "friend"
+              },
+              "settings": {
+                "userActivated": true,
+                "firstSuccessfulWorkflowId": "gNXRKIQpNubEazH7",
+                "userActivatedAt": 1762108796654,
+                "easyAIWorkflowOnboarded": true
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2025-11-14",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": []
+}

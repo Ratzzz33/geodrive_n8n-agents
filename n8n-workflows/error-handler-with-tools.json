@@ -7,7 +7,10 @@
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
-      "position": [-800, 260]
+      "position": [
+        -800,
+        260
+      ]
     },
     {
       "parameters": {},
@@ -15,7 +18,10 @@
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [-800, 20],
+      "position": [
+        -800,
+        20
+      ],
       "onError": "continueRegularOutput"
     },
     {
@@ -23,7 +29,10 @@
       "name": "Manual Error Text",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
-      "position": [-600, 120],
+      "position": [
+        -600,
+        120
+      ],
       "parameters": {
         "keepOnlySet": true,
         "values": {
@@ -71,7 +80,10 @@
       "name": "Merge Inputs",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
-      "position": [-600, 200]
+      "position": [
+        -600,
+        200
+      ]
     },
     {
       "parameters": {
@@ -82,7 +94,10 @@
       "name": "Extract Error Context",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-400, 200]
+      "position": [
+        -400,
+        200
+      ]
     },
     {
       "parameters": {
@@ -100,7 +115,10 @@
       "name": "Check Cache",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [-200, 200],
+      "position": [
+        -200,
+        200
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -129,7 +147,10 @@
       "name": "Is Cached?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [0, 200]
+      "position": [
+        0,
+        200
+      ]
     },
     {
       "parameters": {
@@ -140,7 +161,10 @@
       "name": "Format Cached Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [220, 80]
+      "position": [
+        220,
+        80
+      ]
     },
     {
       "parameters": {
@@ -154,7 +178,10 @@
       "name": "Update Cache Counter",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [460, 40],
+      "position": [
+        460,
+        40
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -174,7 +201,10 @@
       "name": "AI Agent",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.7,
-      "position": [420, 340]
+      "position": [
+        420,
+        340
+      ]
     },
     {
       "parameters": {
@@ -186,7 +216,10 @@
       "name": "GitHub Documentation Tool",
       "type": "@n8n/n8n-nodes-langchain.toolCode",
       "typeVersion": 1,
-      "position": [200, 520]
+      "position": [
+        200,
+        520
+      ]
     },
     {
       "parameters": {
@@ -198,7 +231,10 @@
       "name": "Analyze Error Tool",
       "type": "@n8n/n8n-nodes-langchain.toolCode",
       "typeVersion": 1,
-      "position": [420, 520]
+      "position": [
+        420,
+        520
+      ]
     },
     {
       "parameters": {
@@ -209,7 +245,10 @@
       "name": "OpenAI Chat Model",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
-      "position": [620, 520],
+      "position": [
+        620,
+        520
+      ],
       "credentials": {
         "openAiApi": {
           "id": "r7gKTMOJGyO0hMmF",
@@ -226,7 +265,10 @@
       "name": "Build Agent Input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [220, 340]
+      "position": [
+        220,
+        340
+      ]
     },
     {
       "parameters": {
@@ -237,7 +279,10 @@
       "name": "Parse Agent Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [640, 340]
+      "position": [
+        640,
+        340
+      ]
     },
     {
       "parameters": {
@@ -251,7 +296,10 @@
       "name": "Save to Cache",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [880, 340],
+      "position": [
+        880,
+        340
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -274,7 +322,10 @@
       "name": "Send Summary to Telegram",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [460, 140],
+      "position": [
+        460,
+        140
+      ],
       "continueOnFail": true,
       "credentials": {
         "telegramApi": {
@@ -297,7 +348,10 @@
       "name": "Send Cursor Prompt",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [680, 140],
+      "position": [
+        680,
+        140
+      ],
       "continueOnFail": true,
       "credentials": {
         "telegramApi": {
@@ -309,63 +363,196 @@
   ],
   "connections": {
     "Error Trigger": {
-      "main": [[{"node": "Merge Inputs", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Merge Inputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Manual Trigger": {
-      "main": [[{"node": "Manual Error Text", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Manual Error Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Manual Error Text": {
-      "main": [[{"node": "Merge Inputs", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Merge Inputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Merge Inputs": {
-      "main": [[{"node": "Extract Error Context", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Extract Error Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extract Error Context": {
-      "main": [[{"node": "Check Cache", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Check Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Check Cache": {
-      "main": [[{"node": "Is Cached?", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Is Cached?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Is Cached?": {
       "main": [
-        [{"node": "Format Cached Response", "type": "main", "index": 0}],
-        [{"node": "Build Agent Input", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Format Cached Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Agent Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Format Cached Response": {
       "main": [
-        [{"node": "Update Cache Counter", "type": "main", "index": 0}],
-        [{"node": "Send Summary to Telegram", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Update Cache Counter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Summary to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Build Agent Input": {
-      "main": [[{"node": "AI Agent", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "AI Agent": {
-      "main": [[{"node": "Parse Agent Output", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Parse Agent Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parse Agent Output": {
       "main": [
-        [{"node": "Save to Cache", "type": "main", "index": 0}],
-        [{"node": "Send Summary to Telegram", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Save to Cache",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Summary to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Send Summary to Telegram": {
-      "main": [[{"node": "Send Cursor Prompt", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Send Cursor Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "GitHub Documentation Tool": {
-      "ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Analyze Error Tool": {
-      "ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     },
     "OpenAI Chat Model": {
-      "ai_languageModel": [[{"node": "AI Agent", "type": "ai_languageModel", "index": 0}]]
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   },
   "triggerCount": 1
 }
-

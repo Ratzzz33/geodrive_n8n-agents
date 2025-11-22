@@ -23,12 +23,8 @@ async function getRequestToken(branch) {
     throw new Error(`Unknown branch: ${branch}`);
   }
 
-  const response = await fetch(`${BASE_URL}/token`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Company-Token': companyToken
-    }
+  const response = await fetch(`${BASE_URL}/get_token?company_token=${companyToken}`, {
+    method: 'GET'
   });
 
   if (!response.ok) {
@@ -84,11 +80,11 @@ async function upsertCarPrices(sql, carId, carData) {
         period: period,
         price_per_day: values[idx] || 0,
         price_gel: values[idx] || 0,
-        price_usd: Math.round((values[idx] / 2.7) * 100) / 100,
+        price_usd: Math.round((values[idx] / 2.75) * 100) / 100,
         currency: 'GEL'
       })),
       currency: 'GEL',
-      exchange_rate: 2.7
+      exchange_rate: 2.75
     };
 
     // Добавить сезон

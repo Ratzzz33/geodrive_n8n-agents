@@ -1,0 +1,483 @@
+{
+  "name": "🚗 Парсинг автомобилей RentProg через API раз в час",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 3
+            }
+          ]
+        }
+      },
+      "name": "Every 3 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://rentprog.net/api/v1/all_cars_full?limit=100&page=0",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTY2MCwiZXhwIjoxNzY1MDUxNjYwLCJqdGkiOiIxOTFjMDY4ZS1jOGNhLTQ4OWEtODk0OS1iMjJkMmUzODE2ZDIifQ.G4_I4D96Flv4rP3JwjwDPpEHaH6ShSb0YRRQG8PasXk"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Tbilisi Cars",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        200
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://rentprog.net/api/v1/all_cars_full?limit=100&page=0",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDAyNSwiZXhwIjoxNzY1MDUyMDI1LCJqdGkiOiI0ZmQ2ODE4Yy0zYWNiLTRmZmQtOGZmYS0wZWMwZDkyMmIyMzgifQ.16s2ruRb3x_S7bgy4zF7TW9dSQ3ITqX3kei8recyH_8"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Batumi Cars",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        350
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://rentprog.net/api/v1/all_cars_full?limit=100&page=0",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDE3MiwiZXhwIjoxNzY1MDUyMTcyLCJqdGkiOiJmNzE1NGQ3MC0zZWFmLTRiNzItYTI3Ni0yZTg3MmQ4YjA0YmQifQ.1vd1kNbWB_qassLVqoxgyRsRJwtPsl7OR28gVsCxmwY"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Kutaisi Cars",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        500
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://rentprog.net/api/v1/all_cars_full?limit=100&page=0",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTM4MSwiZXhwIjoxNzY1MDUxMzgxLCJqdGkiOiI4ZDdkYjYyNi1jNWJiLTQ0MWMtYTNlMy00YjQwOWFmODQ1NmUifQ.32BRzttLFFgOgMv-VusAXK8mmyvrk4X-pb_rHQHSFbw"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Service Cars",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        650
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "name": "Merge All Branches",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        720,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обрабатываем все автомобили со всех филиалов\nlet allItems = [];\nfor (let i = 0; i < 4; i++) {\n  try {\n    const items = $input.all(i);\n    if (items && items.length > 0) {\n      allItems = allItems.concat(items);\n    }\n  } catch (e) {\n    // Если входа нет, пропускаем\n  }\n}\nconsole.log('Total input items:', allItems.length);\n\n// Маппинг индексов на филиалы\nconst branchMapping = [\n  { branch: 'tbilisi' },\n  { branch: 'batumi' },\n  { branch: 'kutaisi' },\n  { branch: 'service-center' }\n];\n\nconst results = [];\n\nallItems.forEach((item, index) => {\n  const json = item.json;\n  const mapping = branchMapping[index] || { branch: 'unknown' };\n  \n  // Проверяем наличие ошибок в HTTP запросе\n  if (json.error) {\n    console.error(`Error in item ${index}:`, json.error);\n    results.push({\n      json: {\n        branch: mapping.branch,\n        error: true,\n        error_message: json.error || 'Unknown error'\n      }\n    });\n    return;\n  }\n  \n  // RentProg API /all_cars_full возвращает массив напрямую\n  const carsData = Array.isArray(json) ? json : (json.data || json.cars?.data || []);\n  \n  if (carsData.length === 0) {\n    return;\n  }\n  \n  // Парсим каждый автомобиль\n  carsData.forEach(car => {\n    const attrs = car;\n    \n    results.push({\n      json: {\n        branch: mapping.branch,\n        rentprog_id: attrs.id,\n        \n        // Основная информация\n        model: attrs.model,\n        code: attrs.code,\n        plate: attrs.plate,\n        vin: attrs.vin,\n        \n        // Характеристики\n        year: attrs.year,\n        color: attrs.color,\n        body_type: attrs.body_type,\n        fuel_type: attrs.fuel_type,\n        transmission: attrs.transmission,\n        \n        // Статусы\n        status: attrs.status,\n        is_active: attrs.active,\n        can_rent: attrs.can_rent,\n        \n        // Пробег и состояние\n        mileage: attrs.mileage,\n        \n        // Финансы\n        price_per_day: attrs.price,\n        deposit: attrs.deposit,\n        \n        // Локация\n        location: attrs.location,\n        \n        // Все остальное в data\n        data: attrs,\n        \n        // Без ошибок\n        error: false\n      }\n    });\n  });\n});\n\nconsole.log(`Total results: ${results.length}`);\n\nreturn results;"
+      },
+      "name": "Process All Cars",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "cars"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "branch",
+            "rentprog_id"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "name": "Save to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1040,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Форматирование результата\nconst items = $input.all();\n\nconst successCount = items.filter(item => !item.json.error).length;\nconst errorCount = items.filter(item => item.json.error).length;\n\nlet message = '🚗 Парсинг автомобилей RentProg завершён\\n\\n';\nmessage += `✅ Успешно: ${successCount}\\n`;\n\nif (errorCount > 0) {\n  message += `❌ Ошибок: ${errorCount}\\n`;\n}\n\nmessage += `\\n📈 Всего обработано: ${items.length} items`;\n\nreturn [{\n  json: {\n    success: errorCount === 0,\n    message: message,\n    total_items: items.length,\n    success_count: successCount,\n    error_count: errorCount\n  }\n}];"
+      },
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check-errors",
+              "leftValue": "={{ $json.error_count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "If Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "=-1003484642420",
+        "text": "={{ $json.message + \"\\n\\n🔗 <a href=\\\"https://n8n.rentflow.rentals/workflow/\" + $workflow.id + \"/executions/\" + $execution.id + \"\\\">Открыть execution</a>\" }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1568,
+        320
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1tKryXxL5Gq395nN",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Выбрасываем ошибку чтобы execution был помечен как failed\nconst errorData = $input.first().json;\nconst errorMessage = errorData.message || 'Ошибка при парсинге автомобилей RentProg';\n\nconsole.error('❌ Workflow failed:', errorMessage);\n\nthrow new Error(errorMessage);"
+      },
+      "name": "Throw Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        320
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        480
+      ]
+    }
+  ],
+  "connections": {
+    "Every 3 Hours": {
+      "main": [
+        [
+          {
+            "node": "Get Tbilisi Cars",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Batumi Cars",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Kutaisi Cars",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Service Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tbilisi Cars": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Batumi Cars": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Kutaisi Cars": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Get Service Cars": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merge All Branches": {
+      "main": [
+        [
+          {
+            "node": "Process All Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process All Cars": {
+      "main": [
+        [
+          {
+            "node": "Save to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to DB": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "If Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Alert": {
+      "main": [
+        [
+          {
+            "node": "Throw Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
+  }
+}

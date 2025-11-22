@@ -1,0 +1,508 @@
+{
+  "name": "✅Парсинг активных и новых броней RentProg раз в 5 мин",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTY2MCwiZXhwIjoxNzY1MDUxNjYwLCJqdGkiOiIxOTFjMDY4ZS1jOGNhLTQ4OWEtODk0OS1iMjJkMmUzODE2ZDIifQ.G4_I4D96Flv4rP3JwjwDPpEHaH6ShSb0YRRQG8PasXk"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":500,\"filters\":{\"start_date_from\":\"2025-10-14\"}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Tbilisi Active",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        208
+      ],
+      "id": "b4a5e762-7e06-42e0-b388-33cf34fdaf71"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDAyNSwiZXhwIjoxNzY1MDUyMDI1LCJqdGkiOiI0ZmQ2ODE4Yy0zYWNiLTRmZmQtOGZmYS0wZWMwZDkyMmIyMzgifQ.16s2ruRb3x_S7bgy4zF7TW9dSQ3ITqX3kei8recyH_8"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":500,\"filters\":{\"start_date_from\":\"2025-10-14\"}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Batumi Active",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        400
+      ],
+      "id": "47d8755f-0c64-45a9-a748-a98ae14cb731"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDE3MiwiZXhwIjoxNzY1MDUyMTcyLCJqdGkiOiJmNzE1NGQ3MC0zZWFmLTRiNzItYTI3Ni0yZTg3MmQ4YjA0YmQifQ.1vd1kNbWB_qassLVqoxgyRsRJwtPsl7OR28gVsCxmwY"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":500,\"filters\":{\"start_date_from\":\"2025-10-14\"}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Kutaisi Active",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        496,
+        560
+      ],
+      "id": "21396662-02db-495f-962b-610e02c92945"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTM4MSwiZXhwIjoxNzY1MDUxMzgxLCJqdGkiOiI4ZDdkYjYyNi1jNWJiLTQ0MWMtYTNlMy00YjQwOWFmODQ1NmUifQ.32BRzttLFFgOgMv-VusAXK8mmyvrk4X-pb_rHQHSFbw"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"booking\",\"active\":true,\"page\":1,\"per_page\":500,\"filters\":{\"start_date_from\":\"2025-10-14\"}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Service Active",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        496,
+        704
+      ],
+      "id": "85c7ec7c-95e6-4aa2-af36-7cf34f717b79"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT code, id FROM cars WHERE code IS NOT NULL",
+        "options": {}
+      },
+      "name": "Get Car IDs",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        944,
+        224
+      ],
+      "id": "6d03e7f2-7a2e-4d31-a24b-b622fc12e5cd",
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обрабатываем все брони по филиалам + карта автомобилей\nconst branchItems = (() => {\n  try {\n    return $input.all(0);\n  } catch (err) {\n    console.warn('⚠️  Нет данных от Merge All Branches');\n    return [];\n  }\n})();\n\nconst carItems = (() => {\n  try {\n    return $items('Get Car IDs', 'main', 0, { returnAll: true }) || [];\n  } catch (err) {\n    console.warn('⚠️  Нет данных из Get Car IDs');\n    return [];\n  }\n})();\n\nfunction normalizeCode(value) {\n  return (value ?? '').toString().trim().toLowerCase();\n}\n\nconst carIdMap = new Map();\ncarItems.forEach(item => {\n  const code = normalizeCode(item.json?.code || item.json?.car_code);\n  const id = item.json?.id;\n  if (code && id) {\n    carIdMap.set(code, id);\n  }\n});\nconsole.log('Car codes in map:', carIdMap.size);\n\nfunction convertDateToISO(rawValue) {\n  if (!rawValue) {\n    return null;\n  }\n\n  const value = rawValue.toString().trim();\n  if (!value) {\n    return null;\n  }\n\n  const tryParse = (input) => {\n    const parsed = new Date(input);\n    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();\n  };\n\n  if (value.includes('T')) {\n    const iso = tryParse(value);\n    if (iso) {\n      return iso;\n    }\n  }\n\n  const match = value.match(/^(\\d{2})-(\\d{2})-(\\d{4})(?:\\s+(\\d{2}):(\\d{2}))?$/);\n  if (match) {\n    const day = match[1];\n    const month = match[2];\n    const year = match[3];\n    const hours = match[4] || '00';\n    const minutes = match[5] || '00';\n    const offsetDate = year + '-' + month + '-' + day + 'T' + hours + ':' + minutes + ':00+04:00';\n    const iso = tryParse(offsetDate);\n    return iso || offsetDate;\n  }\n\n  return tryParse(value);\n}\n\nconst branchMapping = [\n  { branch: 'tbilisi', active: true },\n  { branch: 'batumi', active: true },\n  { branch: 'kutaisi', active: true },\n  { branch: 'service-center', active: true },\n];\n\nfunction getTechnicalType(attrs) {\n  const firstName = (attrs.first_name || '').toLowerCase();\n  const lastName = (attrs.last_name || '').toLowerCase();\n  const clientName = (firstName + ' ' + lastName).trim().toLowerCase();\n  const description = (attrs.description || '').toLowerCase();\n  const locationStart = (attrs.location_start || '').toLowerCase();\n\n  const isTechnical =\n    clientName.includes('сервис') ||\n    clientName.includes('сотрудник') ||\n    clientName.includes('service') ||\n    clientName.includes('employee') ||\n    attrs.rental_cost === 0;\n\n  if (!isTechnical) {\n    return {\n      is_technical: false,\n      technical_type: 'regular',\n      technical_purpose: null,\n    };\n  }\n\n  const isRepair =\n    clientName.includes('сервис') ||\n    description.includes('ремонт') ||\n    description.includes('repair') ||\n    description.includes('fix') ||\n    description.includes('сто') ||\n    locationStart.includes('сервис') ||\n    locationStart.includes('service');\n\n  if (isRepair) {\n    return {\n      is_technical: true,\n      technical_type: 'technical_repair',\n      technical_purpose: 'repair',\n    };\n  }\n\n  return {\n    is_technical: true,\n    technical_type: 'technical',\n    technical_purpose: 'employee_trip',\n  };\n}\n\nconst results = [];\n\nbranchItems.forEach((item, index) => {\n  const json = item.json;\n  const mapping = branchMapping[index] || { branch: 'unknown', active: null };\n\n  if (json.error) {\n    results.push({\n      json: {\n        branch: mapping.branch,\n        error: true,\n        error_message: json.error || 'Unknown error',\n      },\n    });\n    return;\n  }\n\n  const bookingsData = json.bookings?.data || [];\n  bookingsData.forEach(booking => {\n    const attrs = booking.attributes || booking;\n    const bookingId = booking.id || attrs.id || null;\n\n    if (!bookingId) {\n      return;\n    }\n\n    const technicalInfo = getTechnicalType(attrs);\n    const clientName = [attrs.first_name, attrs.middle_name, attrs.last_name]\n      .filter(Boolean)\n      .join(' ');\n\n    const carCode = attrs.car_code || '';\n    const rentprogCarIdRaw = attrs.car_id ?? attrs.carId ?? null;\n    const rentprogCarId = rentprogCarIdRaw !== null && rentprogCarIdRaw !== undefined\n      ? String(rentprogCarIdRaw)\n      : null;\n    const carId = carIdMap.get(normalizeCode(carCode)) || null;\n    const payloadObject = attrs ? JSON.parse(JSON.stringify(attrs)) : {};\n    delete payloadObject.id;\n    payloadObject.rentprog_id = String(bookingId);\n\n    const startAtISO = convertDateToISO(attrs.start_date_formatted || attrs.start_date);\n    const endAtISO = convertDateToISO(attrs.end_date_formatted || attrs.end_date);\n\n    payloadObject.branch = mapping.branch;\n    payloadObject.start_at = startAtISO;\n    payloadObject.end_at = endAtISO;\n    payloadObject.client_name = clientName;\n    payloadObject.car_code = carCode;\n    payloadObject.car_name = attrs.car_name || payloadObject.car_name;\n    payloadObject.location_start = attrs.location_start;\n    payloadObject.location_end = attrs.location_end;\n    payloadObject.total = attrs.total;\n    payloadObject.deposit = attrs.deposit;\n    payloadObject.rental_cost = attrs.rental_cost;\n    payloadObject.days = attrs.days;\n    payloadObject.state = attrs.state;\n    payloadObject.in_rent = attrs.in_rent;\n    payloadObject.archive = attrs.archive;\n    payloadObject.description = attrs.description;\n    payloadObject.source = attrs.source;\n\n    const payloadJson = JSON.stringify(payloadObject);\n\n    results.push({\n      json: {\n        table_name: 'bookings',\n        branch: mapping.branch,\n        booking_id: String(bookingId),\n        number: attrs.number,\n        is_active: mapping.active,\n        start_date: attrs.start_date,\n        end_date: attrs.end_date,\n        start_date_formatted: attrs.start_date_formatted,\n        end_date_formatted: attrs.end_date_formatted,\n        start_at: startAtISO,\n        end_at: endAtISO,\n        created_at: attrs.created_at,\n        client_name: clientName,\n        client_category: attrs.client_category,\n        car_name: attrs.car_name,\n        car_code: carCode,\n        rentprog_car_id: rentprogCarId,\n        car_id: carId,\n        location_start: attrs.location_start,\n        location_end: attrs.location_end,\n        total: attrs.total,\n        deposit: attrs.deposit,\n        rental_cost: attrs.rental_cost,\n        days: attrs.days,\n        state: attrs.state,\n        in_rent: attrs.in_rent,\n        archive: attrs.archive,\n        start_worker_id: attrs.start_worker_id,\n        end_worker_id: attrs.end_worker_id,\n        responsible: attrs.responsible,\n        description: attrs.description,\n        source: attrs.source,\n        is_technical: technicalInfo.is_technical,\n        technical_type: technicalInfo.technical_type,\n        technical_purpose: technicalInfo.technical_purpose,\n        data: payloadObject,\n        payload_json: payloadJson,\n      },\n    });\n  });\n});\n\nconsole.log('Total results:', results.length);\n\nreturn results;"
+      },
+      "name": "Process All Bookings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        304
+      ],
+      "id": "524219d2-951e-42d4-8c69-1c2c0fc44fe9"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Быстрое форматирование результата без тяжелых операций\nconst items = $input.all();\n\n// Просто считаем количество успешных и неудачных\nconst successCount = items.filter(item => !item.json.error).length;\nconst errorCount = items.filter(item => item.json.error).length;\n\n// Формируем простое сообщение\nlet message = '📊 Парсинг броней RentProg завершён\\n\\n';\nmessage += `✅ Успешно: ${successCount}\\n`;\n\nif (errorCount > 0) {\n  message += `❌ Ошибок: ${errorCount}\\n`;\n}\n\nmessage += `\\n📈 Всего обработано: ${items.length} items`;\n\nreturn [{\n  json: {\n    success: errorCount === 0,\n    message: message,\n    total_items: items.length,\n    success_count: successCount,\n    error_count: errorCount\n  }\n}];"
+      },
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        288
+      ],
+      "id": "0c346ef0-a5cd-4547-b033-0042b9a0ab15",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2704,
+        464
+      ],
+      "id": "e64e300e-0cdb-423d-b711-6400d944cb9d"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM dynamic_upsert_entity(\n  $1::TEXT,\n  $2::TEXT,\n  $3::JSONB\n);",
+        "options": {
+          "queryReplacement": "={{ $json.table_name }},={{ $json.booking_id }},={{ $json.payload_json }}"
+        }
+      },
+      "name": "Save to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1600,
+        304
+      ],
+      "id": "2ae4957a-c816-4c85-8b4b-cc8b969c38e3",
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "=-1003484642420",
+        "text": "={{ $json.message + '\\n\\n🔗 <a href=\"https://n8n.rentflow.rentals/workflow/' + $workflow.id + '/executions/' + $execution.id + '\">Открыть execution</a>' }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2560,
+        224
+      ],
+      "id": "dee0414d-e87c-4e3a-a245-e3033d747cde",
+      "webhookId": "d9f77bb2-a144-4686-b989-13a7d15a18b0",
+      "credentials": {
+        "telegramApi": {
+          "id": "1tKryXxL5Gq395nN",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Выбрасываем ошибку чтобы execution был помечен как failed\nconst errorData = $input.first().json;\nconst errorMessage = errorData.message || 'Ошибка при парсинге броней RentProg';\n\nconsole.error('❌ Workflow failed:', errorMessage);\n\nthrow new Error(errorMessage);"
+      },
+      "name": "Throw Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2896,
+        192
+      ],
+      "id": "5f468f08-68cd-41f9-bcea-cf9a3cf40d93"
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "name": "Merge All Branches",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        976,
+        496
+      ],
+      "id": "df319425-da73-4561-86a8-88769820c2c1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.error_count }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": 0,
+              "id": "a8d461ac-15b2-4191-a7ed-896eadc18115"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "If Error",
+      "position": [
+        2240,
+        272
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "id": "b9cb5dff-791e-4c9a-9727-443350e5df8c"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        400
+      ],
+      "id": "d60693b5-fe58-481a-a86b-86138e51f807"
+    }
+  ],
+  "connections": {
+    "Get Tbilisi Active": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Batumi Active": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Kutaisi Active": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Get Service Active": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merge All Branches": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Car IDs": {
+      "main": [
+        [
+          {
+            "node": "Process All Bookings",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "Process All Bookings": {
+      "main": [
+        [
+          {
+            "node": "Save to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to DB": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "If Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "If Error": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Alert": {
+      "main": [
+        [
+          {
+            "node": "Throw Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Get Tbilisi Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Batumi Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Kutaisi Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Service Active",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Car IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "staticData": {
+    "node:Every 5 Minutes": {
+      "recurrenceRules": []
+    },
+    "node:Every 60 Minutes": {
+      "recurrenceRules": []
+    }
+  }
+}

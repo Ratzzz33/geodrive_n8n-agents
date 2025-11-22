@@ -192,7 +192,7 @@ const scrapeAndSaveCompanyCashHandler = async (req: any, res: any) => {
 app.post('/scrape-and-save-company-cash', scrapeAndSaveCompanyCashHandler);
 app.get('/scrape-and-save-company-cash', scrapeAndSaveCompanyCashHandler);
 
-const PORT = 3002;  // Другой порт чтобы не конфликтовать с Playwright service
+const PORT = 3004;  // Другой порт чтобы не конфликтовать с Playwright service
 
 // Инициализация БД при старте сервиса
 async function startServer() {

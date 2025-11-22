@@ -118,7 +118,15 @@ async function fetchClientFull(branch: BranchName, clientId: string): Promise<an
  */
 export async function handleRentProgEvent(
   event: SystemEvent,
-  eventId?: number | string
+  eventId?: number | string,
+  changeTracking?: {
+    source?: 'rentprog_webhook' | 'rentprog_history' | 'snapshot_workflow' | 'jarvis_api' | 'manual' | 'n8n_workflow';
+    workflow?: string;
+    function?: string;
+    executionId?: string;
+    user?: string;
+    metadata?: Record<string, any>;
+  }
 ): Promise<{
   ok: boolean;
   processed: boolean;
@@ -127,9 +135,36 @@ export async function handleRentProgEvent(
 }> {
   const payload = event.payload as any;
   
-  // Branch берется из payload если есть, иначе используется значение по умолчанию
-  // Так как компания одна, branch используется только для API вызовов к RentProg
-  const branch = (payload.branch || 'tbilisi') as BranchName;
+  // Определяем branch по company_id из payload (если массив - берем последний элемент)
+  let branch: BranchName = 'tbilisi'; // по умолчанию
+  
+  // Извлекаем company_id с обработкой массива
+  let companyId: number | null = null;
+  if (payload.company_id !== undefined && payload.company_id !== null) {
+    if (Array.isArray(payload.company_id)) {
+      // Если массив - берем последний элемент (новое значение)
+      companyId = payload.company_id.length > 0 
+        ? payload.company_id[payload.company_id.length - 1] 
+        : null;
+    } else {
+      // Если число - используем как есть
+      companyId = payload.company_id;
+    }
+  }
+  
+  // Определяем branch по company_id используя маппинг
+  if (companyId) {
+    const { getBranchByCompanyId } = await import('../config/company-branch-mapping.js');
+    const branchFromCompanyId = getBranchByCompanyId(companyId);
+    if (branchFromCompanyId) {
+      branch = branchFromCompanyId as BranchName;
+    }
+  }
+  
+  // Fallback: если branch указан в payload, используем его
+  if (payload.branch) {
+    branch = payload.branch as BranchName;
+  }
 
   // Определяем тип сущности и ID из payload
   const extId = String(payload.rentprog_id || payload.id || payload.booking_id || payload.car_id || payload.client_id || '');
@@ -166,8 +201,9 @@ export async function handleRentProgEvent(
       // Для бронирований: сначала клиент, затем авто, затем бронь
       let fullPayload = payload;
 
-      // Если payload содержит только ID, получаем полные данные
-      if (!payload.car_id && !payload.client_id && !payload.start_at) {
+      // Если payload не содержит критичных данных (car_id, client_id), получаем полные данные
+      // Проверяем как start_at, так и start_date (RentProg может отправлять разные форматы)
+      if (!payload.car_id || !payload.client_id) {
         fullPayload = await fetchBookingFull(branch, extId);
         if (!fullPayload) {
           return { ok: false, processed: false, error: 'Could not fetch booking data' };
@@ -200,7 +236,13 @@ export async function handleRentProgEvent(
         } else {
           carData = { ...carData, ...fullPayload.car, car_name: fullPayload.car_name };
         }
-        const result = await upsertCarFromRentProg(carData, branch);
+        const result = await upsertCarFromRentProg(carData, branch, {
+          source: changeTracking?.source || 'rentprog_webhook',
+          workflow: changeTracking?.workflow,
+          executionId: changeTracking?.executionId || String(eventId),
+          user: changeTracking?.user,
+          metadata: changeTracking?.metadata,
+        });
         entityIds.carId = result.entityId;
       }
 
@@ -227,11 +269,23 @@ export async function handleRentProgEvent(
             (event.type.includes('created') ? 'create' : 
              event.type.includes('destroy') ? 'delete' : 'update')) as any;
           
+          // Нормализуем details для timeline (убираем Date объекты и массивы)
+          const timelineDetails: any = { rentprog_id: extId };
+          for (const [key, value] of Object.entries(fullPayload)) {
+            if (value instanceof Date) {
+              timelineDetails[key] = value.toISOString();
+            } else if (Array.isArray(value)) {
+              timelineDetails[key] = value.length > 0 ? value[value.length - 1] : null;
+            } else {
+              timelineDetails[key] = value;
+            }
+          }
+          
           await addWebhookToTimeline('booking', entityIds.bookingId, {
             eventType: event.type,
             operation,
             summary: `Бронь ${event.type}: ${extId}`,
-            details: { rentprog_id: extId, ...fullPayload },
+            details: timelineDetails,
             branchCode: branch,
             sourceId: String(eventId || extId),
             relatedEntities: relatedEntities.length > 0 ? relatedEntities : undefined,
@@ -259,7 +313,13 @@ export async function handleRentProgEvent(
         }
       }
 
-      const carResult = await upsertCarFromRentProg(fullPayload, branch);
+      const carResult = await upsertCarFromRentProg(fullPayload, branch, {
+        source: changeTracking?.source || 'rentprog_webhook',
+        workflow: changeTracking?.workflow,
+        executionId: changeTracking?.executionId || String(eventId),
+        user: changeTracking?.user,
+        metadata: changeTracking?.metadata,
+      });
       entityIds.carId = carResult.entityId;
 
       logger.info(`Processed car ${extId} from ${branch}`, { carId: entityIds.carId });
@@ -273,11 +333,23 @@ export async function handleRentProgEvent(
             (event.type.includes('created') ? 'create' : 
              event.type.includes('destroy') ? 'delete' : 'update')) as any;
           
+          // Нормализуем details для timeline (убираем Date объекты и массивы)
+          const timelineDetails: any = { rentprog_id: extId };
+          for (const [key, value] of Object.entries(fullPayload)) {
+            if (value instanceof Date) {
+              timelineDetails[key] = value.toISOString();
+            } else if (Array.isArray(value)) {
+              timelineDetails[key] = value.length > 0 ? value[value.length - 1] : null;
+            } else {
+              timelineDetails[key] = value;
+            }
+          }
+          
           await addWebhookToTimeline('car', entityIds.carId, {
             eventType: event.type,
             operation,
             summary: `Авто ${event.type}: ${fullPayload.plate || fullPayload.car_name || extId}`,
-            details: { rentprog_id: extId, ...fullPayload },
+            details: timelineDetails,
             branchCode: branch,
             sourceId: String(eventId || extId),
           });

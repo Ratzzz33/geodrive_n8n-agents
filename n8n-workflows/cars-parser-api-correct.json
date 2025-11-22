@@ -1,0 +1,196 @@
+{
+  "name": "✅ Парсинг автомобилей через API раз в час",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "trigger",
+      "name": "Every Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const COMPANY_TOKENS = {\n  'tbilisi': '91b83b93963633649f29a04b612bab3f9fbb0471b5928622',\n  'batumi': '7ad345720f8d92f10c187122427c6a2c2bb9494c6bf14e8d',\n  'kutaisi': '5599ebb7b94827fdfd49ca3a5b7e259cfa99d8ea78edeb50',\n  'service-center': '5y4j4gcs75o9n5s1e2vrxx4a'\n};\n\nconst branches = ['tbilisi', 'batumi', 'kutaisi', 'service-center'];\n\nreturn branches.map(branch => ({\n  json: {\n    branch: branch,\n    company_token: COMPANY_TOKENS[branch]\n  }\n}));"
+      },
+      "id": "prep-branches",
+      "name": "Prepare Branches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://rentprog.net/api/v1/public/get_token?company_token={{ $json.company_token }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "get-request-token",
+      "name": "Get Request Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        400
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://rentprog.net/api/v1/public/all_cars_full?limit=100&page=0",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "get-cars",
+      "name": "Get Cars",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        400
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\n\nfor (const item of $input.all()) {\n  const prevBranch = $('Get Request Token').item.json.branch;\n  const branch = prevBranch || item.json.branch;\n  const responseData = item.json;\n  \n  let carsData = [];\n  if (Array.isArray(responseData)) {\n    carsData = responseData;\n  } else if (responseData.data && Array.isArray(responseData.data)) {\n    carsData = responseData.data;\n  } else if (responseData.cars && Array.isArray(responseData.cars)) {\n    carsData = responseData.cars;\n  }\n  \n  if (carsData.length === 0) {\n    results.push({\n      json: { branch, error: true, error_message: 'No cars data' }\n    });\n    continue;\n  }\n  \n  for (const car of carsData) {\n    results.push({\n      json: {\n        branch,\n        rentprog_id: car.id,\n        car_name: car.name || car.car_name,\n        code: car.code,\n        number: car.number,\n        color: car.color,\n        year: car.year,\n        price: car.price || 0,\n        deposit: car.deposit || 0,\n        data: car,\n        error: false\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "process-cars",
+      "name": "Process Cars",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO cars (\n  branch, rentprog_id, car_name, code, number, color, year, price, deposit, is_active, data\n) VALUES (\n  $1, $2, $3, $4, $5, $6, $7, $8, $9, true, $10::jsonb\n)\nON CONFLICT (branch, rentprog_id) \nDO UPDATE SET\n  car_name = EXCLUDED.car_name,\n  code = EXCLUDED.code,\n  number = EXCLUDED.number,\n  color = EXCLUDED.color,\n  year = EXCLUDED.year,\n  price = EXCLUDED.price,\n  deposit = EXCLUDED.deposit,\n  is_active = EXCLUDED.is_active,\n  data = EXCLUDED.data,\n  updated_at = NOW()\nRETURNING id;",
+        "options": {}
+      },
+      "id": "save-to-db",
+      "name": "Save to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1040,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Every Hour": {
+      "main": [
+        [
+          {
+            "node": "Prepare Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Branches": {
+      "main": [
+        [
+          {
+            "node": "Get Request Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Request Token": {
+      "main": [
+        [
+          {
+            "node": "Get Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Cars": {
+      "main": [
+        [
+          {
+            "node": "Process Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Cars": {
+      "main": [
+        [
+          {
+            "node": "Save to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
+  }
+}

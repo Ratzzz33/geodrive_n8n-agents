@@ -7,7 +7,7 @@ const sql = postgres(CONNECTION_STRING, {
   ssl: { rejectUnauthorized: false }
 });
 
-const USD_TO_GEL = 2.7;
+const USD_TO_GEL = 2.75;
 
 try {
   console.log('Обновляю данные о ценах...\n');
@@ -22,7 +22,7 @@ try {
   console.log('2. Добавляю поле exchange_rate...');
   await sql`
     ALTER TABLE car_prices 
-    ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC(10,4) DEFAULT 2.7
+    ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC(10,4) DEFAULT 2.75
   `;
   
   console.log('3. Обновляю существующие записи...');

@@ -70,10 +70,11 @@ async function syncConversations() {
         const messageCount = messagesData.count || messages.length;
         const total = messagesData.total;
         const incomplete = messagesData.incomplete || false;
-        const clientPhone = messagesData.clientPhone;
-        const clientTelegram = messagesData.clientTelegram;
-        const channel = messagesData.channel || 'unknown';
-        const channelAccount = messagesData.channelAccount;
+        const needsManualProcessing = messagesData.needsManualProcessing || false; // Флаг что требуется ручная обработка
+        const clientPhone = messagesData.clientPhone || null;
+        const clientTelegram = messagesData.clientTelegram || null;
+        let channel = messagesData.channel || 'unknown';
+        const channelAccount = messagesData.channelAccount || null;
         
         if (messageCount === 0) {
           console.warn(`   ⚠️  Получено 0 сообщений! Возможно чат пуст или не загрузился`);
@@ -172,15 +173,45 @@ async function syncConversations() {
             console.log(`   ✅ Создан новый Telegram клиент: ${clientId}`);
           }
         } else {
-          // Нет ни телефона, ни Telegram username - создаем по имени
-          console.warn(`   ⚠️  Не найден идентификатор клиента (ни phone, ни telegram)`);
-          const newClient = await sql`
-            INSERT INTO clients (name, email, created_at, updated_at)
-            VALUES (${clientName}, ${clientEmail}, NOW(), NOW())
-            RETURNING id
+          // Нет ни телефона, ни Telegram username - это Telegram клиент (создан без телефона)
+          console.log(`   ✈️  Telegram клиент (без телефона): ${clientName}`);
+          
+          // Определяем канал как telegram
+          if (channel === 'unknown') {
+            channel = 'telegram';
+          }
+          
+          // Ищем клиента по имени (может быть дубликат, но это лучше чем создавать нового каждый раз)
+          const existingClient = await sql`
+            SELECT id FROM clients 
+            WHERE name = ${clientName} 
+              AND phone IS NULL 
+              AND telegram_username IS NULL
+            LIMIT 1
           `;
-          clientId = newClient[0].id;
-          console.log(`   ⚠️  Создан клиент без идентификатора: ${clientId}`);
+          
+          if (existingClient.length > 0) {
+            clientId = existingClient[0].id;
+            console.log(`   ✅ Найден существующий Telegram клиент (без телефона): ${clientId}`);
+            
+            // Обновляем имя если оно изменилось
+            if (clientName && clientName !== 'Unknown') {
+              await sql`
+                UPDATE clients 
+                SET name = ${clientName}, updated_at = NOW()
+                WHERE id = ${clientId}
+              `;
+            }
+          } else {
+            // Создаем нового Telegram клиента без телефона
+            const newClient = await sql`
+              INSERT INTO clients (name, email, created_at, updated_at)
+              VALUES (${clientName}, ${clientEmail}, NOW(), NOW())
+              RETURNING id
+            `;
+            clientId = newClient[0].id;
+            console.log(`   ✅ Создан новый Telegram клиент (без телефона): ${clientId}`);
+          }
         }
         
         // 3. Создать или обновить conversation
@@ -208,8 +239,8 @@ async function syncConversations() {
           VALUES (
             ${clientId},
             ${chat.id},
-            ${channel},
-            ${channelAccount},
+            ${channel || 'unknown'},
+            ${channelAccount || null},
             ${'active'},
             NOW(),
             ${JSON.stringify(metadata)},
@@ -387,11 +418,10 @@ async function syncConversations() {
               messages_saved: savedMessages, // Количество сохраненных в этом раунде
               needs_manual_processing: needsManualProcessing, // Требуется ручная обработка через MCP Chrome (30/30 = лимит страницы)
               client_id: clientId,
-              client_name: clientName,
-              client_phone: clientPhone,
+              client_name: clientName || null,
+              client_phone: clientPhone || null,
               conversation_id: conversationId,
-              channel: channel,
-              status: status
+              channel: channel || 'unknown'
             })}
           WHERE id = ${chat.id}
         `;

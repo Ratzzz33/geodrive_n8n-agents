@@ -803,7 +803,9 @@
     "executionOrder": "v1",
     "saveDataSuccessExecution": "all",
     "saveDataErrorExecution": "all",
-    "saveManualExecutions": true
+    "saveManualExecutions": true,
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   },
   "staticData": null,
   "tags": [],

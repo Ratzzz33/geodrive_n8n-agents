@@ -1,39 +1,26 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Проверка прогресса импорта"""
+import paramiko
+import time
 
-import sys
-import io
-import psycopg2
-from datetime import datetime
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect('46.224.17.15', username='root', password='Geodrive2024SecurePass')
 
-if sys.platform == 'win32':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+print('📊 Проверяю прогресс импорта...\n')
 
-CONNECTION_STRING = "postgresql://neondb_owner:npg_cHIT9Kxfk1Am@ep-rough-heart-ahnybmq0-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
+# Проверяем запущен ли процесс
+stdin, stdout, stderr = ssh.exec_command('pgrep -f "import_all_rentprog_to_db"')
+pids = stdout.read().decode().strip()
 
-conn = psycopg2.connect(CONNECTION_STRING)
-cur = conn.cursor()
+if pids:
+    print(f'✅ Процесс работает (PID: {pids})\n')
+else:
+    print('⚠️  Процесс не найден (возможно уже завершён)\n')
 
-print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Статус импорта:")
-print("="*60)
+# Читаем логи
+stdin, stdout, stderr = ssh.exec_command('tail -50 /root/geodrive_n8n-agents/logs/import_clients.log 2>/dev/null || echo "Лог пока пуст"')
+logs = stdout.read().decode()
 
-cur.execute("SELECT COUNT(*) FROM i2crm_conversations")
-convs = cur.fetchone()[0]
-print(f"Диалогов: {convs:,}")
+print('📋 Последние 50 строк лога:\n')
+print(logs)
 
-cur.execute("SELECT COUNT(*) FROM i2crm_messages")
-msgs = cur.fetchone()[0]
-print(f"Сообщений: {msgs:,} / 495,457 ({msgs/495457*100:.1f}%)")
-
-if msgs > 0:
-    cur.execute("SELECT channel, COUNT(*) FROM i2crm_messages GROUP BY channel ORDER BY channel")
-    print("\nПо каналам:")
-    for row in cur.fetchall():
-        print(f"  {row[0]}: {row[1]:,}")
-
-cur.close()
-conn.close()
-
-print("="*60)
-
+ssh.close()

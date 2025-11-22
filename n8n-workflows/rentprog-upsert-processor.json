@@ -12,7 +12,10 @@
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [250, 300],
+      "position": [
+        250,
+        300
+      ],
       "webhookId": "rentprog-upsert-processor"
     },
     {
@@ -24,7 +27,10 @@
       "name": "Prepare Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [450, 300]
+      "position": [
+        450,
+        300
+      ]
     },
     {
       "parameters": {
@@ -44,6 +50,10 @@
             {
               "name": "rentprog_id",
               "value": "={{ $json.rentprog_id }}"
+            },
+            {
+              "name": "eventId",
+              "value": "={{ $json.id || $json.eventId }}"
             }
           ]
         },
@@ -53,13 +63,37 @@
               "responseFormat": "json"
             }
           }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Source",
+              "value": "n8n_workflow"
+            },
+            {
+              "name": "X-Workflow-Id",
+              "value": "={{ $workflow.id }}"
+            },
+            {
+              "name": "X-Workflow-Name",
+              "value": "={{ $workflow.name || 'RentProg Upsert Processor' }}"
+            },
+            {
+              "name": "X-Execution-Id",
+              "value": "={{ $execution.id }}"
+            }
+          ]
         }
       },
       "id": "process-event-node",
       "name": "Process Event via Jarvis",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [650, 300],
+      "position": [
+        650,
+        300
+      ],
       "onError": "continueRegularOutput"
     },
     {
@@ -74,7 +108,10 @@
       "name": "Mark Event as Processed",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2,
-      "position": [850, 300],
+      "position": [
+        850,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "postgres-credentials",
@@ -92,26 +129,63 @@
       "name": "Respond",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1050, 300]
+      "position": [
+        1050,
+        300
+      ]
     }
   ],
   "connections": {
     "Webhook Trigger": {
-      "main": [[{ "node": "Prepare Data", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Prepare Data": {
-      "main": [[{ "node": "Process Event via Jarvis", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Process Event via Jarvis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Process Event via Jarvis": {
-      "main": [[{ "node": "Mark Event as Processed", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Mark Event as Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Mark Event as Processed": {
-      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   },
   "staticData": null,
   "tags": [],

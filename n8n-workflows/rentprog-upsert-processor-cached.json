@@ -12,7 +12,10 @@
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [250, 500],
+      "position": [
+        250,
+        500
+      ],
       "webhookId": "rentprog-upsert-processor-cached"
     },
     {
@@ -38,7 +41,10 @@
       "name": "Prepare Data",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [450, 500]
+      "position": [
+        450,
+        500
+      ]
     },
     {
       "parameters": {
@@ -52,7 +58,10 @@
       "name": "Check Cache",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2,
-      "position": [650, 500],
+      "position": [
+        650,
+        500
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -86,7 +95,10 @@
       "name": "If Cache Hit",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [850, 500]
+      "position": [
+        850,
+        500
+      ]
     },
     {
       "parameters": {
@@ -109,7 +121,10 @@
       "name": "Try Cached Branch",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1050, 400],
+      "position": [
+        1050,
+        400
+      ],
       "onError": "continueRegularOutput"
     },
     {
@@ -138,7 +153,10 @@
       "name": "If Cached Success",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1250, 400]
+      "position": [
+        1250,
+        400
+      ]
     },
     {
       "parameters": {
@@ -152,7 +170,10 @@
       "name": "Update Cache Timestamp",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2,
-      "position": [1450, 300],
+      "position": [
+        1450,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -169,7 +190,10 @@
       "name": "Create Fallback Items",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1050, 600]
+      "position": [
+        1050,
+        600
+      ]
     },
     {
       "parameters": {
@@ -192,7 +216,10 @@
       "name": "Try All Branches (Fallback)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1250, 600],
+      "position": [
+        1250,
+        600
+      ],
       "onError": "continueRegularOutput"
     },
     {
@@ -221,7 +248,10 @@
       "name": "Filter Fallback Success",
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2,
-      "position": [1450, 600]
+      "position": [
+        1450,
+        600
+      ]
     },
     {
       "parameters": {
@@ -232,7 +262,10 @@
       "name": "Get Fallback First Success",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1650, 600]
+      "position": [
+        1650,
+        600
+      ]
     },
     {
       "parameters": {
@@ -260,7 +293,10 @@
       "name": "If Fallback Found",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1850, 600]
+      "position": [
+        1850,
+        600
+      ]
     },
     {
       "parameters": {
@@ -274,7 +310,10 @@
       "name": "Save to Cache",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2,
-      "position": [2050, 500],
+      "position": [
+        2050,
+        500
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -294,7 +333,10 @@
       "name": "Save Data",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2,
-      "position": [2250, 500],
+      "position": [
+        2250,
+        500
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -311,7 +353,10 @@
       "name": "Alert: Not Found",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
-      "position": [2050, 700],
+      "position": [
+        2050,
+        700
+      ],
       "credentials": {
         "telegramApi": {
           "id": "1tKryXxL5Gq395nN",
@@ -329,7 +374,10 @@
       "name": "Respond Cached",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1650, 300]
+      "position": [
+        1650,
+        300
+      ]
     },
     {
       "parameters": {
@@ -341,7 +389,10 @@
       "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [2450, 500]
+      "position": [
+        2450,
+        500
+      ]
     },
     {
       "parameters": {
@@ -353,71 +404,207 @@
       "name": "Respond Not Found",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [2250, 700]
+      "position": [
+        2250,
+        700
+      ]
     }
   ],
   "connections": {
     "Webhook Trigger": {
-      "main": [[{ "node": "Prepare Data", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Prepare Data": {
-      "main": [[{ "node": "Check Cache", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Check Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Check Cache": {
-      "main": [[{ "node": "If Cache Hit", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "If Cache Hit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "If Cache Hit": {
       "main": [
-        [{ "node": "Try Cached Branch", "type": "main", "index": 0 }],
-        [{ "node": "Create Fallback Items", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Try Cached Branch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Fallback Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Try Cached Branch": {
-      "main": [[{ "node": "If Cached Success", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "If Cached Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "If Cached Success": {
       "main": [
-        [{ "node": "Update Cache Timestamp", "type": "main", "index": 0 }],
-        [{ "node": "Create Fallback Items", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Update Cache Timestamp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Fallback Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Update Cache Timestamp": {
-      "main": [[{ "node": "Respond Cached", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond Cached",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Create Fallback Items": {
-      "main": [[{ "node": "Try All Branches (Fallback)", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Try All Branches (Fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Try All Branches (Fallback)": {
-      "main": [[{ "node": "Filter Fallback Success", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Filter Fallback Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Filter Fallback Success": {
-      "main": [[{ "node": "Get Fallback First Success", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Get Fallback First Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Get Fallback First Success": {
-      "main": [[{ "node": "If Fallback Found", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "If Fallback Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "If Fallback Found": {
       "main": [
-        [{ "node": "Save to Cache", "type": "main", "index": 0 }],
-        [{ "node": "Alert: Not Found", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Save to Cache",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alert: Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Save to Cache": {
-      "main": [[{ "node": "Save Data", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Save Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Save Data": {
-      "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Alert: Not Found": {
-      "main": [[{ "node": "Respond Not Found", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   },
   "staticData": null,
   "tags": [],
   "triggerCount": 0
 }
-

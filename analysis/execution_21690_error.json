@@ -1,0 +1,11 @@
+{
+  "id": "21690",
+  "status": "error",
+  "node": "Save to DB",
+  "message": "duplicate key value violates unique constraint \"bookings_branch_number_unique\"",
+  "details": {
+    "branch": "tbilisi",
+    "number": "3976"
+  }
+}
+

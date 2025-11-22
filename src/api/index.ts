@@ -365,7 +365,7 @@ export function initApiServer(port: number = 3000): void {
       const { normalizeRentProgWebhook } = await import('../integrations/rentprog-webhook-parser');
       const { handleRentProgEvent } = await import('../orchestrator/rentprog-handler');
       
-      const { type, rentprog_id, eventId } = req.body;
+      const { type, rentprog_id, eventId, branch } = req.body;
       // Поддержка старого формата ext_id для обратной совместимости
       const ext_id = req.body.rentprog_id || req.body.ext_id;
       
@@ -374,11 +374,24 @@ export function initApiServer(port: number = 3000): void {
         return;
       }
       
+      // Извлекаем информацию об источнике из headers или body
+      const changeTracking = {
+        source: (req.headers['x-source'] || req.body.source || 'rentprog_webhook') as any,
+        workflow: req.headers['x-workflow-id'] || req.headers['x-workflow-name'] || req.body.workflow,
+        executionId: req.headers['x-execution-id'] || req.body.execution_id || String(eventId),
+        user: req.headers['x-user-id'] || req.body.user_id,
+        metadata: {
+          branch: branch || req.body.branch,
+          event_type: type,
+          received_at: new Date().toISOString(),
+        },
+      };
+      
       // Создаем событие для обработки
       const systemEvent = normalizeRentProgWebhook({
         event: type,
         id: ext_id,
-        payload: { id: ext_id },
+        payload: { id: ext_id, branch },
       });
       
       if (!systemEvent) {
@@ -387,8 +400,8 @@ export function initApiServer(port: number = 3000): void {
       }
       
       // Обрабатываем событие (auto-fetch + upsert)
-      // Передаем eventId для связи с timeline
-      const result = await handleRentProgEvent(systemEvent, eventId);
+      // Передаем eventId и changeTracking для связи с timeline и отслеживания источника
+      const result = await handleRentProgEvent(systemEvent, eventId, changeTracking);
       
       res.json({ 
         ok: result.ok, 

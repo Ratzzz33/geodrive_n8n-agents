@@ -12,7 +12,10 @@
       "name": "Webhook (Service Center)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
-      "position": [240, 400],
+      "position": [
+        240,
+        400
+      ],
       "webhookId": "service-center-webhook"
     },
     {
@@ -24,7 +27,10 @@
       "name": "Parse Webhook",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 400]
+      "position": [
+        440,
+        400
+      ]
     },
     {
       "parameters": {
@@ -38,7 +44,10 @@
       "name": "Save to Events",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [640, 400],
+      "position": [
+        640,
+        400
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -55,7 +64,10 @@
       "name": "Pass Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [840, 400]
+      "position": [
+        840,
+        400
+      ]
     },
     {
       "parameters": {
@@ -135,7 +147,10 @@
       "name": "Switch by Operation",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
-      "position": [1040, 400]
+      "position": [
+        1040,
+        400
+      ]
     },
     {
       "parameters": {
@@ -146,7 +161,10 @@
       "name": "Prepare Create",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1240, 200]
+      "position": [
+        1240,
+        200
+      ]
     },
     {
       "parameters": {
@@ -160,7 +178,10 @@
       "name": "Insert Entity",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1440, 200],
+      "position": [
+        1440,
+        200
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -180,7 +201,10 @@
       "name": "Check Exists",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1240, 400],
+      "position": [
+        1240,
+        400
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -215,7 +239,10 @@
       "name": "If Exists",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1440, 400]
+      "position": [
+        1440,
+        400
+      ]
     },
     {
       "parameters": {
@@ -226,7 +253,10 @@
       "name": "Prepare Update",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1640, 300]
+      "position": [
+        1640,
+        300
+      ]
     },
     {
       "parameters": {
@@ -240,7 +270,10 @@
       "name": "Update Entity",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1840, 300],
+      "position": [
+        1840,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -257,7 +290,10 @@
       "name": "Get RentProg Token",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1640, 500]
+      "position": [
+        1640,
+        500
+      ]
     },
     {
       "parameters": {
@@ -337,7 +373,10 @@
       "name": "Switch by Entity",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
-      "position": [1840, 500]
+      "position": [
+        1840,
+        500
+      ]
     },
     {
       "parameters": {
@@ -367,7 +406,10 @@
       "name": "Fetch Car",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2040, 400]
+      "position": [
+        2040,
+        400
+      ]
     },
     {
       "parameters": {
@@ -397,7 +439,10 @@
       "name": "Fetch Client",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2040, 500]
+      "position": [
+        2040,
+        500
+      ]
     },
     {
       "parameters": {
@@ -427,7 +472,10 @@
       "name": "Fetch Booking",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2040, 600]
+      "position": [
+        2040,
+        600
+      ]
     },
     {
       "parameters": {
@@ -438,7 +486,10 @@
       "name": "Extract Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2240, 500]
+      "position": [
+        2240,
+        500
+      ]
     },
     {
       "parameters": {
@@ -452,7 +503,10 @@
       "name": "Insert Fetched Entity",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [2440, 500],
+      "position": [
+        2440,
+        500
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -472,7 +526,10 @@
       "name": "Mark as Deleted",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1240, 600],
+      "position": [
+        1240,
+        600
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -490,7 +547,10 @@
       "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [2640, 400]
+      "position": [
+        2640,
+        400
+      ]
     }
   ],
   "connections": {
@@ -743,7 +803,8 @@
     "executionOrder": "v1",
     "saveDataSuccessExecution": "all",
     "saveDataErrorExecution": "all",
-    "saveManualExecutions": true
+    "saveManualExecutions": true,
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   }
 }
-

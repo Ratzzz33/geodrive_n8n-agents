@@ -1,0 +1,483 @@
+{
+  "name": "📸 Snapshot: RentProg Clients (1 раз в день)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 3 * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every Night at 3 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTY2MCwiZXhwIjoxNzY1MDUxNjYwLCJqdGkiOiIxOTFjMDY4ZS1jOGNhLTQ4OWEtODk0OS1iMjJkMmUzODE2ZDIifQ.G4_I4D96Flv4rP3JwjwDPpEHaH6ShSb0YRRQG8PasXk"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"client\",\"page\":1,\"per_page\":500}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "name": "Get Tbilisi Clients",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 208],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDAyNSwiZXhwIjoxNzY1MDUyMDI1LCJqdGkiOiI0ZmQ2ODE4Yy0zYWNiLTRmZmQtOGZmYS0wZWMwZDkyMmIyMzgifQ.16s2ruRb3x_S7bgy4zF7TW9dSQ3ITqX3kei8recyH_8"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"client\",\"page\":1,\"per_page\":500}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "name": "Get Batumi Clients",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 400],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ2MDE3MiwiZXhwIjoxNzY1MDUyMTcyLCJqdGkiOiJmNzE1NGQ3MC0zZWFmLTRiNzItYTI3Ni0yZTg3MmQ4YjA0YmQifQ.1vd1kNbWB_qassLVqoxgyRsRJwtPsl7OR28gVsCxmwY"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"client\",\"page\":1,\"per_page\":500}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "name": "Get Kutaisi Clients",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 560],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rentprog.net/api/v1/index_with_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ1OTM4MSwiZXhwIjoxNzY1MDUxMzgxLCJqdGkiOiI4ZDdkYjYyNi1jNWJiLTQ0MWMtYTNlMy00YjQwOWFmODQ1NmUifQ.32BRzttLFFgOgMv-VusAXK8mmyvrk4X-pb_rHQHSFbw"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"client\",\"page\":1,\"per_page\":500}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "name": "Get Service Clients",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 704],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "name": "Merge All Branches",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [720, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обработка всех клиентов по филиалам\nconst branchItems = $input.all();\n\nconst BRANCH_MAPPING = [\n  { branch: 'tbilisi', companyId: 9247 },\n  { branch: 'batumi', companyId: 9506 },\n  { branch: 'kutaisi', companyId: 9248 },\n  { branch: 'service-center', companyId: 11163 },\n];\n\nfunction cleanPhone(phone) {\n  if (!phone) return null;\n  // Убираем всё кроме цифр и +\n  const cleaned = phone.toString().replace(/[^\\d+]/g, '');\n  return cleaned || null;\n}\n\nfunction cleanEmail(email) {\n  if (!email) return null;\n  const cleaned = email.toString().trim().toLowerCase();\n  return cleaned.includes('@') ? cleaned : null;\n}\n\nconst results = [];\nlet totalClients = 0;\nlet totalErrors = 0;\n\nbranchItems.forEach((item, index) => {\n  const json = item.json;\n  const mapping = BRANCH_MAPPING[index] || { branch: 'unknown', companyId: null };\n\n  if (json.error) {\n    totalErrors++;\n    console.error(`❌ Error fetching ${mapping.branch} clients:`, json.error);\n    return;\n  }\n\n  const clientsData = json.clients?.data || [];\n  console.log(`📊 ${mapping.branch}: ${clientsData.length} clients`);\n\n  clientsData.forEach(client => {\n    const attrs = client.attributes || client;\n    \n    const rentprogId = attrs.id;\n    if (!rentprogId) {\n      console.warn(`⚠️  Skipping client without id`);\n      return;\n    }\n\n    const phone = cleanPhone(attrs.phone);\n    const email = cleanEmail(attrs.email);\n    \n    // Телефон - основной идентификатор\n    if (!phone) {\n      console.warn(`⚠️  Skipping client ${rentprogId} without phone`);\n      return;\n    }\n\n    const firstName = attrs.first_name || attrs.name || '';\n    const lastName = attrs.last_name || attrs.lastname || '';\n    const middleName = attrs.middle_name || attrs.middlename || '';\n    \n    const fullName = [firstName, middleName, lastName]\n      .filter(Boolean)\n      .join(' ') || 'Client ' + rentprogId;\n\n    // Создаем payload для data (JSONB)\n    const payloadObject = attrs ? JSON.parse(JSON.stringify(attrs)) : {};\n    \n    results.push({\n      json: {\n        rentprog_id: String(rentprogId),\n        branch: mapping.branch,\n        company_id: mapping.companyId,\n        phone: phone,\n        email: email,\n        name: firstName,\n        lastname: lastName,\n        middlename: middleName,\n        fio: fullName,\n        category: attrs.category || 'Новый',\n        entity: attrs.entity || false,\n        entity_name: attrs.entity_name || null,\n        country: attrs.country || null,\n        city: attrs.city || null,\n        address: attrs.address || null,\n        birthday: attrs.birthday || null,\n        passport_series: attrs.passport_series || null,\n        passport_number: attrs.passport_number || null,\n        passport_issued: attrs.passport_issued || null,\n        driver_series: attrs.driver_series || null,\n        driver_number: attrs.driver_number || null,\n        driver_issued: attrs.driver_issued || null,\n        balance: attrs.balance || 0,\n        debt: attrs.debt || 0,\n        debtor: attrs.debtor || false,\n        problems: attrs.problems || false,\n        source: attrs.source || null,\n        notes: attrs.notes || null,\n        telegram: attrs.telegram || null,\n        whatsapp: attrs.whatsapp || null,\n        created_at: attrs.created_at || new Date().toISOString(),\n        data: payloadObject,\n      },\n    });\n    totalClients++;\n  });\n});\n\nconsole.log(`✅ Total processed: ${totalClients} clients`);\nconsole.log(`❌ Total errors: ${totalErrors} branches`);\n\nif (results.length > 0) {\n  results[0].json._stats = {\n    total_clients: totalClients,\n    total_errors: totalErrors,\n  };\n}\n\nreturn results;"
+      },
+      "name": "Process All Clients",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 400]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "clients"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "phone": "={{ $json.phone }}",
+            "email": "={{ $json.email }}",
+            "name": "={{ $json.name }}",
+            "lastname": "={{ $json.lastname }}",
+            "middlename": "={{ $json.middlename }}",
+            "fio": "={{ $json.fio }}",
+            "category": "={{ $json.category }}",
+            "company_id": "={{ $json.company_id }}",
+            "entity": "={{ $json.entity }}",
+            "entity_name": "={{ $json.entity_name }}",
+            "country": "={{ $json.country }}",
+            "city": "={{ $json.city }}",
+            "address": "={{ $json.address }}",
+            "birthday": "={{ $json.birthday }}",
+            "passport_series": "={{ $json.passport_series }}",
+            "passport_number": "={{ $json.passport_number }}",
+            "passport_issued": "={{ $json.passport_issued }}",
+            "driver_series": "={{ $json.driver_series }}",
+            "driver_number": "={{ $json.driver_number }}",
+            "driver_issued": "={{ $json.driver_issued }}",
+            "balance": "={{ $json.balance }}",
+            "debt": "={{ $json.debt }}",
+            "debtor": "={{ $json.debtor }}",
+            "problems": "={{ $json.problems }}",
+            "source": "={{ $json.source }}",
+            "notes": "={{ $json.notes }}",
+            "telegram": "={{ $json.telegram }}",
+            "whatsapp": "={{ $json.whatsapp }}",
+            "data": "={{ $json.data }}"
+          },
+          "matchingColumns": ["phone"]
+        },
+        "options": {}
+      },
+      "name": "Upsert to Clients",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1200, 400],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO external_refs (\n  entity_type,\n  entity_id,\n  system,\n  external_id,\n  branch_code,\n  created_at,\n  updated_at\n)\nSELECT\n  'client'::text,\n  c.id,\n  'rentprog'::text,\n  '{{ $json.rentprog_id }}',\n  '{{ $json.branch }}',\n  NOW(),\n  NOW()\nFROM clients c\nWHERE c.phone = '{{ $json.phone }}'\nON CONFLICT (system, external_id) \nDO UPDATE SET\n  entity_id = EXCLUDED.entity_id,\n  branch_code = EXCLUDED.branch_code,\n  updated_at = NOW()\nRETURNING entity_id, external_id;",
+        "options": {}
+      },
+      "name": "Create External Refs",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1440, 400],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst successCount = items.filter(item => !item.json.error && item.json.entity_id).length;\nconst errorCount = items.filter(item => item.json.error).length;\n\nlet message = '📸 Snapshot: RentProg Clients\\n\\n';\nmessage += `✅ Успешно обработано: ${successCount}\\n`;\n\nif (errorCount > 0) {\n  message += `❌ Ошибок: ${errorCount}\\n`;\n}\n\nconst stats = items[0]?.json?._stats;\nif (stats) {\n  message += `\\n📊 Статистика:\\n`;\n  message += `   Всего клиентов из RentProg: ${stats.total_clients}\\n`;\n  message += `   Создано external_refs: ${successCount}\\n`;\n  message += `   Ошибок филиалов: ${stats.total_errors}\\n`;\n}\n\nreturn [{\n  json: {\n    success: errorCount === 0,\n    message: message,\n    total_items: items.length,\n    success_count: successCount,\n    error_count: errorCount\n  }\n}];"
+      },
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1680, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check-errors",
+              "leftValue": "={{ $json.error_count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "If Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1920, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "-1003484642420",
+        "text": "={{ $json.message + '\\n\\n🔗 <a href=\"https://n8n.rentflow.rentals/workflow/' + $workflow.id + '/executions/' + $execution.id + '\">Открыть execution</a>' }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2160, 320],
+      "credentials": {
+        "telegramApi": {
+          "id": "1tKryXxL5Gq395nN",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.first().json;\nconst errorMessage = errorData.message || 'Ошибка при snapshot клиентов RentProg';\n\nconsole.error('❌ Workflow failed:', errorMessage);\n\nthrow new Error(errorMessage);"
+      },
+      "name": "Throw Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2400, 320]
+    },
+    {
+      "parameters": {},
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2160, 480]
+    }
+  ],
+  "connections": {
+    "Every Night at 3 AM": {
+      "main": [
+        [
+          {
+            "node": "Get Tbilisi Clients",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Batumi Clients",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Kutaisi Clients",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Service Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tbilisi Clients": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Batumi Clients": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Kutaisi Clients": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Get Service Clients": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merge All Branches": {
+      "main": [
+        [
+          {
+            "node": "Process All Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process All Clients": {
+      "main": [
+        [
+          {
+            "node": "Upsert to Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert to Clients": {
+      "main": [
+        [
+          {
+            "node": "Create External Refs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create External Refs": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "If Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Alert": {
+      "main": [
+        [
+          {
+            "node": "Throw Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "timezone": "Asia/Tbilisi"
+  }
+}
+

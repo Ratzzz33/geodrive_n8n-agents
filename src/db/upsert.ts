@@ -25,9 +25,47 @@ import type { BranchName } from '../integrations/rentprog.js';
 import { apiFetch } from '../integrations/rentprog.js';
 // import { extractCarFields, extractClientFields } from './carsAndClients'; // Временно закомментировано
 
-// Временные заглушки
-const extractCarFields = (payload: any) => payload;
-const extractClientFields = (payload: any) => payload;
+// Нормализация полей из RentProg (обработка массивов и типов)
+function normalizeFields(payload: any): any {
+  const normalized: any = {};
+  
+  for (const [key, value] of Object.entries(payload)) {
+    // Пропускаем служебные поля
+    if (key === 'id' || key === 'car_id' || key === 'client_id' || key === 'booking_id') {
+      continue;
+    }
+    
+    // Обработка массивов: берем последнее значение (новое значение)
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        continue; // Пропускаем пустые массивы
+      }
+      // Для company_id, mileage и других массивов берем последнее значение
+      normalized[key] = value[value.length - 1];
+    } else if (value instanceof Date) {
+      // Если уже Date объект, оставляем как есть
+      normalized[key] = value;
+    } else if (value !== null && value !== undefined) {
+      // Остальные значения оставляем как есть
+      normalized[key] = value;
+    }
+  }
+  
+  return normalized;
+}
+
+// Временные заглушки (с нормализацией)
+const extractCarFields = (payload: any) => {
+  const normalized = normalizeFields(payload);
+  // Сохраняем все в data как JSONB
+  return { data: normalized };
+};
+
+const extractClientFields = (payload: any) => {
+  const normalized = normalizeFields(payload);
+  // Сохраняем все в data как JSONB
+  return { data: normalized };
+};
 
 /**
  * Разрешить entity_id по внешней ссылке
@@ -133,7 +171,15 @@ async function getOrCreateBranch(code: string, name?: string): Promise<string> {
  */
 export async function upsertCarFromRentProg(
   payload: any,
-  branchCode: BranchName
+  branchCode: BranchName,
+  changeTracking?: {
+    source?: 'rentprog_webhook' | 'rentprog_history' | 'snapshot_workflow' | 'jarvis_api' | 'manual' | 'n8n_workflow';
+    workflow?: string;
+    function?: string;
+    executionId?: string;
+    user?: string;
+    metadata?: Record<string, any>;
+  }
 ): Promise<{ entityId: string; created: boolean }> {
   const db = getDatabase();
   const rentprogId = String(payload.id || payload.car_id);
@@ -146,6 +192,16 @@ export async function upsertCarFromRentProg(
   // Извлекаем все поля из payload
   const extractedFields = extractCarFields(payload);
 
+  // Подготавливаем информацию об источнике изменения
+  const changeInfo = {
+    updated_by_source: changeTracking?.source || 'jarvis_api',
+    updated_by_workflow: changeTracking?.workflow || null,
+    updated_by_function: changeTracking?.function || 'upsertCarFromRentProg',
+    updated_by_execution_id: changeTracking?.executionId || null,
+    updated_by_user: changeTracking?.user || null,
+    updated_by_metadata: changeTracking?.metadata || null,
+  };
+
   if (carId) {
     // Обновляем существующий автомобиль
     await db
@@ -153,11 +209,12 @@ export async function upsertCarFromRentProg(
       .set({
         branch_id: branchId,
         ...extractedFields,
+        ...changeInfo,
         updated_at: new Date(),
       })
       .where(eq(cars.id, carId));
 
-    logger.debug(`Updated car ${carId} from RentProg ${rentprogId}`);
+    logger.debug(`Updated car ${carId} from RentProg ${rentprogId} by ${changeInfo.updated_by_source}`);
     return { entityId: carId, created: false };
   } else {
     // Создаем новый автомобиль
@@ -166,6 +223,7 @@ export async function upsertCarFromRentProg(
       .values({
         branch_id: branchId,
         ...extractedFields,
+        ...changeInfo,
       })
       .returning({ id: cars.id });
 
@@ -173,7 +231,7 @@ export async function upsertCarFromRentProg(
 
     // Создаем внешнюю ссылку (без meta, т.к. данные уже в таблице)
     await linkExternalRef('car', carId, 'rentprog', rentprogId, branchCode, null);
-    logger.debug(`Created car ${carId} from RentProg ${rentprogId}`);
+    logger.debug(`Created car ${carId} from RentProg ${rentprogId} by ${changeInfo.updated_by_source}`);
     return { entityId: carId, created: true };
   }
 }
@@ -227,20 +285,50 @@ export async function upsertClientFromRentProg(
 
 /**
  * Парсинг даты из формата RentProg (DD-MM-YYYY H:mm)
+ * Экспортируется для тестирования
  */
-function parseRentProgDate(dateStr: string | undefined): Date | null {
+export function parseRentProgDate(dateStr: string | Date | undefined | null): Date | null {
   if (!dateStr) return null;
   
-  // Формат RentProg: "25-01-2022 10:00"
+  // Если уже Date объект, возвращаем как есть
+  if (dateStr instanceof Date) {
+    return isNaN(dateStr.getTime()) ? null : dateStr;
+  }
+  
+  // Если массив, берем последнее значение
+  if (Array.isArray(dateStr)) {
+    if (dateStr.length === 0) return null;
+    dateStr = dateStr[dateStr.length - 1];
+    // Рекурсивно обрабатываем
+    return parseRentProgDate(dateStr);
+  }
+  
+  // Если не строка, пробуем преобразовать
+  if (typeof dateStr !== 'string') {
+    try {
+      const parsed = new Date(dateStr);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    } catch {
+      return null;
+    }
+  }
+  
+  // Формат RentProg: "25-01-2022 10:00" (время в Asia/Tbilisi, UTC+4)
   const match = dateStr.match(/(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})/);
   if (match) {
     const [, day, month, year, hour, minute] = match;
-    return new Date(`${year}-${month}-${day}T${hour}:${minute}:00`);
+    // ВАЖНО: RentProg всегда использует Asia/Tbilisi (UTC+4)
+    // Добавляем часовой пояс явно, чтобы избежать интерпретации как локальное время сервера
+    return new Date(`${year}-${month}-${day}T${hour}:${minute}:00+04:00`);
   }
   
   // Пробуем стандартный ISO формат
+  try {
   const parsed = new Date(dateStr);
   return isNaN(parsed.getTime()) ? null : parsed;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -278,10 +366,52 @@ export async function upsertBookingFromRentProg(
   const branchId = await getOrCreateBranch(branchCode, branchCode);
 
   // Парсим даты (поддержка формата RentProg)
-  const startAt = parseRentProgDate(payload.start_date) || 
-                  (payload.start_at ? new Date(payload.start_at) : null);
-  const endAt = parseRentProgDate(payload.end_date) || 
-                (payload.end_at ? new Date(payload.end_at) : null);
+  // Обработка массивов: если дата приходит как массив, берем последнее значение
+  // Также обрабатываем start_date и end_date как массивы
+  const startDateValue = Array.isArray(payload.start_date) 
+    ? payload.start_date[payload.start_date.length - 1] 
+    : payload.start_date;
+  const endDateValue = Array.isArray(payload.end_date) 
+    ? payload.end_date[payload.end_date.length - 1] 
+    : payload.end_date;
+  const startAtValue = Array.isArray(payload.start_at) 
+    ? payload.start_at[payload.start_at.length - 1] 
+    : payload.start_at;
+  const endAtValue = Array.isArray(payload.end_at) 
+    ? payload.end_at[payload.end_at.length - 1] 
+    : payload.end_at;
+  
+  // Безопасный парсинг дат с обработкой всех вариантов
+  let startAt: Date | null = null;
+  let endAt: Date | null = null;
+  
+  try {
+    startAt = parseRentProgDate(startDateValue) || 
+              (startAtValue ? (startAtValue instanceof Date ? startAtValue : 
+                (typeof startAtValue === 'string' ? new Date(startAtValue) : null)) : null);
+    
+    // Проверяем валидность даты
+    if (startAt && isNaN(startAt.getTime())) {
+      startAt = null;
+    }
+  } catch (error) {
+    logger.warn(`[Booking ${rentprogId}] Error parsing start_date: ${error}`);
+    startAt = null;
+  }
+  
+  try {
+    endAt = parseRentProgDate(endDateValue) || 
+            (endAtValue ? (endAtValue instanceof Date ? endAtValue : 
+              (typeof endAtValue === 'string' ? new Date(endAtValue) : null)) : null);
+    
+    // Проверяем валидность даты
+    if (endAt && isNaN(endAt.getTime())) {
+      endAt = null;
+    }
+  } catch (error) {
+    logger.warn(`[Booking ${rentprogId}] Error parsing end_date: ${error}`);
+    endAt = null;
+  }
 
   // Определяем статус
   let status = payload.status || payload.state;
@@ -620,7 +750,18 @@ export async function dynamicUpsertEntity(
 
   if (created) {
     // Вставляем новую запись с минимальными полями
-    const insertData: any = { id: entityId };
+    const insertData: any = { 
+      id: entityId,
+      // Заполняем поля отслеживания изменений
+      updated_by_source: 'jarvis_api',
+      updated_by_function: 'dynamicUpsertEntity',
+      updated_by_execution_id: null,
+      updated_by_user: null,
+      updated_by_metadata: {
+        rentprog_id: rentprogId,
+        table_name: tableName,
+      },
+    };
 
     // Добавляем служебные поля
     if (tableName === 'cars') {
@@ -632,9 +773,22 @@ export async function dynamicUpsertEntity(
   }
 
   // Обновляем все поля из data, кроме служебных
-  const updateData: any = { updated_at: new Date() };
+  const updateData: any = { 
+    updated_at: new Date(),
+    // Заполняем поля отслеживания изменений
+    updated_by_source: 'jarvis_api',
+    updated_by_function: 'dynamicUpsertEntity',
+    updated_by_execution_id: null,
+    updated_by_user: null,
+    updated_by_metadata: {
+      rentprog_id: rentprogId,
+      table_name: tableName,
+    },
+  };
   for (const [key, value] of Object.entries(data)) {
-    if (!['id', 'created_at', 'updated_at', 'car_id', 'client_id', 'booking_id'].includes(key)) {
+    if (!['id', 'created_at', 'updated_at', 'car_id', 'client_id', 'booking_id',
+          'updated_by_source', 'updated_by_workflow', 'updated_by_function', 
+          'updated_by_execution_id', 'updated_by_user', 'updated_by_metadata'].includes(key)) {
       updateData[key] = value;
     }
   }

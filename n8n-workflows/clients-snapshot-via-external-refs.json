@@ -1,0 +1,171 @@
+{
+  "name": "📸 Snapshot: RentProg Clients (via external_refs)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "cronExpression", "expression": "0 3 * * *"}]
+        }
+      },
+      "name": "Every Night at 3 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400],
+      "id": "trigger-1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const totalPages = 50;\nconst pages = [];\nfor (let i = 1; i <= totalPages; i++) {\n  pages.push({ json: { page: i } });\n}\nreturn pages;"
+      },
+      "name": "Generate Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 400],
+      "id": "code-generate"
+    },
+    {
+      "parameters": {},
+      "name": "Loop Over Pages",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [720, 400],
+      "id": "loop-1"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://rentprog.net/api/v1/clients?page={{ $json.page }}&per_page=200",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MzY1NTQ0NSwiZXhwIjoxNzY2MjQ3NDQ1LCJqdGkiOiI4YjFhMzg4NS1lYTJkLTRmMjQtOWIwNC04MTE0YzNkODc4MWYifQ.FmwUZv_gW0NMQ4vAmRjIMKk24yT0LE4HdQASDnfGaNk"},
+            {"name": "Accept", "value": "application/json"},
+            {"name": "Origin", "value": "https://web.rentprog.ru"},
+            {"name": "Referer", "value": "https://web.rentprog.ru/"}
+          ]
+        },
+        "options": {"timeout": 120000}
+      },
+      "name": "Get Clients Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1008, 208],
+      "id": "http-get",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst currentPage = $('Loop Over Pages').item.json.page;\n\nif (response.error || !response.data) {\n  console.error('❌ Error or no data:', response.error);\n  return [];\n}\n\nconst clientsData = response.data;\nif (clientsData.length === 0) {\n  console.log(`✅ End of pagination at page ${currentPage}`);\n  return [];\n}\n\nconst results = [];\nclientsData.forEach(client => {\n  const attrs = client.attributes || client;\n  const rentprogId = attrs.id;\n  if (!rentprogId) return;\n  \n  const phone = attrs.phone ? String(attrs.phone).replace(/[^\\d+]/g, '') : null;\n  if (!phone) return;\n  \n  const email = attrs.email && String(attrs.email).includes('@') ? String(attrs.email).trim().toLowerCase() : null;\n  const firstName = attrs.first_name || attrs.name || '';\n  const lastName = attrs.last_name || attrs.lastname || '';\n  const middleName = attrs.middle_name || attrs.middlename || '';\n  const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ') || `Client ${rentprogId}`;\n  \n  results.push({\n    json: {\n      rentprog_id: String(rentprogId),\n      phone: phone,\n      email: email,\n      name: firstName,\n      lastname: lastName,\n      middlename: middleName,\n      fio: fullName,\n      category: attrs.category || 'Новый',\n      entity: attrs.entity || false,\n      entity_name: attrs.entity_name || null,\n      country: attrs.country || null,\n      city: attrs.city || null,\n      address: attrs.address || null,\n      birthday: attrs.birthday || null,\n      passport_series: attrs.passport_series || null,\n      passport_number: attrs.passport_number || null,\n      passport_issued: attrs.passport_issued || null,\n      driver_series: attrs.driver_series || null,\n      driver_number: attrs.driver_number || null,\n      driver_issued: attrs.driver_issued || null,\n      balance: attrs.balance || 0,\n      debt: attrs.debt || 0,\n      debtor: attrs.debtor || false,\n      problems: attrs.problems || false,\n      source: attrs.source || null,\n      notes: attrs.notes || null,\n      telegram: attrs.telegram || null,\n      whatsapp: attrs.whatsapp || null,\n      created_at: attrs.created_at || new Date().toISOString(),\n      data: JSON.parse(JSON.stringify(attrs)),\n      _page: currentPage\n    }\n  });\n});\n\nreturn results;"
+      },
+      "name": "Process Clients",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 144],
+      "id": "code-process"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=-- Step 1: Upsert external_refs и получить UUID клиента\nINSERT INTO external_refs (\n  entity_type,\n  entity_id,\n  system,\n  external_id,\n  created_at,\n  updated_at\n)\nVALUES (\n  'client',\n  gen_random_uuid(),  -- создаём новый UUID если клиента нет\n  'rentprog',\n  '{{ $json.rentprog_id }}',\n  NOW(),\n  NOW()\n)\nON CONFLICT (system, external_id)\nDO UPDATE SET updated_at = NOW()\nRETURNING entity_id, external_id;",
+        "options": {}
+      },
+      "name": "Upsert External Refs",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1400, 128],
+      "id": "pg-external-refs",
+      "credentials": {"postgres": {"id": "3I9fyXVlGg4Vl4LZ"}}
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=-- Step 2: Upsert clients по UUID из external_refs\nINSERT INTO clients (\n  id,\n  phone,\n  email,\n  name,\n  lastname,\n  middlename,\n  fio,\n  category,\n  entity,\n  entity_name,\n  country,\n  city,\n  address,\n  birthday,\n  passport_series,\n  passport_number,\n  passport_issued,\n  driver_series,\n  driver_number,\n  driver_issued,\n  balance,\n  debt,\n  debtor,\n  problems,\n  source,\n  notes,\n  telegram_username,\n  whatsapp,\n  data,\n  created_at,\n  updated_at\n)\nVALUES (\n  '{{ $('Upsert External Refs').item.json.entity_id }}',  -- UUID из external_refs\n  {{ $json.phone ? \"'\" + $json.phone + \"'\" : \"NULL\" }},\n  {{ $json.email ? \"'\" + $json.email + \"'\" : \"NULL\" }},\n  {{ $json.name ? \"'\" + $json.name.replace(/'/g, \"''\") + \"'\" : \"NULL\" }},\n  {{ $json.lastname ? \"'\" + $json.lastname.replace(/'/g, \"''\") + \"'\" : \"NULL\" }},\n  {{ $json.middlename ? \"'\" + $json.middlename.replace(/'/g, \"''\") + \"'\" : \"NULL\" }},\n  {{ $json.fio ? \"'\" + $json.fio.replace(/'/g, \"''\") + \"'\" : \"NULL\" }},\n  '{{ $json.category }}',\n  {{ $json.entity }},\n  {{ $json.entity_name ? \"'\" + $json.entity_name.replace(/'/g, \"''\") + \"'\" : \"NULL\" }},\n  {{ $json.country ? \"'\" + $json.country + \"'\" : \"NULL\" }},\n  {{ $json.city ? \"'\" + $json.city + \"'\" : \"NULL\" }},\n  {{ $json.address ? \"'\" + $json.address.replace(/'/g, \"''\") + \"'\" : \"NULL\" }},\n  {{ $json.birthday ? \"'\" + $json.birthday + \"'\" : \"NULL\" }},\n  {{ $json.passport_series ? \"'\" + $json.passport_series + \"'\" : \"NULL\" }},\n  {{ $json.passport_number ? \"'\" + $json.passport_number + \"'\" : \"NULL\" }},\n  {{ $json.passport_issued ? \"'\" + $json.passport_issued + \"'\" : \"NULL\" }},\n  {{ $json.driver_series ? \"'\" + $json.driver_series + \"'\" : \"NULL\" }},\n  {{ $json.driver_number ? \"'\" + $json.driver_number + \"'\" : \"NULL\" }},\n  {{ $json.driver_issued ? \"'\" + $json.driver_issued + \"'\" : \"NULL\" }},\n  {{ $json.balance }},\n  {{ $json.debt }},\n  {{ $json.debtor }},\n  {{ $json.problems }},\n  {{ $json.source ? \"'\" + $json.source + \"'\" : \"NULL\" }},\n  {{ $json.notes ? \"'\" + $json.notes.replace(/'/g, \"''\") + \"'\" : \"NULL\" }},\n  {{ $json.telegram ? \"'\" + $json.telegram + \"'\" : \"NULL\" }},\n  {{ $json.whatsapp ? \"'\" + $json.whatsapp + \"'\" : \"NULL\" }},\n  '{{ JSON.stringify($json.data).replace(/'/g, \"''\") }}'::jsonb,\n  '{{ $json.created_at }}',\n  NOW()\n)\nON CONFLICT (id)\nDO UPDATE SET\n  phone = EXCLUDED.phone,\n  email = EXCLUDED.email,\n  name = EXCLUDED.name,\n  lastname = EXCLUDED.lastname,\n  middlename = EXCLUDED.middlename,\n  fio = EXCLUDED.fio,\n  category = EXCLUDED.category,\n  entity = EXCLUDED.entity,\n  entity_name = EXCLUDED.entity_name,\n  country = EXCLUDED.country,\n  city = EXCLUDED.city,\n  address = EXCLUDED.address,\n  birthday = EXCLUDED.birthday,\n  passport_series = EXCLUDED.passport_series,\n  passport_number = EXCLUDED.passport_number,\n  passport_issued = EXCLUDED.passport_issued,\n  driver_series = EXCLUDED.driver_series,\n  driver_number = EXCLUDED.driver_number,\n  driver_issued = EXCLUDED.driver_issued,\n  balance = EXCLUDED.balance,\n  debt = EXCLUDED.debt,\n  debtor = EXCLUDED.debtor,\n  problems = EXCLUDED.problems,\n  source = EXCLUDED.source,\n  notes = EXCLUDED.notes,\n  telegram_username = EXCLUDED.telegram_username,\n  whatsapp = EXCLUDED.whatsapp,\n  data = EXCLUDED.data,\n  updated_at = NOW()\nRETURNING id;",
+        "options": {}
+      },
+      "name": "Upsert Clients",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1600, 112],
+      "id": "pg-clients",
+      "credentials": {"postgres": {"id": "3I9fyXVlGg4Vl4LZ"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nconst successCount = allItems.filter(item => item.json.id).length;\nconst errorCount = allItems.filter(item => item.json.error).length;\nconst processedPages = new Set();\nallItems.forEach(item => { if (item.json._page) processedPages.add(item.json._page); });\n\nlet message = '📸 Snapshot: RentProg Clients\\n\\n';\nmessage += `✅ Обновлено клиентов: ${successCount}\\n`;\nmessage += `📄 Обработано страниц: ${processedPages.size}\\n`;\nmessage += `👥 Всего записей: ${allItems.length}\\n`;\nif (errorCount > 0) message += `❌ Ошибок: ${errorCount}\\n`;\n\nreturn [{ json: { success: errorCount === 0, message, total_items: allItems.length, success_count: successCount, error_count: errorCount, pages_processed: processedPages.size } }];"
+      },
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1920, 400],
+      "id": "code-format"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "typeValidation": "strict", "version": 1},
+          "conditions": [{"id": "check-errors", "leftValue": "={{ $json.error_count }}", "rightValue": 0, "operator": {"type": "number", "operation": "gt"}}],
+          "combinator": "and"
+        }
+      },
+      "name": "If Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2160, 400],
+      "id": "if-error"
+    },
+    {
+      "parameters": {
+        "chatId": "-1003484642420",
+        "text": "={{ $json.message + '\\n\\n🔗 <a href=\"https://n8n.rentflow.rentals/workflow/' + $workflow.id + '/executions/' + $execution.id + '\">Открыть execution</a>' }}",
+        "additionalFields": {"appendAttribution": false, "parse_mode": "HTML"}
+      },
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2400, 320],
+      "id": "tg-alert",
+      "credentials": {"telegramApi": {"id": "1tKryXxL5Gq395nN"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.first().json;\nconst errorMessage = errorData.message || 'Ошибка при snapshot клиентов RentProg';\nthrow new Error(errorMessage);"
+      },
+      "name": "Throw Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2640, 320],
+      "id": "code-throw"
+    },
+    {
+      "parameters": {},
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2400, 480],
+      "id": "noop-success"
+    }
+  ],
+  "connections": {
+    "Every Night at 3 AM": {"main": [[{"node": "Generate Pages", "type": "main", "index": 0}]]},
+    "Generate Pages": {"main": [[{"node": "Loop Over Pages", "type": "main", "index": 0}]]},
+    "Loop Over Pages": {"main": [[{"node": "Format Result", "type": "main", "index": 0}], [{"node": "Get Clients Page", "type": "main", "index": 0}]]},
+    "Get Clients Page": {"main": [[{"node": "Process Clients", "type": "main", "index": 0}]]},
+    "Process Clients": {"main": [[{"node": "Upsert External Refs", "type": "main", "index": 0}]]},
+    "Upsert External Refs": {"main": [[{"node": "Upsert Clients", "type": "main", "index": 0}]]},
+    "Upsert Clients": {"main": [[{"node": "Loop Over Pages", "type": "main", "index": 0}]]},
+    "Format Result": {"main": [[{"node": "If Error", "type": "main", "index": 0}]]},
+    "If Error": {"main": [[{"node": "Send Alert", "type": "main", "index": 0}], [{"node": "Success", "type": "main", "index": 0}]]},
+    "Send Alert": {"main": [[{"node": "Throw Error", "type": "main", "index": 0}]]}
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "timezone": "Asia/Tbilisi"
+  }
+}
+

@@ -1,0 +1,318 @@
+{
+  "csv_total": 128,
+  "db_total": 136,
+  "only_in_csv": [
+    {
+      "plate": "MM207LM/",
+      "brand": "Mazda",
+      "model": "3",
+      "partner": "Ïåðåäíèé"
+    },
+    {
+      "plate": "UU630UL/",
+      "brand": "Volkswagen",
+      "model": "Tiguan",
+      "partner": "Ïåðåäíèé"
+    },
+    {
+      "plate": "WW080UU/",
+      "brand": "Volkswagen",
+      "model": "Beetle",
+      "partner": "Ïåðåäíèé"
+    },
+    {
+      "plate": "RR307QQ/",
+      "brand": "Volkswagen",
+      "model": "Tiguan",
+      "partner": "Ïîëíûé"
+    },
+    {
+      "plate": "LB713BB/",
+      "brand": "Volkswagen",
+      "model": "Tiguan",
+      "partner": "Ïîëíûé"
+    },
+    {
+      "plate": "BZ551ZB/",
+      "brand": "Chevrolet",
+      "model": "Cruze",
+      "partner": "Ïåðåäíèé"
+    },
+    {
+      "plate": "SS966SJ/",
+      "brand": "Mini",
+      "model": "Cooper",
+      "partner": "Ïåðåäíèé"
+    },
+    {
+      "plate": "TT780TR",
+      "brand": "Skoda",
+      "model": "Kodiaq",
+      "partner": "Ïåðåäíèé"
+    },
+    {
+      "plate": "TT262TH",
+      "brand": "Toyota",
+      "model": "Camry",
+      "partner": "Ïåðåäíèé"
+    },
+    {
+      "plate": "IV430AN/",
+      "brand": "BMW",
+      "model": "430i",
+      "partner": "Ïåðåäíèé"
+    },
+    {
+      "plate": "CC760XC",
+      "brand": "Buick Encore",
+      "model": "",
+      "partner": "Ïîëíûé"
+    }
+  ],
+  "only_in_db": [
+    {
+      "plate": "BW690BB",
+      "model": "Chevrolet Captiva",
+      "branch": null
+    },
+    {
+      "plate": "BZ551ZB",
+      "model": "Chevrolet Cruze (HR)",
+      "branch": "Кутаиси"
+    },
+    {
+      "plate": "CE111LO",
+      "model": "Mercedes-Benz CLS",
+      "branch": null
+    },
+    {
+      "plate": "FH785FH",
+      "model": "Mini Cooper S ",
+      "branch": null
+    },
+    {
+      "plate": "GG773GN",
+      "model": "MINI Cabrio",
+      "branch": null
+    },
+    {
+      "plate": "HH018VV",
+      "model": "Mini Cabrio",
+      "branch": null
+    },
+    {
+      "plate": "HL841LH",
+      "model": "Volkswagen Tiguan",
+      "branch": null
+    },
+    {
+      "plate": "IV430AN",
+      "model": "BMW 430i Cabrio",
+      "branch": "Сервисный центр"
+    },
+    {
+      "plate": "LB713BB",
+      "model": "Volkswagen Tiguan",
+      "branch": "Батуми"
+    },
+    {
+      "plate": "MM207LM",
+      "model": "Mazda 3",
+      "branch": "Тбилиси"
+    },
+    {
+      "plate": "OC700OC",
+      "model": "Santafe Black",
+      "branch": "Батуми"
+    },
+    {
+      "plate": "QQ931QN",
+      "model": "Mini Countryman",
+      "branch": null
+    },
+    {
+      "plate": "RR307QQ",
+      "model": "Volkswagen Tiguan",
+      "branch": "Сервисный центр"
+    },
+    {
+      "plate": "SS966SJ",
+      "model": "MINI Hatch",
+      "branch": "Батуми"
+    },
+    {
+      "plate": "TH262TT",
+      "model": "Toyota Camry",
+      "branch": "Сервисный центр"
+    },
+    {
+      "plate": "UU630UL",
+      "model": "Volkswagen Tiguan",
+      "branch": "Кутаиси"
+    },
+    {
+      "plate": "VV583MV",
+      "model": "MINI Clubman",
+      "branch": null
+    },
+    {
+      "plate": "WW080UU",
+      "model": "Volkswagen Beetle",
+      "branch": "Сервисный центр"
+    },
+    {
+      "plate": "хх001хх",
+      "model": "Партнерский",
+      "branch": null
+    }
+  ],
+  "vin_differences": 1,
+  "partners_from_csv": [
+    {
+      "name": "Ïîëíûé",
+      "cars_count": 50,
+      "plates": [
+        "HW816HW",
+        "PM279MM",
+        "EE377EI",
+        "TT948GG",
+        "GP919GG",
+        "PQ523PQ",
+        "BZ390ZB",
+        "BB681BF",
+        "RR307QQ/",
+        "LB713BB/",
+        "PZ432ZP",
+        "RR350FR",
+        "RL738RL",
+        "FF633FM",
+        "FY399FY",
+        "DW705DW",
+        "GT183GG",
+        "DD319RD",
+        "HH972LH",
+        "FF468BF",
+        "OB700OB",
+        "NB669NN",
+        "VF986VF",
+        "RE177NT",
+        "FK093FF",
+        "FK288FF",
+        "MM438JM",
+        "DF368DD",
+        "DF603DD",
+        "RR704SR",
+        "XX950DX",
+        "DF298DD",
+        "BB678YY",
+        "WQ686WQ",
+        "EP021EP",
+        "CJ686CC",
+        "AR958ES",
+        "RR814WR",
+        "WT572WT",
+        "WG516GG",
+        "RR635WR",
+        "OO700JO",
+        "JR983JR",
+        "ZW648WW",
+        "NN371KN",
+        "FK256FF",
+        "CX036CX",
+        "RV933RR",
+        "CC760XC",
+        "JU904UU"
+      ]
+    },
+    {
+      "name": "Çàäíèé",
+      "cars_count": 6,
+      "plates": [
+        "UQ165QQ",
+        "HH587MH",
+        "SU656UU",
+        "TR001OF",
+        "QY309QY",
+        "LO987KI"
+      ]
+    },
+    {
+      "name": "Ïåðåäíèé",
+      "cars_count": 72,
+      "plates": [
+        "QQ726LQ",
+        "JG722GJ",
+        "BB542QB",
+        "LL393DL",
+        "II179IE",
+        "MM423QM",
+        "AH270HA",
+        "ON475NN",
+        "XX202JJ",
+        "JQ680QQ",
+        "MM207LM/",
+        "LL760ZZ",
+        "JJ477LJ",
+        "GG134HG",
+        "ZR350RZ",
+        "HG541HG",
+        "MM228LM",
+        "XX299UU",
+        "UU630UL/",
+        "GG225WG",
+        "ZZ041BZ",
+        "WW080UU/",
+        "RL630RL",
+        "DC348DC",
+        "NN626CC",
+        "YQ691QY",
+        "VW495VV",
+        "IP595II",
+        "QI838QQ",
+        "CV403CV",
+        "TH235TH",
+        "MM972LM",
+        "CR106CR",
+        "KD474DK",
+        "CT021CT",
+        "NN085YN",
+        "GG663YG",
+        "BZ551ZB/",
+        "UQ089QQ",
+        "QL145QQ",
+        "DW457WD",
+        "SS966SJ/",
+        "KK992RK",
+        "AA916BA",
+        "UN522UN",
+        "TT780TR",
+        "MV640MM",
+        "BE023ES",
+        "BE022ES",
+        "BE021ES",
+        "PJ756PJ",
+        "RR942LR",
+        "HT360HH",
+        "TT262TH",
+        "UM562UM",
+        "MC238MM",
+        "WQ464WQ",
+        "PF769PP",
+        "QZ101QQ",
+        "ZR174ZR",
+        "NR136NR",
+        "IV430AN/",
+        "GG460ZG",
+        "GG668ZG",
+        "PP692TP",
+        "QQ325EQ",
+        "DK700DK",
+        "BI355II",
+        "AP589AA",
+        "EP962EP",
+        "TS078TT",
+        "WX370WX"
+      ]
+    }
+  ]
+}

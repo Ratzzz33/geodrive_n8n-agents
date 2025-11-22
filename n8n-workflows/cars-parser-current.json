@@ -1,0 +1,3414 @@
+{
+  "success": true,
+  "data": {
+    "workflow": {
+      "updatedAt": "2025-11-14T19:57:32.599Z",
+      "createdAt": "2025-11-14T09:31:41.855Z",
+      "id": "u3cOUuoaH5RSw7hm",
+      "name": "✅ Парсинг автомобилей раз в 5 min",
+      "active": true,
+      "isArchived": false,
+      "nodes": [
+        {
+          "parameters": {
+            "jsCode": "const TOKENS = {\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs',\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc'\n};\n\nreturn [{ json: { branch: 'tbilisi', branch_id: '277eaada-1428-4c04-9cd7-5e614e43bedc', token: TOKENS.tbilisi, page: 1 } }];"
+          },
+          "name": "Tbilisi Pages",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            448,
+            208
+          ],
+          "id": "21756081-4dc6-484c-aa73-75baa730a93a"
+        },
+        {
+          "parameters": {
+            "jsCode": "const TOKENS = {\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs',\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc'\n};\n\nreturn [{ json: { branch: 'batumi', branch_id: '627c4c88-d8a1-47bf-b9a6-2e9ad33112a4', token: TOKENS.batumi, page: 1 } }];"
+          },
+          "name": "Batumi Pages",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            448,
+            352
+          ],
+          "id": "3c603377-073a-43ac-9cc2-a13497b6d6bb"
+        },
+        {
+          "parameters": {
+            "jsCode": "const TOKENS = {\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs',\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc'\n};\n\nreturn [{ json: { branch: 'kutaisi', branch_id: '5e551b32-934c-498f-a4a1-a90079985c0a', token: TOKENS.kutaisi, page: 1 } }];"
+          },
+          "name": "Kutaisi Pages",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            448,
+            512
+          ],
+          "id": "c8e78a1f-38a8-4243-b4b3-0a6c65ff5e49"
+        },
+        {
+          "parameters": {
+            "jsCode": "const TOKENS = {\n  'tbilisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NiIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDExMywiZXhwIjoxNzY1MDgyMTEzLCJqdGkiOiI0MmUxNzQ5Zi02MjEyLTRmOTMtOGM0Zi02ZWMwODUzYmUwYWQifQ.20oXaXcgK_hdofbUK3RGdQuPa0pGWtZTV4b42-A8oY4',\n  'batumi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OCIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDE1NCwiZXhwIjoxNzY1MDgyMTU0LCJqdGkiOiI0MWUxMjRjOS01MDgxLTQ2NmMtOTUxNS0xNWEwMjE4ZDA1OTEifQ.l2MfCEf1LJLe-kCuF-MKyOMdhAmd3UWfzG7xECMy37o',\n  'kutaisi': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0OSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDIwMiwiZXhwIjoxNzY1MDgyMjAyLCJqdGkiOiIxZWVlMWU2YS1kMTNhLTQwMzEtYjI2Mi04NGRiM2Y0ZmFiMGEifQ.xGIpTLumIwLxpitlLbeclqb9XBedY8jV1wCIuMP69Vs',\n  'service-center': 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxNjA0NSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc2MjQ5MDA0MSwiZXhwIjoxNzY1MDgyMDQxLCJqdGkiOiI1ZDkwMDI2MC02NTE2LTQxYjctOTI4Ny1jODAyMjNiN2EwNTMifQ.oLMvW9mftfJ9Oivy2riQjx8uK12Ur6aaFy02sDs6DSc'\n};\n\nreturn [{ json: { branch: 'service-center', branch_id: '6026cff7-eee8-4fb9-be26-604f308911f0', token: TOKENS['service-center'], page: 1 } }];"
+          },
+          "name": "Service Pages",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            448,
+            656
+          ],
+          "id": "0bde3a87-4201-4181-8ad9-ab340bbdee1c"
+        },
+        {
+          "parameters": {
+            "url": "https://rentprog.net/api/v1/all_cars_with_bookings",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Authorization",
+                  "value": "=Bearer {{ $json.token }}"
+                },
+                {
+                  "name": "Accept",
+                  "value": "application/json, text/plain, */*"
+                },
+                {
+                  "name": "Origin",
+                  "value": "https://web.rentprog.ru"
+                },
+                {
+                  "name": "Referer",
+                  "value": "https://web.rentprog.ru/"
+                },
+                {
+                  "name": "User-Agent",
+                  "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
+                }
+              ]
+            },
+            "options": {
+              "timeout": 60000
+            }
+          },
+          "name": "Get Tbilisi",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            640,
+            208
+          ],
+          "id": "25ffa661-a876-426a-b55b-d85da612d712"
+        },
+        {
+          "parameters": {
+            "values": {
+              "string": [
+                {
+                  "name": "branch",
+                  "value": "tbilisi"
+                },
+                {
+                  "name": "branch_id",
+                  "value": "277eaada-1428-4c04-9cd7-5e614e43bedc"
+                }
+              ]
+            },
+            "options": {}
+          },
+          "name": "Set Tbilisi Branch",
+          "type": "n8n-nodes-base.set",
+          "typeVersion": 2,
+          "position": [
+            768,
+            208
+          ],
+          "id": "b940aa72-979c-4ce2-bb85-83d773704108"
+        },
+        {
+          "parameters": {
+            "url": "https://rentprog.net/api/v1/all_cars_with_bookings",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Authorization",
+                  "value": "=Bearer {{ $json.token }}"
+                },
+                {
+                  "name": "Accept",
+                  "value": "application/json, text/plain, */*"
+                },
+                {
+                  "name": "Origin",
+                  "value": "https://web.rentprog.ru"
+                },
+                {
+                  "name": "Referer",
+                  "value": "https://web.rentprog.ru/"
+                },
+                {
+                  "name": "User-Agent",
+                  "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
+                }
+              ]
+            },
+            "options": {
+              "timeout": 60000
+            }
+          },
+          "name": "Get Batumi",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            640,
+            352
+          ],
+          "id": "c8962cf5-31b2-4e73-98ee-739f8e396cce"
+        },
+        {
+          "parameters": {
+            "values": {
+              "string": [
+                {
+                  "name": "branch",
+                  "value": "batumi"
+                },
+                {
+                  "name": "branch_id",
+                  "value": "627c4c88-d8a1-47bf-b9a6-2e9ad33112a4"
+                }
+              ]
+            },
+            "options": {}
+          },
+          "name": "Set Batumi Branch",
+          "type": "n8n-nodes-base.set",
+          "typeVersion": 2,
+          "position": [
+            768,
+            352
+          ],
+          "id": "6f2458f4-1b7e-4723-bd80-9d3baf78cb8b"
+        },
+        {
+          "parameters": {
+            "url": "https://rentprog.net/api/v1/all_cars_with_bookings",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Authorization",
+                  "value": "=Bearer {{ $json.token }}"
+                },
+                {
+                  "name": "Accept",
+                  "value": "application/json, text/plain, */*"
+                },
+                {
+                  "name": "Origin",
+                  "value": "https://web.rentprog.ru"
+                },
+                {
+                  "name": "Referer",
+                  "value": "https://web.rentprog.ru/"
+                },
+                {
+                  "name": "User-Agent",
+                  "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
+                }
+              ]
+            },
+            "options": {
+              "timeout": 60000
+            }
+          },
+          "name": "Get Kutaisi",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            640,
+            512
+          ],
+          "id": "ebbfcc13-1cbc-4510-a171-c4ad9e996783"
+        },
+        {
+          "parameters": {
+            "values": {
+              "string": [
+                {
+                  "name": "branch",
+                  "value": "kutaisi"
+                },
+                {
+                  "name": "branch_id",
+                  "value": "5e551b32-934c-498f-a4a1-a90079985c0a"
+                }
+              ]
+            },
+            "options": {}
+          },
+          "name": "Set Kutaisi Branch",
+          "type": "n8n-nodes-base.set",
+          "typeVersion": 2,
+          "position": [
+            768,
+            512
+          ],
+          "id": "70bf9961-ee53-4725-b483-3ae25f89f3f6"
+        },
+        {
+          "parameters": {
+            "url": "https://rentprog.net/api/v1/all_cars_with_bookings",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Authorization",
+                  "value": "=Bearer {{ $json.token }}"
+                },
+                {
+                  "name": "Accept",
+                  "value": "application/json, text/plain, */*"
+                },
+                {
+                  "name": "Origin",
+                  "value": "https://web.rentprog.ru"
+                },
+                {
+                  "name": "Referer",
+                  "value": "https://web.rentprog.ru/"
+                },
+                {
+                  "name": "User-Agent",
+                  "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
+                }
+              ]
+            },
+            "options": {
+              "timeout": 60000
+            }
+          },
+          "name": "Get Service",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            640,
+            656
+          ],
+          "id": "fe36825b-2f99-4737-9b73-d78dcdba3512"
+        },
+        {
+          "parameters": {
+            "values": {
+              "string": [
+                {
+                  "name": "branch",
+                  "value": "service-center"
+                },
+                {
+                  "name": "branch_id",
+                  "value": "6026cff7-eee8-4fb9-be26-604f308911f0"
+                }
+              ]
+            },
+            "options": {}
+          },
+          "name": "Set Service Branch",
+          "type": "n8n-nodes-base.set",
+          "typeVersion": 2,
+          "position": [
+            768,
+            656
+          ],
+          "id": "d87bb5a0-56ea-4e0c-91c4-0d38fdc07117"
+        },
+        {
+          "parameters": {
+            "numberInputs": 4
+          },
+          "name": "Wait for All Branches",
+          "type": "n8n-nodes-base.merge",
+          "typeVersion": 3,
+          "position": [
+            1040,
+            352
+          ],
+          "id": "4fb88817-30b6-4e45-bb57-20d0cca2f0b5"
+        },
+        {
+          "parameters": {
+            "jsCode": "const results = [];\n\n// Маппинг branch code → UUID\nconst BRANCH_MAP = {\n  'tbilisi': '277eaada-1428-4c04-9cd7-5e614e43bedc',\n  'batumi': '627c4c88-d8a1-47bf-b9a6-2e9ad33112a4',\n  'kutaisi': '5e551b32-934c-498f-a4a1-a90079985c0a',\n  'service-center': '6026cff7-eee8-4fb9-be26-604f308911f0'\n};\n\nfor (const item of $input.all()) {\n  const branchCode = item.json.branch;\n  const branchId = BRANCH_MAP[branchCode];\n  const responseData = item.json;\n  \n  // API возвращает массив cars или объект с data.cars\n  let carsData = [];\n  \n  if (Array.isArray(responseData)) {\n    carsData = responseData;\n  } else if (responseData.data && Array.isArray(responseData.data)) {\n    carsData = responseData.data;\n  } else if (responseData.cars && Array.isArray(responseData.cars)) {\n    carsData = responseData.cars;\n  } else if (responseData.cars && Array.isArray(responseData.cars.data)) {\n    carsData = responseData.cars.data;\n  } else if (responseData.data && responseData.data.cars && Array.isArray(responseData.data.cars)) {\n    carsData = responseData.data.cars;\n  } else if (responseData.data && responseData.data.cars && Array.isArray(responseData.data.cars.data)) {\n    carsData = responseData.data.cars.data;\n  }\n  \n  if (carsData.length === 0) {\n    results.push({\n      json: {\n        branch_code: branchCode,\n        branch_id: branchId,\n        error: true,\n        error_message: 'No cars data in response'\n      }\n    });\n    continue;\n  }\n  \n  // Обрабатываем каждый автомобиль\n  for (const car of carsData) {\n    // Извлекаем attributes если это JSON:API формат\n    const attrs = car.attributes || car;\n    \n    results.push({\n      json: {\n        branch_code: branchCode,\n        branch_id: branchId,\n        rentprog_id: attrs.id || car.id,\n        car_name: attrs.car_name || attrs.name,\n        code: attrs.code,\n        number: attrs.number,\n        \n        // Основные характеристики\n        vin: attrs.vin,\n        color: attrs.color,\n        year: attrs.year,\n        transmission: attrs.transmission,\n        fuel: attrs.fuel,\n        car_type: attrs.car_type,\n        car_class: attrs.car_class,\n        \n        // Состояния и статусы\n        active: attrs.active,\n        state: attrs.state, // 1=доступен, 2=внимание, 3=нельзя выдавать\n        tank_state: attrs.tank_state, // состояние бака\n        clean_state: attrs.clean_state, // чистота\n        \n        // Пробег и ТО\n        mileage: attrs.mileage,\n        tire_type: attrs.tire_type, // 1=лето, 2=зима, 3=всесезон\n        tire_size: attrs.tire_size,\n        last_inspection: attrs.last_inspection,\n        \n        // Цены и финансы\n        deposit: attrs.deposit,\n        price_hour: attrs.price_hour,\n        hourly_deposit: attrs.hourly_deposit,\n        monthly_deposit: attrs.monthly_deposit,\n        investor_id: attrs.investor_id,\n        purchase_price: attrs.purchase_price,\n        purchase_date: attrs.purchase_date,\n        \n        // Ограничения\n        age_limit: attrs.age_limit,\n        driver_year_limit: attrs.driver_year_limit,\n        franchise: attrs.franchise,\n        max_fine: attrs.max_fine,\n        repair_cost: attrs.repair_cost,\n        \n        // Опции и оборудование (boolean)\n        is_air: attrs.is_air,\n        climate_control: attrs.climate_control,\n        parktronic: attrs.parktronic,\n        parktronic_camera: attrs.parktronic_camera,\n        heated_seats: attrs.heated_seats,\n        audio_system: attrs.audio_system,\n        usb_system: attrs.usb_system,\n        rain_sensor: attrs.rain_sensor,\n        \n        // Технические детали\n        engine_capacity: attrs.engine_capacity,\n        number_doors: attrs.number_doors,\n        tank_value: attrs.tank_value,\n        \n        // Документы\n        pts: attrs.pts,\n        registration_certificate: attrs.registration_certificate,\n        body_number: attrs.body_number,\n        \n        // Полный JSON для всех остальных полей\n        data: attrs,\n        error: false\n      }\n    });\n  }\n}\n\nreturn results;"
+          },
+          "name": "Merge & Process",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            1232,
+            400
+          ],
+          "id": "06e90a27-119c-48e6-8196-f6811fa83459"
+        },
+        {
+          "parameters": {
+            "operation": "upsert",
+            "schema": {
+              "__rl": true,
+              "value": "public",
+              "mode": "list"
+            },
+            "table": {
+              "__rl": true,
+              "value": "rentprog_car_states_snapshot",
+              "mode": "list"
+            },
+            "columns": {
+              "mappingMode": "defineBelow",
+              "value": {
+                "branch_id": "={{ $json.branch_id }}",
+                "rentprog_id": "={{ $json.rentprog_id }}",
+                "car_name": "={{ $json.car_name }}",
+                "code": "={{ $json.code }}",
+                "number": "={{ $json.number }}",
+                "vin": "={{ $json.vin }}",
+                "color": "={{ $json.color }}",
+                "year": "={{ $json.year }}",
+                "transmission": "={{ $json.transmission }}",
+                "fuel": "={{ $json.fuel }}",
+                "car_type": "={{ $json.car_type }}",
+                "car_class": "={{ $json.car_class }}",
+                "active": "={{ $json.active }}",
+                "state": "={{ $json.state }}",
+                "tank_state": "={{ $json.tank_state }}",
+                "clean_state": "={{ $json.clean_state }}",
+                "mileage": "={{ $json.mileage }}",
+                "tire_type": "={{ $json.tire_type }}",
+                "tire_size": "={{ $json.tire_size }}",
+                "last_inspection": "={{ $json.last_inspection }}",
+                "deposit": "={{ $json.deposit }}",
+                "price_hour": "={{ $json.price_hour }}",
+                "hourly_deposit": "={{ $json.hourly_deposit }}",
+                "monthly_deposit": "={{ $json.monthly_deposit }}",
+                "investor_id": "={{ $json.investor_id }}",
+                "purchase_price": "={{ $json.purchase_price }}",
+                "purchase_date": "={{ $json.purchase_date }}",
+                "age_limit": "={{ $json.age_limit }}",
+                "driver_year_limit": "={{ $json.driver_year_limit }}",
+                "franchise": "={{ $json.franchise }}",
+                "max_fine": "={{ $json.max_fine }}",
+                "repair_cost": "={{ $json.repair_cost }}",
+                "is_air": "={{ $json.is_air }}",
+                "climate_control": "={{ $json.climate_control }}",
+                "parktronic": "={{ $json.parktronic }}",
+                "parktronic_camera": "={{ $json.parktronic_camera }}",
+                "heated_seats": "={{ $json.heated_seats }}",
+                "audio_system": "={{ $json.audio_system }}",
+                "usb_system": "={{ $json.usb_system }}",
+                "rain_sensor": "={{ $json.rain_sensor }}",
+                "engine_capacity": "={{ $json.engine_capacity }}",
+                "number_doors": "={{ $json.number_doors }}",
+                "tank_value": "={{ $json.tank_value }}",
+                "pts": "={{ $json.pts }}",
+                "registration_certificate": "={{ $json.registration_certificate }}",
+                "body_number": "={{ $json.body_number }}",
+                "data": "={{ $json.data ? JSON.stringify($json.data) : null }}"
+              },
+              "matchingColumns": [
+                "rentprog_id"
+              ],
+              "schema": [
+                {
+                  "id": "rentprog_id",
+                  "displayName": "rentprog_id",
+                  "required": true,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "company_id",
+                  "displayName": "company_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false,
+                  "removed": false
+                },
+                {
+                  "id": "model",
+                  "displayName": "model",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false,
+                  "removed": false
+                },
+                {
+                  "id": "plate",
+                  "displayName": "plate",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false,
+                  "removed": false
+                },
+                {
+                  "id": "state",
+                  "displayName": "state",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "transmission",
+                  "displayName": "transmission",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "year",
+                  "displayName": "year",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "number_doors",
+                  "displayName": "number_doors",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "number_seats",
+                  "displayName": "number_seats",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false,
+                  "removed": false
+                },
+                {
+                  "id": "is_air",
+                  "displayName": "is_air",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "engine_capacity",
+                  "displayName": "engine_capacity",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "engine_power",
+                  "displayName": "engine_power",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false,
+                  "removed": false
+                },
+                {
+                  "id": "trunk_volume",
+                  "displayName": "trunk_volume",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false,
+                  "removed": false
+                },
+                {
+                  "id": "avatar_url",
+                  "displayName": "avatar_url",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false,
+                  "removed": false
+                },
+                {
+                  "id": "fetched_at",
+                  "displayName": "fetched_at",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "dateTime",
+                  "canBeUsedToMatch": false,
+                  "removed": false
+                },
+                {
+                  "id": "branch_id",
+                  "displayName": "branch_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "car_name",
+                  "displayName": "car_name",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "code",
+                  "displayName": "code",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "number",
+                  "displayName": "number",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "vin",
+                  "displayName": "vin",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "color",
+                  "displayName": "color",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "fuel",
+                  "displayName": "fuel",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "car_type",
+                  "displayName": "car_type",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "car_class",
+                  "displayName": "car_class",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "active",
+                  "displayName": "active",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "tank_state",
+                  "displayName": "tank_state",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "clean_state",
+                  "displayName": "clean_state",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "mileage",
+                  "displayName": "mileage",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "tire_type",
+                  "displayName": "tire_type",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "tire_size",
+                  "displayName": "tire_size",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "last_inspection",
+                  "displayName": "last_inspection",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "deposit",
+                  "displayName": "deposit",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "price_hour",
+                  "displayName": "price_hour",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "hourly_deposit",
+                  "displayName": "hourly_deposit",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "monthly_deposit",
+                  "displayName": "monthly_deposit",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "investor_id",
+                  "displayName": "investor_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "purchase_price",
+                  "displayName": "purchase_price",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "purchase_date",
+                  "displayName": "purchase_date",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "age_limit",
+                  "displayName": "age_limit",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "driver_year_limit",
+                  "displayName": "driver_year_limit",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "franchise",
+                  "displayName": "franchise",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "max_fine",
+                  "displayName": "max_fine",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "repair_cost",
+                  "displayName": "repair_cost",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "climate_control",
+                  "displayName": "climate_control",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "parktronic",
+                  "displayName": "parktronic",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "parktronic_camera",
+                  "displayName": "parktronic_camera",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "heated_seats",
+                  "displayName": "heated_seats",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "audio_system",
+                  "displayName": "audio_system",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "usb_system",
+                  "displayName": "usb_system",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "rain_sensor",
+                  "displayName": "rain_sensor",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "tank_value",
+                  "displayName": "tank_value",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "pts",
+                  "displayName": "pts",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "registration_certificate",
+                  "displayName": "registration_certificate",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "body_number",
+                  "displayName": "body_number",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": false
+                },
+                {
+                  "id": "data",
+                  "displayName": "data",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "object",
+                  "canBeUsedToMatch": false
+                }
+              ],
+              "attemptToConvertTypes": false,
+              "convertFieldsToString": false
+            },
+            "options": {}
+          },
+          "name": "Save Snapshot",
+          "type": "n8n-nodes-base.postgres",
+          "typeVersion": 2.5,
+          "position": [
+            1408,
+            400
+          ],
+          "id": "c41003bf-f04a-48c2-96d8-755ee425b81d",
+          "credentials": {
+            "postgres": {
+              "id": "3I9fyXVlGg4Vl4LZ",
+              "name": "Postgres account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "jsCode": "const originalData = $('Merge & Process').all();\nconst saveResults = $input.all();\n\nconst saveErrors = {};\n\nsaveResults.forEach((result, index) => {\n  const hasError = result.error || \n                   (result.json && result.json.error) ||\n                   (result.json && result.json.message && result.json.message.includes('error')) ||\n                   (result.json && !result.json.success && result.json.success !== undefined);\n  \n  if (hasError) {\n    const originalItem = originalData[index];\n    let branch = null;\n    \n    if (originalItem && originalItem.json && originalItem.json.branch_code) {\n      branch = originalItem.json.branch_code;\n    } else {\n      const branchMatch = result.json?.message?.match(/(tbilisi|batumi|kutaisi|service-center)/i);\n      if (branchMatch) branch = branchMatch[1].toLowerCase();\n    }\n    \n    if (branch) {\n      if (!saveErrors[branch]) saveErrors[branch] = [];\n      saveErrors[branch].push({\n        error: result.json?.message || result.error || 'Unknown error',\n        item: originalItem?.json\n      });\n    }\n  }\n});\n\nconst allItems = originalData.map((item, index) => {\n  const saveResult = saveResults[index];\n  const hasError = saveResult?.error || \n                   (saveResult?.json && saveResult.json.error) ||\n                   (saveResult?.json && saveResult.json.message && saveResult.json.message.includes('error'));\n  \n  return {\n    json: {\n      ...item.json,\n      saved: !hasError,\n      save_error: hasError ? (saveResult?.json?.message || saveResult?.error || 'Unknown error') : null\n    }\n  };\n});\n\nreturn allItems;"
+          },
+          "name": "Pass Through Data",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            1776,
+            384
+          ],
+          "id": "87acea44-79a0-45d7-b084-136592e86969"
+        },
+        {
+          "parameters": {
+            "jsCode": "const saved = $input.all();\nconst successCount = saved.filter(s => s.json.saved).length;\nconst errorCount = saved.filter(s => !s.json.saved).length;\n\nconst byBranch = {};\nconst errorDetails = {};\n\nsaved.forEach(item => {\n  if (item.json.branch_code) {\n    const branch = item.json.branch_code;\n    if (!byBranch[branch]) byBranch[branch] = { success: 0, error: 0 };\n    \n    if (!item.json.saved) {\n      byBranch[branch].error++;\n      if (!errorDetails[branch]) errorDetails[branch] = [];\n      errorDetails[branch].push({\n        car: item.json.rentprog_id || 'unknown',\n        error: item.json.save_error || 'Unknown error'\n      });\n    } else {\n      byBranch[branch].success++;\n    }\n  }\n});\n\nlet message = '🚗 Парсинг автомобилей раз в час:\\n';\nObject.keys(byBranch).forEach(branch => {\n  const stats = byBranch[branch];\n  message += `${branch.toUpperCase()}: ${stats.success} ✓`;\n  if (stats.error > 0) {\n    message += ` / ${stats.error} ✗`;\n  }\n  message += '\\n';\n});\n\nmessage += `\\nВсего: ${successCount} сохранено`;\nif (errorCount > 0) {\n  message += ` / ${errorCount} ошибок`;\n}\n\nreturn [{\n  json: {\n    message: message,\n    success_count: successCount,\n    error_count: errorCount,\n    by_branch: byBranch,\n    error_details: errorDetails\n  }\n}];"
+          },
+          "name": "Format Result",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            1952,
+            384
+          ],
+          "id": "e0bf5823-d114-416e-b47d-cbc0b70e3add"
+        },
+        {
+          "parameters": {
+            "conditions": {
+              "options": {
+                "caseSensitive": true,
+                "typeValidation": "strict"
+              },
+              "conditions": [
+                {
+                  "id": "check-error-count",
+                  "leftValue": "={{ $json.error_count }}",
+                  "rightValue": 0,
+                  "operator": {
+                    "type": "number",
+                    "operation": "gt"
+                  }
+                }
+              ],
+              "combinator": "and"
+            },
+            "options": {}
+          },
+          "name": "If Error",
+          "type": "n8n-nodes-base.if",
+          "typeVersion": 2,
+          "position": [
+            2128,
+            384
+          ],
+          "id": "a61250dd-e42a-40ee-a071-c12bf2f91c79"
+        },
+        {
+          "parameters": {
+            "chatId": "=-1003484642420",
+            "text": "={{ $json.message }}\\n\\n🔗 <a href=\"https://n8n.rentflow.rentals/workflow/{{ $workflow.id }}/executions/{{ $execution.id }}\">Открыть execution</a>",
+            "additionalFields": {
+              "appendAttribution": false,
+              "parse_mode": "HTML"
+            }
+          },
+          "name": "Send Alert",
+          "type": "n8n-nodes-base.telegram",
+          "typeVersion": 1.2,
+          "position": [
+            2368,
+            496
+          ],
+          "id": "bf4db716-5c55-4d15-b596-665d9728e5dc",
+          "webhookId": "0d3dfacc-f170-4fe5-b1a5-51fc976021b9",
+          "credentials": {
+            "telegramApi": {
+              "id": "1tKryXxL5Gq395nN",
+              "name": "Telegram account"
+            }
+          }
+        },
+        {
+          "parameters": {},
+          "name": "Success",
+          "type": "n8n-nodes-base.noOp",
+          "typeVersion": 1,
+          "position": [
+            2352,
+            272
+          ],
+          "id": "4e421158-8006-4f47-b14d-7ebf4cfc8849"
+        },
+        {
+          "parameters": {
+            "rule": {
+              "interval": [
+                {
+                  "field": "minutes",
+                  "minutesInterval": 5
+                }
+              ]
+            }
+          },
+          "name": "Every 5 min",
+          "type": "n8n-nodes-base.scheduleTrigger",
+          "typeVersion": 1.2,
+          "position": [
+            240,
+            400
+          ],
+          "id": "9be202aa-076a-4805-a102-87cf7124b092"
+        },
+        {
+          "parameters": {
+            "operation": "upsert",
+            "schema": {
+              "__rl": true,
+              "value": "public",
+              "mode": "list"
+            },
+            "table": {
+              "__rl": true,
+              "value": "cars",
+              "mode": "list"
+            },
+            "columns": {
+              "mappingMode": "defineBelow",
+              "value": {
+                "branch_id": "={{ $json.branch_id }}",
+                "rentprog_id": "={{ $json.rentprog_id }}",
+                "car_name": "={{ $json.car_name }}",
+                "code": "={{ $json.code }}",
+                "number": "={{ $json.number }}",
+                "vin": "={{ $json.vin }}",
+                "color": "={{ $json.color }}",
+                "year": "={{ $json.year }}",
+                "transmission": "={{ $json.transmission }}",
+                "fuel": "={{ $json.fuel }}",
+                "car_type": "={{ $json.car_type }}",
+                "car_class": "={{ $json.car_class }}",
+                "active": "={{ $json.active }}",
+                "state": "={{ $json.state }}",
+                "tank_state": "={{ $json.tank_state }}",
+                "clean_state": "={{ $json.clean_state }}",
+                "mileage": "={{ $json.mileage }}",
+                "tire_type": "={{ $json.tire_type }}",
+                "tire_size": "={{ $json.tire_size }}",
+                "last_inspection": "={{ $json.last_inspection }}",
+                "deposit": "={{ $json.deposit }}",
+                "price_hour": "={{ $json.price_hour }}",
+                "hourly_deposit": "={{ $json.hourly_deposit }}",
+                "monthly_deposit": "={{ $json.monthly_deposit }}",
+                "investor_id": "={{ $json.investor_id }}",
+                "purchase_price": "={{ $json.purchase_price }}",
+                "purchase_date": "={{ $json.purchase_date }}",
+                "age_limit": "={{ $json.age_limit }}",
+                "driver_year_limit": "={{ $json.driver_year_limit }}",
+                "franchise": "={{ $json.franchise }}",
+                "max_fine": "={{ $json.max_fine }}",
+                "repair_cost": "={{ $json.repair_cost }}",
+                "is_air": "={{ $json.is_air }}",
+                "climate_control": "={{ $json.climate_control }}",
+                "parktronic": "={{ $json.parktronic }}",
+                "parktronic_camera": "={{ $json.parktronic_camera }}",
+                "heated_seats": "={{ $json.heated_seats }}",
+                "audio_system": "={{ $json.audio_system }}",
+                "usb_system": "={{ $json.usb_system }}",
+                "rain_sensor": "={{ $json.rain_sensor }}",
+                "engine_capacity": "={{ $json.engine_capacity }}",
+                "number_doors": "={{ $json.number_doors }}",
+                "tank_value": "={{ $json.tank_value }}",
+                "pts": "={{ $json.pts }}",
+                "registration_certificate": "={{ $json.registration_certificate }}",
+                "body_number": "={{ $json.body_number }}",
+                "data": "={{ $json.data ? JSON.stringify($json.data) : null }}",
+                "number_seats": 0,
+                "start_mileage": 0,
+                "extra_mileage_km": 0,
+                "extra_mileage_price": 0,
+                "company_id": 0,
+                "sort": 0,
+                "car_mark_id": 0,
+                "car_model_id": 0,
+                "average_price": 0,
+                "ygibdd_status": 0,
+                "weekly_deposit": 0,
+                "main_company_id": 0,
+                "car_generation_id": 0,
+                "inspections_count": 0,
+                "car_configuration_id": 0,
+                "rided_bookings_count": 0,
+                "active_bookings_count": 0,
+                "in_rent_bookings_count": 0
+              },
+              "matchingColumns": [
+                "rentprog_id"
+              ],
+              "schema": [
+                {
+                  "id": "id",
+                  "displayName": "id",
+                  "required": false,
+                  "defaultMatch": true,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "branch_id",
+                  "displayName": "branch_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "plate",
+                  "displayName": "plate",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "vin",
+                  "displayName": "vin",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "model",
+                  "displayName": "model",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "starline_id",
+                  "displayName": "starline_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "data",
+                  "displayName": "data",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "object",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "created_at",
+                  "displayName": "created_at",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "dateTime",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "updated_at",
+                  "displayName": "updated_at",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "dateTime",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "rentprog_id",
+                  "displayName": "rentprog_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "transmission",
+                  "displayName": "transmission",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "fuel",
+                  "displayName": "fuel",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "year",
+                  "displayName": "year",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "color",
+                  "displayName": "color",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "mileage",
+                  "displayName": "mileage",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "car_type",
+                  "displayName": "car_type",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "interior",
+                  "displayName": "interior",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "car_class",
+                  "displayName": "car_class",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "code",
+                  "displayName": "code",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "state",
+                  "displayName": "state",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "avatar_url",
+                  "displayName": "avatar_url",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "drive_unit",
+                  "displayName": "drive_unit",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "number_doors",
+                  "displayName": "number_doors",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "number_seats",
+                  "displayName": "number_seats",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "trunk_volume",
+                  "displayName": "trunk_volume",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "steering_side",
+                  "displayName": "steering_side",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "engine_capacity",
+                  "displayName": "engine_capacity",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "engine_power",
+                  "displayName": "engine_power",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "tire_size",
+                  "displayName": "tire_size",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "tire_type",
+                  "displayName": "tire_type",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "franchise",
+                  "displayName": "franchise",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "max_fine",
+                  "displayName": "max_fine",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "insurance",
+                  "displayName": "insurance",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "start_mileage",
+                  "displayName": "start_mileage",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "registration_certificate",
+                  "displayName": "registration_certificate",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "abs",
+                  "displayName": "abs",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "ebd",
+                  "displayName": "ebd",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "esp",
+                  "displayName": "esp",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "is_air",
+                  "displayName": "is_air",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "cd_system",
+                  "displayName": "cd_system",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "tv_system",
+                  "displayName": "tv_system",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "parktronic",
+                  "displayName": "parktronic",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "parktronic_back",
+                  "displayName": "parktronic_back",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "parktronic_camera",
+                  "displayName": "parktronic_camera",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "tank_state",
+                  "displayName": "tank_state",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "heated_seats",
+                  "displayName": "heated_seats",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "heated_seats_front",
+                  "displayName": "heated_seats_front",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "clean_state",
+                  "displayName": "clean_state",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "audio_system",
+                  "displayName": "audio_system",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "video_system",
+                  "displayName": "video_system",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "folding_seats",
+                  "displayName": "folding_seats",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "climate_control",
+                  "displayName": "climate_control",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "usb_system",
+                  "displayName": "usb_system",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "rain_sensor",
+                  "displayName": "rain_sensor",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "wheel_adjustment",
+                  "displayName": "wheel_adjustment",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "wheel_adjustment_full",
+                  "displayName": "wheel_adjustment_full",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "heated_windshield",
+                  "displayName": "heated_windshield",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "is_electropackage",
+                  "displayName": "is_electropackage",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "tank_value",
+                  "displayName": "tank_value",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "gas_mileage",
+                  "displayName": "gas_mileage",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "repair_cost",
+                  "displayName": "repair_cost",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "store_place",
+                  "displayName": "store_place",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "pts",
+                  "displayName": "pts",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "roof",
+                  "displayName": "roof",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "custom_field_1",
+                  "displayName": "custom_field_1",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "custom_field_2",
+                  "displayName": "custom_field_2",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "custom_field_3",
+                  "displayName": "custom_field_3",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "window_lifters",
+                  "displayName": "window_lifters",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "extra_mileage_km",
+                  "displayName": "extra_mileage_km",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "extra_mileage_price",
+                  "displayName": "extra_mileage_price",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "body_number",
+                  "displayName": "body_number",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "airbags",
+                  "displayName": "airbags",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "company_id",
+                  "displayName": "company_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "description",
+                  "displayName": "description",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "grm",
+                  "displayName": "grm",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "city",
+                  "displayName": "city",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "demo",
+                  "displayName": "demo",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "free",
+                  "displayName": "free",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "sipp",
+                  "displayName": "sipp",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "sort",
+                  "displayName": "sort",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "photo",
+                  "displayName": "photo",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "total",
+                  "displayName": "total",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "active",
+                  "displayName": "active",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "candle",
+                  "displayName": "candle",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "grm_km",
+                  "displayName": "grm_km",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "number",
+                  "displayName": "number",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "photos",
+                  "displayName": "photos",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "pickup",
+                  "displayName": "pickup",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "archive",
+                  "displayName": "archive",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "deposit",
+                  "displayName": "deposit",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "dropoff",
+                  "displayName": "dropoff",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "seasons",
+                  "displayName": "seasons",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "user_id",
+                  "displayName": "user_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "all_days",
+                  "displayName": "all_days",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "car_name",
+                  "displayName": "car_name",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "grm_date",
+                  "displayName": "grm_date",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "latitude",
+                  "displayName": "latitude",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "timezone",
+                  "displayName": "timezone",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "age_limit",
+                  "displayName": "age_limit",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "akb_renew",
+                  "displayName": "akb_renew",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "amocrm_id",
+                  "displayName": "amocrm_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "candle_km",
+                  "displayName": "candle_km",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "locations",
+                  "displayName": "locations",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "object",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "longitude",
+                  "displayName": "longitude",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "sale_date",
+                  "displayName": "sale_date",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "ygibdd_id",
+                  "displayName": "ygibdd_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "antifreeze",
+                  "displayName": "antifreeze",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "beacon_pin",
+                  "displayName": "beacon_pin",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "oil_engine",
+                  "displayName": "oil_engine",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "price_hour",
+                  "displayName": "price_hour",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "sale_price",
+                  "displayName": "sale_price",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "traccar_id",
+                  "displayName": "traccar_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "beacon_emai",
+                  "displayName": "beacon_emai",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "brake_fluid",
+                  "displayName": "brake_fluid",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "candle_date",
+                  "displayName": "candle_date",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "car_mark_id",
+                  "displayName": "car_mark_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "hours_limit",
+                  "displayName": "hours_limit",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "investor_id",
+                  "displayName": "investor_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "start_price",
+                  "displayName": "start_price",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "akb_renew_km",
+                  "displayName": "akb_renew_km",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "beacon_phone",
+                  "displayName": "beacon_phone",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "car_model_id",
+                  "displayName": "car_model_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "card_payment",
+                  "displayName": "card_payment",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "cash_payment",
+                  "displayName": "cash_payment",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "fast_booking",
+                  "displayName": "fast_booking",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "in_agregator",
+                  "displayName": "in_agregator",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "in_localrent",
+                  "displayName": "in_localrent",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "antifreeze_km",
+                  "displayName": "antifreeze_km",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "average_price",
+                  "displayName": "average_price",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "mileage_limit",
+                  "displayName": "mileage_limit",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "oil_engine_km",
+                  "displayName": "oil_engine_km",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "price_periods",
+                  "displayName": "price_periods",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "purchase_date",
+                  "displayName": "purchase_date",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "ygibdd_active",
+                  "displayName": "ygibdd_active",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "ygibdd_status",
+                  "displayName": "ygibdd_status",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "akb_renew_date",
+                  "displayName": "akb_renew_date",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "bookings_count",
+                  "displayName": "bookings_count",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "brake_fluid_km",
+                  "displayName": "brake_fluid_km",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "hourly_deposit",
+                  "displayName": "hourly_deposit",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "power_steering",
+                  "displayName": "power_steering",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "purchase_price",
+                  "displayName": "purchase_price",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "selected_price",
+                  "displayName": "selected_price",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "weekly_deposit",
+                  "displayName": "weekly_deposit",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "ygibdd_pending",
+                  "displayName": "ygibdd_pending",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "active_bookings",
+                  "displayName": "active_bookings",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "antifreeze_date",
+                  "displayName": "antifreeze_date",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "car_visual_name",
+                  "displayName": "car_visual_name",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "diagnostic_card",
+                  "displayName": "diagnostic_card",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "driver_year_max",
+                  "displayName": "driver_year_max",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "last_inspection",
+                  "displayName": "last_inspection",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "main_company_id",
+                  "displayName": "main_company_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "monthly_deposit",
+                  "displayName": "monthly_deposit",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "oil_engine_date",
+                  "displayName": "oil_engine_date",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "booking_settings",
+                  "displayName": "booking_settings",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "brake_fluid_date",
+                  "displayName": "brake_fluid_date",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "cashless_payment",
+                  "displayName": "cashless_payment",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "created_from_api",
+                  "displayName": "created_from_api",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "oil_transmission",
+                  "displayName": "oil_transmission",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "updated_from_api",
+                  "displayName": "updated_from_api",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "car_generation_id",
+                  "displayName": "car_generation_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "driver_year_limit",
+                  "displayName": "driver_year_limit",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true
+                },
+                {
+                  "id": "fuel_filter_renew",
+                  "displayName": "fuel_filter_renew",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "in_agregator_date",
+                  "displayName": "in_agregator_date",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "inspections_count",
+                  "displayName": "inspections_count",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "power_steering_km",
+                  "displayName": "power_steering_km",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "services_settings",
+                  "displayName": "services_settings",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "taxi_vehicle_data",
+                  "displayName": "taxi_vehicle_data",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "object",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "yandex_vehicle_id",
+                  "displayName": "yandex_vehicle_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "amocrm_last_update",
+                  "displayName": "amocrm_last_update",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "insurance_settings",
+                  "displayName": "insurance_settings",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "mileage_limit_cost",
+                  "displayName": "mileage_limit_cost",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "salon_filter_renew",
+                  "displayName": "salon_filter_renew",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "taxi_permit_number",
+                  "displayName": "taxi_permit_number",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "taxi_vehicle_class",
+                  "displayName": "taxi_vehicle_class",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "booking_description",
+                  "displayName": "booking_description",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "oil_transmission_km",
+                  "displayName": "oil_transmission_km",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "power_steering_date",
+                  "displayName": "power_steering_date",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "ready_for_agregator",
+                  "displayName": "ready_for_agregator",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "boolean",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "car_complectation_id",
+                  "displayName": "car_complectation_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "car_configuration_id",
+                  "displayName": "car_configuration_id",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "card_to_card_payment",
+                  "displayName": "card_to_card_payment",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "fuel_filter_renew_km",
+                  "displayName": "fuel_filter_renew_km",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "rided_bookings_count",
+                  "displayName": "rided_bookings_count",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "active_bookings_count",
+                  "displayName": "active_bookings_count",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "last_booking_on_dates",
+                  "displayName": "last_booking_on_dates",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "next_booking_on_dates",
+                  "displayName": "next_booking_on_dates",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "oil_transmission_date",
+                  "displayName": "oil_transmission_date",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "salon_filter_renew_km",
+                  "displayName": "salon_filter_renew_km",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "fuel_filter_renew_date",
+                  "displayName": "fuel_filter_renew_date",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "in_rent_bookings_count",
+                  "displayName": "in_rent_bookings_count",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "number",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "taxi_permit_expires_at",
+                  "displayName": "taxi_permit_expires_at",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "salon_filter_renew_date",
+                  "displayName": "salon_filter_renew_date",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "part_return_deposit_days",
+                  "displayName": "part_return_deposit_days",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "prices",
+                  "displayName": "prices",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "object",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "history_log",
+                  "displayName": "history_log",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "object",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "ru_link",
+                  "displayName": "ru_link",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                },
+                {
+                  "id": "en_link",
+                  "displayName": "en_link",
+                  "required": false,
+                  "defaultMatch": false,
+                  "display": true,
+                  "type": "string",
+                  "canBeUsedToMatch": true,
+                  "removed": false
+                }
+              ],
+              "attemptToConvertTypes": false,
+              "convertFieldsToString": false
+            },
+            "options": {}
+          },
+          "id": "sync-cars",
+          "name": "Sync Cars",
+          "type": "n8n-nodes-base.postgres",
+          "typeVersion": 2.5,
+          "position": [
+            1584,
+            384
+          ],
+          "credentials": {
+            "postgres": {
+              "id": "3I9fyXVlGg4Vl4LZ",
+              "name": "Postgres account"
+            }
+          },
+          "continueOnFail": true
+        }
+      ],
+      "connections": {
+        "Tbilisi Pages": {
+          "main": [
+            [
+              {
+                "node": "Get Tbilisi",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Batumi Pages": {
+          "main": [
+            [
+              {
+                "node": "Get Batumi",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Kutaisi Pages": {
+          "main": [
+            [
+              {
+                "node": "Get Kutaisi",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Service Pages": {
+          "main": [
+            [
+              {
+                "node": "Get Service",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Get Tbilisi": {
+          "main": [
+            [
+              {
+                "node": "Set Tbilisi Branch",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Get Batumi": {
+          "main": [
+            [
+              {
+                "node": "Set Batumi Branch",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Get Kutaisi": {
+          "main": [
+            [
+              {
+                "node": "Set Kutaisi Branch",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Get Service": {
+          "main": [
+            [
+              {
+                "node": "Set Service Branch",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Set Tbilisi Branch": {
+          "main": [
+            [
+              {
+                "node": "Wait for All Branches",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Set Batumi Branch": {
+          "main": [
+            [
+              {
+                "node": "Wait for All Branches",
+                "type": "main",
+                "index": 1
+              }
+            ]
+          ]
+        },
+        "Set Kutaisi Branch": {
+          "main": [
+            [
+              {
+                "node": "Wait for All Branches",
+                "type": "main",
+                "index": 2
+              }
+            ]
+          ]
+        },
+        "Set Service Branch": {
+          "main": [
+            [
+              {
+                "node": "Wait for All Branches",
+                "type": "main",
+                "index": 3
+              }
+            ]
+          ]
+        },
+        "Wait for All Branches": {
+          "main": [
+            [
+              {
+                "node": "Merge & Process",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Merge & Process": {
+          "main": [
+            [
+              {
+                "node": "Save Snapshot",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Pass Through Data": {
+          "main": [
+            [
+              {
+                "node": "Format Result",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Format Result": {
+          "main": [
+            [
+              {
+                "node": "If Error",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "If Error": {
+          "main": [
+            [
+              {
+                "node": "Success",
+                "type": "main",
+                "index": 0
+              }
+            ],
+            [
+              {
+                "node": "Send Alert",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Every 5 min": {
+          "main": [
+            [
+              {
+                "node": "Tbilisi Pages",
+                "type": "main",
+                "index": 0
+              },
+              {
+                "node": "Batumi Pages",
+                "type": "main",
+                "index": 0
+              },
+              {
+                "node": "Kutaisi Pages",
+                "type": "main",
+                "index": 0
+              },
+              {
+                "node": "Service Pages",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Save Snapshot": {
+          "main": [
+            [
+              {
+                "node": "Sync Cars",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Sync Cars": {
+          "main": [
+            [
+              {
+                "node": "Pass Through Data",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "settings": {
+        "executionOrder": "v1"
+      },
+      "staticData": {
+        "node:Every 5 min": {
+          "recurrenceRules": []
+        }
+      },
+      "meta": null,
+      "pinData": {},
+      "versionId": "2653f4b7-50ed-4a66-b044-25249331425b",
+      "triggerCount": 1,
+      "shared": [
+        {
+          "updatedAt": "2025-11-14T09:31:41.855Z",
+          "createdAt": "2025-11-14T09:31:41.855Z",
+          "role": "workflow:owner",
+          "workflowId": "u3cOUuoaH5RSw7hm",
+          "projectId": "YeYimRJroeGbDN4w",
+          "project": {
+            "updatedAt": "2025-10-31T22:08:34.100Z",
+            "createdAt": "2025-10-31T21:59:17.618Z",
+            "id": "YeYimRJroeGbDN4w",
+            "name": "Aleksey Eliseev <33pokrov33@gmail.com>",
+            "type": "personal",
+            "icon": null,
+            "description": null,
+            "projectRelations": [
+              {
+                "updatedAt": "2025-10-31T21:59:17.618Z",
+                "createdAt": "2025-10-31T21:59:17.618Z",
+                "userId": "7d62b373-201b-47f3-859a-cdc69ddea44a",
+                "projectId": "YeYimRJroeGbDN4w",
+                "user": {
+                  "updatedAt": "2025-11-14T20:05:09.320Z",
+                  "createdAt": "2025-10-31T21:58:30.097Z",
+                  "id": "7d62b373-201b-47f3-859a-cdc69ddea44a",
+                  "email": "33pokrov33@gmail.com",
+                  "firstName": "Aleksey",
+                  "lastName": "Eliseev",
+                  "personalizationAnswers": {
+                    "version": "v4",
+                    "personalization_survey_submitted_at": "2025-10-31T22:14:18.419Z",
+                    "personalization_survey_n8n_version": "1.117.3",
+                    "companyIndustryExtended": [
+                      "physical-retail-or-services"
+                    ],
+                    "companySize": "<20",
+                    "companyType": "other",
+                    "role": "business-owner",
+                    "reportedSource": "friend"
+                  },
+                  "settings": {
+                    "userActivated": true,
+                    "firstSuccessfulWorkflowId": "gNXRKIQpNubEazH7",
+                    "userActivatedAt": 1762108796654,
+                    "easyAIWorkflowOnboarded": true
+                  },
+                  "disabled": false,
+                  "mfaEnabled": false,
+                  "lastActiveAt": "2025-11-14",
+                  "isPending": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "tags": []
+    },
+    "executionStats": {
+      "totalExecutions": 10,
+      "successCount": 5,
+      "errorCount": 5,
+      "lastExecutionTime": "2025-11-14T19:56:59.666Z"
+    },
+    "hasWebhookTrigger": false,
+    "webhookPath": null
+  }
+}

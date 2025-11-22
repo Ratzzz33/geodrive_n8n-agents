@@ -1,97 +1,91 @@
+#!/usr/bin/env node
 /**
- * Запуск миграции для создания таблиц Starline GPS
+ * Выполнение миграции для Starline API таблиц
  */
+
 import postgres from 'postgres';
-import fs from 'fs';
-import path from 'path';
+import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
 
-const CONNECTION_STRING = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_cHIT9Kxfk1Am@ep-rough-heart-ahnybmq0-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require';
-
-const sql = postgres(CONNECTION_STRING, {
-  max: 1,
-  ssl: { rejectUnauthorized: false }
-});
+// Connection string из документации
+const DATABASE_URL = process.env.DATABASE_URL || 
+  'postgresql://neondb_owner:npg_cHIT9Kxfk1Am@ep-rough-heart-ahnybmq0-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require';
 
 async function runMigration() {
-  console.log('🚀 Запуск миграции Starline GPS...\n');
+  console.log('🔄 Выполняю миграцию для Starline API...\n');
+
+  const sql = postgres(DATABASE_URL, {
+    max: 1,
+    ssl: { rejectUnauthorized: false }
+  });
 
   try {
-    // Читаем SQL файл миграции
-    const migrationPath = path.join(__dirname, 'migrations', '0013_starline_devices.sql');
-    const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
+    // Читаем файл миграции
+    const migrationPath = join(__dirname, 'migrations', '0023_starline_api_tables.sql');
+    const migrationSQL = readFileSync(migrationPath, 'utf8');
 
-    console.log('📄 Файл миграции найден:', migrationPath);
-    console.log('📏 Размер:', Math.round(migrationSQL.length / 1024), 'KB\n');
+    console.log('📄 Читаю файл миграции...');
+    console.log(`   Путь: ${migrationPath}\n`);
 
     // Выполняем миграцию
-    console.log('⏳ Выполнение миграции...');
+    console.log('⚙️  Выполняю SQL команды...');
     await sql.unsafe(migrationSQL);
-    console.log('✅ Миграция выполнена успешно!\n');
 
-    // Проверяем что таблицы созданы
-    console.log('🔍 Проверка созданных таблиц...');
+    console.log('✅ Миграция успешно выполнена!\n');
+
+    // Проверяем созданные таблицы
+    console.log('🔍 Проверяю созданные таблицы...');
     
     const tables = await sql`
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public' 
-        AND table_name IN ('starline_devices', 'starline_match_history')
+        AND table_name IN ('starline_api_tokens', 'starline_events', 'starline_routes')
       ORDER BY table_name
     `;
 
-    console.log(`✅ Найдено таблиц: ${tables.length}`);
-    tables.forEach(t => console.log(`   - ${t.table_name}`));
-    console.log('');
+    console.log(`   Найдено таблиц: ${tables.length}`);
+    tables.forEach(t => console.log(`   ✅ ${t.table_name}`));
 
-    // Проверяем view
-    const views = await sql`
-      SELECT table_name 
-      FROM information_schema.views 
-      WHERE table_schema = 'public' 
-        AND table_name = 'starline_devices_with_cars'
+    // Проверяем новые поля в gps_tracking
+    console.log('\n🔍 Проверяю новые поля в gps_tracking...');
+    const gpsColumns = await sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'gps_tracking' 
+        AND column_name IN ('course', 'alarm_state', 'geofence_status')
+      ORDER BY column_name
     `;
+    
+    console.log(`   Найдено полей: ${gpsColumns.length}`);
+    gpsColumns.forEach(c => console.log(`   ✅ ${c.column_name}`));
 
-    if (views.length > 0) {
-      console.log('✅ View создан: starline_devices_with_cars\n');
-    }
-
-    // Проверяем триггеры
-    const triggers = await sql`
-      SELECT trigger_name 
-      FROM information_schema.triggers 
-      WHERE event_object_table = 'starline_devices'
+    // Проверяем новые поля в starline_devices
+    console.log('\n🔍 Проверяю новые поля в starline_devices...');
+    const deviceColumns = await sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'starline_devices' 
+        AND column_name IN ('last_api_sync', 'api_token_expires_at')
+      ORDER BY column_name
     `;
+    
+    console.log(`   Найдено полей: ${deviceColumns.length}`);
+    deviceColumns.forEach(c => console.log(`   ✅ ${c.column_name}`));
 
-    console.log(`✅ Триггеров создано: ${triggers.length}`);
-    triggers.forEach(t => console.log(`   - ${t.trigger_name}`));
-    console.log('');
-
-    // Проверяем индексы
-    const indexes = await sql`
-      SELECT indexname 
-      FROM pg_indexes 
-      WHERE tablename IN ('starline_devices', 'starline_match_history')
-      ORDER BY indexname
-    `;
-
-    console.log(`✅ Индексов создано: ${indexes.length}`);
-    indexes.forEach(i => console.log(`   - ${i.indexname}`));
-    console.log('');
-
-    console.log('🎉 Миграция Starline GPS завершена успешно!');
-    console.log('');
-    console.log('📊 Следующие шаги:');
-    console.log('   1. Запустить синхронизацию устройств: POST /starline/sync-devices');
-    console.log('   2. Сопоставить с cars: POST /starline/match-devices');
-    console.log('   3. Запустить GPS мониторинг: POST /starline/update-gps');
-    console.log('   4. Импортировать n8n workflow для автоматического мониторинга');
+    console.log('\n✨ Все проверки пройдены успешно!');
 
   } catch (error) {
-    console.error('❌ Ошибка при выполнении миграции:', error);
+    console.error('❌ Ошибка при выполнении миграции:');
+    console.error(error.message);
+    if (error.stack) {
+      console.error('\nStack trace:');
+      console.error(error.stack);
+    }
     process.exit(1);
   } finally {
     await sql.end();
@@ -99,4 +93,3 @@ async function runMigration() {
 }
 
 runMigration();
-

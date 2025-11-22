@@ -12,7 +12,10 @@
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [250, 500],
+      "position": [
+        250,
+        500
+      ],
       "webhookId": "rentprog-upsert-processor"
     },
     {
@@ -38,7 +41,10 @@
       "name": "Prepare Data",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [450, 500]
+      "position": [
+        450,
+        500
+      ]
     },
     {
       "parameters": {
@@ -61,7 +67,10 @@
       "name": "Try Tbilisi",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [650, 300],
+      "position": [
+        650,
+        300
+      ],
       "onError": "continueRegularOutput"
     },
     {
@@ -90,7 +99,10 @@
       "name": "If Tbilisi Success",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [850, 300]
+      "position": [
+        850,
+        300
+      ]
     },
     {
       "parameters": {
@@ -113,7 +125,10 @@
       "name": "Try Batumi",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [850, 500],
+      "position": [
+        850,
+        500
+      ],
       "onError": "continueRegularOutput"
     },
     {
@@ -142,7 +157,10 @@
       "name": "If Batumi Success",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1050, 500]
+      "position": [
+        1050,
+        500
+      ]
     },
     {
       "parameters": {
@@ -165,7 +183,10 @@
       "name": "Try Kutaisi",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1050, 700],
+      "position": [
+        1050,
+        700
+      ],
       "onError": "continueRegularOutput"
     },
     {
@@ -194,7 +215,10 @@
       "name": "If Kutaisi Success",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1250, 700]
+      "position": [
+        1250,
+        700
+      ]
     },
     {
       "parameters": {
@@ -217,7 +241,10 @@
       "name": "Try Service Center",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1250, 900],
+      "position": [
+        1250,
+        900
+      ],
       "onError": "continueRegularOutput"
     },
     {
@@ -246,7 +273,10 @@
       "name": "If Service Center Success",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1450, 900]
+      "position": [
+        1450,
+        900
+      ]
     },
     {
       "parameters": {
@@ -260,7 +290,10 @@
       "name": "Save Tbilisi Data",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2,
-      "position": [1050, 200],
+      "position": [
+        1050,
+        200
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -280,7 +313,10 @@
       "name": "Save Batumi Data",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2,
-      "position": [1250, 400],
+      "position": [
+        1250,
+        400
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -300,7 +336,10 @@
       "name": "Save Kutaisi Data",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2,
-      "position": [1450, 600],
+      "position": [
+        1450,
+        600
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -320,7 +359,10 @@
       "name": "Save Service Center Data",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2,
-      "position": [1650, 800],
+      "position": [
+        1650,
+        800
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -337,7 +379,10 @@
       "name": "Alert: Not Found",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
-      "position": [1650, 1000],
+      "position": [
+        1650,
+        1000
+      ],
       "credentials": {
         "telegramApi": {
           "id": "1tKryXxL5Gq395nN",
@@ -355,7 +400,10 @@
       "name": "Respond Tbilisi",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1250, 200]
+      "position": [
+        1250,
+        200
+      ]
     },
     {
       "parameters": {
@@ -367,7 +415,10 @@
       "name": "Respond Batumi",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1450, 400]
+      "position": [
+        1450,
+        400
+      ]
     },
     {
       "parameters": {
@@ -379,7 +430,10 @@
       "name": "Respond Kutaisi",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1650, 600]
+      "position": [
+        1650,
+        600
+      ]
     },
     {
       "parameters": {
@@ -391,7 +445,10 @@
       "name": "Respond Service Center",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1850, 800]
+      "position": [
+        1850,
+        800
+      ]
     },
     {
       "parameters": {
@@ -403,74 +460,214 @@
       "name": "Respond Not Found",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1850, 1000]
+      "position": [
+        1850,
+        1000
+      ]
     }
   ],
   "connections": {
     "Webhook Trigger": {
-      "main": [[{ "node": "Prepare Data", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Prepare Data": {
-      "main": [[{ "node": "Try Tbilisi", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Try Tbilisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Try Tbilisi": {
-      "main": [[{ "node": "If Tbilisi Success", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "If Tbilisi Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "If Tbilisi Success": {
       "main": [
-        [{ "node": "Save Tbilisi Data", "type": "main", "index": 0 }],
-        [{ "node": "Try Batumi", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Save Tbilisi Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Try Batumi",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Try Batumi": {
-      "main": [[{ "node": "If Batumi Success", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "If Batumi Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "If Batumi Success": {
       "main": [
-        [{ "node": "Save Batumi Data", "type": "main", "index": 0 }],
-        [{ "node": "Try Kutaisi", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Save Batumi Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Try Kutaisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Try Kutaisi": {
-      "main": [[{ "node": "If Kutaisi Success", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "If Kutaisi Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "If Kutaisi Success": {
       "main": [
-        [{ "node": "Save Kutaisi Data", "type": "main", "index": 0 }],
-        [{ "node": "Try Service Center", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Save Kutaisi Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Try Service Center",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Try Service Center": {
-      "main": [[{ "node": "If Service Center Success", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "If Service Center Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "If Service Center Success": {
       "main": [
-        [{ "node": "Save Service Center Data", "type": "main", "index": 0 }],
-        [{ "node": "Alert: Not Found", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Save Service Center Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alert: Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Save Tbilisi Data": {
-      "main": [[{ "node": "Respond Tbilisi", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond Tbilisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Save Batumi Data": {
-      "main": [[{ "node": "Respond Batumi", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond Batumi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Save Kutaisi Data": {
-      "main": [[{ "node": "Respond Kutaisi", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond Kutaisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Save Service Center Data": {
-      "main": [[{ "node": "Respond Service Center", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond Service Center",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Alert: Not Found": {
-      "main": [[{ "node": "Respond Not Found", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   },
   "staticData": null,
   "tags": [],
   "triggerCount": 0
 }
-

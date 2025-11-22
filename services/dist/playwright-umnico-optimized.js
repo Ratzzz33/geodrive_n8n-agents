@@ -221,12 +221,13 @@ class UmnicoPlaywrightServiceOptimized {
     }
     /**
      * Получить сообщения через API (БЫСТРО!)
+     * Возвращает расширенный объект с метаданными
      */
     async getMessagesViaAPI(conversationId) {
         try {
             const cookies = await context.cookies();
             const cookieString = cookies.map(c => `${c.name}=${c.value}`).join('; ');
-            const url = `https://umnico.com/api/v1/deals/${conversationId}/messages?limit=100`;
+            const url = `https://umnico.com/api/v1/deals/${conversationId}/messages?limit=500`;
             const response = await page.evaluate(async ({ url, cookieString }) => {
                 try {
                     const res = await fetch(url, {
@@ -244,10 +245,45 @@ class UmnicoPlaywrightServiceOptimized {
             }, { url, cookieString });
             if (response.ok && response.data) {
                 const messages = Array.isArray(response.data) ? response.data : response.data.messages || [];
-                return messages;
+                const total = response.data.total || null;
+                const loaded = messages.length;
+                // Определяем incomplete по логике x/y
+                let incomplete = false;
+                if (total && loaded === total) {
+                    // x = y → нужна прокрутка, но API не может прокручивать
+                    // Поэтому fallback на UI метод
+                    console.log(`🔄 API: loaded = total (${loaded}/${total}), falling back to UI for scrolling...`);
+                    return await this.getMessagesViaUI(conversationId);
+                }
+                else if (total && loaded < total) {
+                    // x < y → всё ОК
+                    incomplete = false;
+                }
+                // Пытаемся получить информацию о клиенте из первого сообщения
+                const firstMsg = messages[0];
+                let clientPhone = firstMsg?.phone || null;
+                let clientTelegram = null;
+                let channel = firstMsg?.channel || 'unknown';
+                let channelAccount = firstMsg?.channelAccount || '';
+                // Если нет телефона, это может быть Telegram
+                if (!clientPhone && firstMsg?.author) {
+                    clientTelegram = firstMsg.author;
+                    channel = 'telegram';
+                }
+                return {
+                    messages,
+                    total,
+                    loaded,
+                    incomplete,
+                    channel,
+                    channelAccount,
+                    clientPhone,
+                    clientTelegram
+                };
             }
             else {
                 // Fallback на UI парсинг
+                console.log(`⚠️ API failed (${response.status}), falling back to UI parsing`);
                 return await this.getMessagesViaUI(conversationId);
             }
         }
@@ -258,37 +294,174 @@ class UmnicoPlaywrightServiceOptimized {
     }
     /**
      * Получить сообщения через UI (МЕДЛЕННО - fallback)
+     * НОВАЯ ЛОГИКА:
+     * - x < y → ✅ всё получили успешно
+     * - x = y → 🔄 пытаемся прокрутить вверх
+     * - Не получилось → ⚠️ incomplete: true для ручной доработки через MCP Chrome
      */
     async getMessagesViaUI(conversationId) {
         try {
             const url = `https://umnico.com/app/inbox/deals/inbox/details/${conversationId}`;
             await page.goto(url, { waitUntil: 'networkidle' });
-            const messages = await page.$$eval('.im-stack__messages-item-wrap', wraps => wraps.map((wrap, index) => {
-                const messageDiv = wrap.querySelector('.im-message');
-                if (!messageDiv)
-                    return null;
-                const textEl = messageDiv.querySelector('.im-message__text');
-                const timeEl = messageDiv.querySelector('.im-info__date');
-                const dateAttr = wrap.querySelector('.im-stack__messages-item')?.getAttribute('name');
-                const isOutgoing = messageDiv.classList.contains('im-message_out') ||
-                    messageDiv.classList.contains('im-message--outgoing');
-                return {
-                    index,
-                    text: textEl?.textContent?.trim() || '',
-                    time: timeEl?.textContent?.trim() || '',
-                    datetime: dateAttr || '',
-                    direction: isOutgoing ? 'outgoing' : 'incoming',
-                    hasAttachments: messageDiv.querySelectorAll('img:not([alt])').length > 0
-                };
-            }).filter(m => m !== null));
-            const sourceText = await page.$eval('.im-source-item', el => el.textContent?.trim() || '').catch(() => '');
-            const channelMatch = sourceText.match(/WhatsApp.*?(\d+)/);
-            return messages.map(m => ({
+            // Извлекаем информацию о клиенте и канале
+            const clientInfo = await page.evaluate(() => {
+                // Телефон
+                const phoneLink = document.querySelector('a[href*="tel:"]');
+                const phone = phoneLink ? phoneLink.textContent?.trim() : null;
+                // Telegram username (если нет телефона)
+                let telegram = null;
+                if (!phone) {
+                    // Ищем в заголовке или метаданных
+                    const headerEl = document.querySelector('.im-header__name, .client-name, [class*="client"]');
+                    const headerText = headerEl?.textContent?.trim() || '';
+                    // Telegram username обычно начинается с @ или указан явно
+                    const tgMatch = headerText.match(/@(\w+)/);
+                    if (tgMatch) {
+                        telegram = tgMatch[1];
+                    }
+                    else if (headerText && !headerText.includes('+')) {
+                        // Если это не похоже на телефон, считаем Telegram username
+                        telegram = headerText;
+                    }
+                }
+                // Источник (WhatsApp/Telegram)
+                const sourceEl = document.querySelector('.im-source-item');
+                const sourceText = sourceEl?.textContent?.trim() || '';
+                let channel = 'unknown';
+                let channelAccount = '';
+                if (sourceText.includes('WhatsApp')) {
+                    channel = 'whatsapp';
+                    const accountMatch = sourceText.match(/(\d+)/);
+                    channelAccount = accountMatch ? accountMatch[1] : '';
+                }
+                else if (sourceText.includes('Telegram') || sourceText.includes('телеграм')) {
+                    channel = 'telegram';
+                }
+                else if (sourceText.includes('Instagram')) {
+                    channel = 'instagram';
+                }
+                return { phone, telegram, channel, channelAccount, sourceText };
+            });
+            console.log(`📱 Client info: phone=${clientInfo.phone}, telegram=${clientInfo.telegram}, channel=${clientInfo.channel}`);
+            // Пытаемся определить общее количество сообщений из UI
+            const totalFromUI = await page.evaluate(() => {
+                // Ищем счётчик в заголовке или метаданных
+                // Примеры: "42 сообщения", "Messages: 100", "100/100"
+                const selectors = [
+                    '.im-header__count',
+                    '.messages-count',
+                    '[class*="count"]',
+                    '.im-header'
+                ];
+                for (const selector of selectors) {
+                    const el = document.querySelector(selector);
+                    if (el) {
+                        const text = el.textContent?.trim() || '';
+                        // Ищем число
+                        const match = text.match(/(\d+)/);
+                        if (match) {
+                            return parseInt(match[1]);
+                        }
+                    }
+                }
+                return null;
+            });
+            // Извлекаем функцию для получения сообщений
+            const extractMessages = async () => {
+                return await page.$$eval('.im-stack__messages-item-wrap', wraps => wraps.map((wrap, index) => {
+                    const messageDiv = wrap.querySelector('.im-message');
+                    if (!messageDiv)
+                        return null;
+                    const textEl = messageDiv.querySelector('.im-message__text');
+                    const timeEl = messageDiv.querySelector('.im-info__date');
+                    const dateAttr = wrap.querySelector('.im-stack__messages-item')?.getAttribute('name');
+                    const isOutgoing = messageDiv.classList.contains('im-message_out') ||
+                        messageDiv.classList.contains('im-message--outgoing');
+                    return {
+                        index,
+                        text: textEl?.textContent?.trim() || '',
+                        time: timeEl?.textContent?.trim() || '',
+                        datetime: dateAttr || '',
+                        direction: isOutgoing ? 'outgoing' : 'incoming',
+                        hasAttachments: messageDiv.querySelectorAll('img:not([alt])').length > 0
+                    };
+                }).filter(m => m !== null));
+            };
+            // Первая загрузка
+            let messages = await extractMessages();
+            let loaded = messages.length;
+            let incomplete = false;
+            console.log(`💬 Initial load: ${loaded} messages` + (totalFromUI ? ` (total in UI: ${totalFromUI})` : ''));
+            // НОВАЯ ЛОГИКА: проверяем x/y
+            if (totalFromUI && loaded === totalFromUI) {
+                // x = y → пытаемся прокрутить вверх
+                console.log(`🔄 loaded = total (${loaded}/${totalFromUI}), attempting to scroll up...`);
+                let scrollAttempts = 0;
+                const maxScrollAttempts = 10;
+                let noChangeCount = 0;
+                const maxNoChange = 3;
+                while (scrollAttempts < maxScrollAttempts) {
+                    const beforeScroll = messages.length;
+                    // Прокручиваем вверх
+                    await page.evaluate(() => {
+                        const container = document.querySelector('.im-stack__messages');
+                        if (container) {
+                            container.scrollTop = 0; // Прокручиваем к началу
+                        }
+                    });
+                    // Ждем подгрузки
+                    await page.waitForTimeout(2000);
+                    // Получаем обновленные сообщения
+                    messages = await extractMessages();
+                    if (messages.length === beforeScroll) {
+                        noChangeCount++;
+                        if (noChangeCount >= maxNoChange) {
+                            console.log(`⚠️  Could not load more messages after ${scrollAttempts + 1} attempts`);
+                            incomplete = true; // Помечаем как неполный
+                            break;
+                        }
+                    }
+                    else {
+                        noChangeCount = 0;
+                        const newMessages = messages.length - beforeScroll;
+                        console.log(`   ✅ Loaded ${newMessages} more messages (total: ${messages.length})`);
+                    }
+                    scrollAttempts++;
+                    // Проверяем, достигли ли x < y
+                    if (messages.length < totalFromUI) {
+                        console.log(`✅ Success! loaded < total (${messages.length}/${totalFromUI})`);
+                        incomplete = false;
+                        break;
+                    }
+                }
+                loaded = messages.length;
+            }
+            else if (totalFromUI && loaded < totalFromUI) {
+                // x < y → всё ОК, получили всё что нужно
+                console.log(`✅ loaded < total (${loaded}/${totalFromUI}) - complete!`);
+                incomplete = false;
+            }
+            else if (!totalFromUI) {
+                // Не смогли определить total из UI
+                console.log(`⚠️  Could not determine total from UI, marking as incomplete`);
+                incomplete = true;
+            }
+            const finalMessages = messages.map(m => ({
                 ...m,
                 conversationId,
-                channel: channelMatch ? 'whatsapp' : 'unknown',
-                channelAccount: channelMatch ? channelMatch[1] : ''
+                channel: clientInfo.channel,
+                channelAccount: clientInfo.channelAccount
             }));
+            return {
+                messages: finalMessages,
+                total: totalFromUI,
+                loaded,
+                incomplete,
+                channel: clientInfo.channel,
+                channelAccount: clientInfo.channelAccount,
+                clientPhone: clientInfo.phone,
+                clientTelegram: clientInfo.telegram
+            };
         }
         catch (error) {
             console.error(`❌ Failed to get messages for conversation ${conversationId}:`, error);
@@ -297,12 +470,15 @@ class UmnicoPlaywrightServiceOptimized {
     }
     /**
      * Получить сообщения (умный выбор метода)
+     * Возвращает расширенный объект с метаданными
      */
     async getMessages(conversationId) {
         // Сначала пробуем API (быстро)
-        const messages = await this.getMessagesViaAPI(conversationId);
-        console.log(`💬 Got ${messages.length} messages for conversation ${conversationId}`);
-        return messages;
+        const result = await this.getMessagesViaAPI(conversationId);
+        console.log(`💬 Got ${result.loaded} messages for conversation ${conversationId}` +
+            (result.total ? ` (${result.loaded}/${result.total})` : '') +
+            (result.incomplete ? ' ⚠️ INCOMPLETE' : ' ✅'));
+        return result;
     }
     async getStatus() {
         return {
@@ -310,7 +486,7 @@ class UmnicoPlaywrightServiceOptimized {
             lastLoginAt: this.lastLoginAt,
             uptime: process.uptime(),
             browserConnected: browser?.isConnected() || false,
-            pageUrl: page ? await page.url().catch(() => 'unknown') : 'no-page',
+            pageUrl: page ? (await page.url().catch(() => 'unknown')) : 'no-page',
             cacheSize: conversationsCache?.data.length || 0,
             cacheAge: conversationsCache ? Math.round((Date.now() - conversationsCache.timestamp) / 1000) : null
         };
@@ -346,8 +522,19 @@ app.get('/api/conversations', async (req, res) => {
 app.get('/api/conversations/:id/messages', async (req, res) => {
     try {
         const { id } = req.params;
-        const messages = await service.getMessages(id);
-        res.json({ ok: true, conversationId: id, count: messages.length, data: messages });
+        const result = await service.getMessages(id);
+        res.json({
+            ok: true,
+            conversationId: id,
+            count: result.loaded,
+            total: result.total,
+            incomplete: result.incomplete,
+            channel: result.channel,
+            channelAccount: result.channelAccount,
+            clientPhone: result.clientPhone,
+            clientTelegram: result.clientTelegram,
+            data: result.messages
+        });
     }
     catch (error) {
         res.status(500).json({ ok: false, error: error.message });

@@ -65,3 +65,32 @@ drizzle/
 # Backup files
 *.bak
 *.backup
+
+# Временные файлы и логи
+*.txt
+!README.txt
+!LICENSE.txt
+*.html
+!*.md
+check_*.txt
+import_log*.txt
+parsing_log*.txt
+*_log.txt
+*_result.txt
+*_output.txt
+context_samples.txt
+dialog_ids_list.txt
+excel_*.txt
+kanal_field_check.txt
+metadata_check.txt
+mercedes_output.txt
+dup_check_*.txt
+db_analysis_result.txt
+check_total_result.txt
+incomplete_dialogs.txt
+booking_attributes.txt
+
+# Устаревшие конфигурационные файлы (будут удалены)
+CURSOR_MCP_*.json
+MCP_CURSOR_*.json
+!mcp-server/**/*.json

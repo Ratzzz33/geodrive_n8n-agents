@@ -7,18 +7,18 @@ services:
     container_name: playwright-umnico
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "3003:3003"
     environment:
       - UMNICO_EMAIL=${UMNICO_EMAIL}
       - UMNICO_PASSWORD=${UMNICO_PASSWORD}
-      - UMNICO_PLAYWRIGHT_PORT=3001
+      - UMNICO_PLAYWRIGHT_PORT=3003
       - UMNICO_STATE_FILE=/data/umnico-session.json
     volumes:
       - playwright_umnico_data:/data
     networks:
       - n8n-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
       interval: 60s
       timeout: 10s
       retries: 3

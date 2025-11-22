@@ -13,7 +13,7 @@ import express from 'express';
 import fs from 'fs/promises';
 import path from 'path';
 
-const PORT = process.env.UMNICO_PLAYWRIGHT_PORT || 3001;
+const PORT = process.env.UMNICO_PLAYWRIGHT_PORT || 3003;
 const STATE_FILE = process.env.UMNICO_STATE_FILE || './data/umnico-session.json';
 const UMNICO_EMAIL = process.env.UMNICO_EMAIL!;
 const UMNICO_PASSWORD = process.env.UMNICO_PASSWORD!;
@@ -374,7 +374,7 @@ class UmnicoPlaywrightService {
     }
   }
 
-  async getMessages(conversationId: string, options?: { all?: boolean; since?: Date }): Promise<any[]> {
+  async getMessages(conversationId: string, options?: { all?: boolean; since?: Date }): Promise<{ messages: any[]; needsManualProcessing: boolean; exactly30Attempts: number }> {
     try {
       const url = `https://umnico.com/app/inbox/deals/inbox/details/${conversationId}`;
       
@@ -397,6 +397,8 @@ class UmnicoPlaywrightService {
       let scrollAttempts = 0;
       const maxScrollAttempts = options?.all ? 500 : 1; // Увеличено с 200 до 500 для более надежной прокрутки
       const targetDate = options?.since || (options?.all ? new Date('2024-09-01') : undefined);
+      let needsManualProcessing = false; // Флаг что требуется ручная обработка
+      let exactly30Attempts = 0; // Счетчик попыток когда ровно 30 сообщений
 
       const extractMessages = async (): Promise<any[]> => {
         return await page!.$$eval('.im-stack__messages-item-wrap', wraps =>
@@ -431,7 +433,6 @@ class UmnicoPlaywrightService {
         
         let noChangeCount = 0; // Счетчик попыток без изменений
         const maxNoChange = 10; // Увеличено до 10 попыток без изменений (было 3)
-        let exactly30Attempts = 0; // Счетчик попыток когда ровно 30 сообщений
         const maxExactly30Attempts = 5; // Максимум попыток при 30 сообщениях
         
         while (scrollAttempts < maxScrollAttempts) {
@@ -505,8 +506,8 @@ class UmnicoPlaywrightService {
             
             // Если слишком много попыток с 30 сообщениями - прекращаем
             if (exactly30Attempts >= maxExactly30Attempts) {
-              console.log(`   ⚠️  После ${maxExactly30Attempts} попыток все еще 30 сообщений - возможно это действительно все сообщения или требуется ручная обработка`);
-              // Возвращаем что есть, но помечаем что возможно не все загружено
+              console.log(`   ⚠️  После ${maxExactly30Attempts} попыток все еще 30 сообщений - требуется ручная обработка через MCP Chrome`);
+              needsManualProcessing = true; // Помечаем что требуется ручная обработка
               break;
             }
             
@@ -555,8 +556,6 @@ class UmnicoPlaywrightService {
               console.log(`   📥 Loaded ${newMessages} new messages (total: ${allMessages.length})`);
             }
           }
-          
-          scrollAttempts++;
 
           if (targetDate) {
             const oldestMessage = allMessages
@@ -611,13 +610,17 @@ class UmnicoPlaywrightService {
 
       console.log(`💬 Found ${allMessages.length} messages in conversation ${conversationId}`);
       
-      // Возвращаем массив сообщений (для совместимости)
-      return allMessages.map(m => ({
-        ...m,
-        conversationId,
-        channel: channelMatch ? 'whatsapp' : 'unknown',
-        channelAccount: channelMatch ? channelMatch[1] : ''
-      }));
+      // Возвращаем объект с сообщениями и флагами
+      return {
+        messages: allMessages.map(m => ({
+          ...m,
+          conversationId,
+          channel: channelMatch ? 'whatsapp' : 'unknown',
+          channelAccount: channelMatch ? channelMatch[1] : ''
+        })),
+        needsManualProcessing,
+        exactly30Attempts
+      };
     } catch (error) {
       console.error(`❌ Failed to get messages for conversation ${conversationId}:`, error);
       throw error;
@@ -729,7 +732,8 @@ class UmnicoPlaywrightService {
   async getNewMessages(conversationId: string, since?: Date): Promise<any[]> {
     try {
       // Получаем все сообщения
-      const allMessages = await this.getMessages(conversationId);
+      const result = await this.getMessages(conversationId);
+      const allMessages = result.messages; // Извлекаем массив сообщений из объекта
       
       if (!since) {
         // Если since не указан, возвращаем все сообщения
@@ -848,12 +852,13 @@ app.get('/api/conversations/:id/messages', async (req, res) => {
     }
     
     // Иначе используем getMessages с опциями
-    const messages = await service.getMessages(id, { all, since });
+    const result = await service.getMessages(id, { all, since });
+    const messages = result.messages; // Извлекаем массив сообщений из объекта
     
     // КРИТИЧНО: Если ровно 30 сообщений - это может быть лимит страницы
     // Добавляем флаг в ответ для скрипта синхронизации
     const isExactly30 = messages.length === 30;
-    const needsManualProcessing = isExactly30; // Если ровно 30 - требуется ручная обработка
+    const needsManualProcessing = result.needsManualProcessing || isExactly30; // Используем флаг из результата или проверяем 30 сообщений
     
     res.json({ 
       ok: true, 
@@ -861,7 +866,8 @@ app.get('/api/conversations/:id/messages', async (req, res) => {
       count: messages.length, 
       data: messages,
       needsManualProcessing: needsManualProcessing, // Флаг что требуется ручная обработка через MCP Chrome
-      isExactly30: isExactly30 // Дополнительный флаг для информации
+      isExactly30: isExactly30, // Дополнительный флаг для информации
+      exactly30Attempts: result.exactly30Attempts // Количество попыток при 30 сообщениях
     });
   } catch (error: any) {
     res.status(500).json({ ok: false, error: error.message });

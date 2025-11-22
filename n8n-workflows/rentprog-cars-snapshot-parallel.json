@@ -7,7 +7,10 @@
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [250, 400]
+      "position": [
+        250,
+        400
+      ]
     },
     {
       "parameters": {
@@ -18,7 +21,10 @@
       "name": "Fetch Tbilisi",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [500, 200],
+      "position": [
+        500,
+        200
+      ],
       "notes": "Импорт автомобилей из Тбилиси"
     },
     {
@@ -30,7 +36,10 @@
       "name": "Fetch Batumi",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [500, 400],
+      "position": [
+        500,
+        400
+      ],
       "notes": "Импорт автомобилей из Батуми"
     },
     {
@@ -42,7 +51,10 @@
       "name": "Fetch Kutaisi",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [500, 600],
+      "position": [
+        500,
+        600
+      ],
       "notes": "Импорт автомобилей из Кутаиси"
     },
     {
@@ -54,7 +66,10 @@
       "name": "Fetch Service-Center",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [500, 800],
+      "position": [
+        500,
+        800
+      ],
       "notes": "Импорт автомобилей из Service-Center"
     },
     {
@@ -63,7 +78,10 @@
       "name": "Merge Branches",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
-      "position": [800, 400],
+      "position": [
+        800,
+        400
+      ],
       "notes": "Объединение данных всех филиалов"
     },
     {
@@ -74,7 +92,10 @@
       "name": "Transform For Upsert",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1050, 400],
+      "position": [
+        1050,
+        400
+      ],
       "notes": "Преобразование данных автомобилей для вставки в БД"
     },
     {
@@ -85,7 +106,10 @@
       "name": "Generate Upsert SQL",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1300, 400],
+      "position": [
+        1300,
+        400
+      ],
       "notes": "SQL для вставки/обновления автомобилей"
     },
     {
@@ -98,7 +122,10 @@
       "name": "Upsert Cars to PostgreSQL",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1550, 400],
+      "position": [
+        1550,
+        400
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -115,7 +142,10 @@
       "name": "Generate External Refs SQL",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1800, 400],
+      "position": [
+        1800,
+        400
+      ],
       "notes": "SQL для таблицы external_refs"
     },
     {
@@ -128,7 +158,10 @@
       "name": "Upsert External Refs",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [2050, 400],
+      "position": [
+        2050,
+        400
+      ],
       "credentials": {
         "postgres": {
           "id": "3I9fyXVlGg4Vl4LZ",
@@ -145,7 +178,10 @@
       "name": "Branch Summary",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2300, 400],
+      "position": [
+        2300,
+        400
+      ],
       "notes": "Итог по филиалу"
     },
     {
@@ -157,7 +193,10 @@
       "name": "Final Report",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2550, 400],
+      "position": [
+        2550,
+        400
+      ],
       "notes": "Финальный отчёт"
     }
   ],
@@ -311,7 +350,9 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   },
   "staticData": null,
   "tags": [],
@@ -319,4 +360,3 @@
   "updatedAt": "2025-11-03T00:00:00.000Z",
   "versionId": "3"
 }
-

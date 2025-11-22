@@ -98,6 +98,19 @@
 - **Таблицы мониторинга:** `events`, `sync_runs`, `health`, `webhook_dedup`, `event_processing_log`, `sync_state`
 - **Таблицы диалогов:** `conversations`, `messages`, `message_chunks`, `message_embeddings` (pgvector)
 - **Таблицы AmoCRM:** `amocrm_deals`, `amocrm_contacts`
+
+### 7. Веб-интерфейсы (UI Components)
+- **TailwindUI Plus Components 2025** — полная библиотека UI компонентов
+  - **Catalyst UI Kit** — современный UI kit от команды Tailwind CSS (React, TypeScript)
+  - **Tailwind UI v3.4 и v4** — компоненты для React, Vue, Alpine, HTML
+  - **Категории:** Application UI (380+), E-commerce (114+), Marketing (210+)
+  - **Шаблоны:** 12 готовых шаблонов (Catalyst, Commit, Protocol, Spotlight и др.)
+- **Использование:**
+  - Страницы управления задачами (`/tasks`)
+  - Просмотр диалогов Umnico (`/conversations/:id`)
+  - Дашборды и аналитика (`/dashboard`)
+  - Настройки и конфигурация (`/settings`)
+- **Документация:** `docs/TAILWINDUI_PLUS_GUIDE.md`
 - **Таблицы истории:** `history`, `history_operation_mappings`
 - Поддержка миграций через Drizzle
 
@@ -243,6 +256,9 @@
 - **Хранилище**: GCS/S3/MinIO (план)
 - **Мониторинг**: n8n executions, Health-check workflow, Telegram alerts; планируется Grafana/Prometheus
 - **CV/ML**: YOLOv8/YOLOv9, SAM2, OCR (Tesseract)
+- **Тестирование**: Vitest (55 unit-тестов в 7 файлах, все проходят успешно) — см. `docs/TESTS_CREATED.md`
+- **Качество кода**: ESLint (рекомендации в `docs/LINTING_AND_TESTING.md`), планируется интеграция в CI/CD
+- **Архитектура агентов**: Рекомендации по улучшению в `docs/AGENT_PATTERNS_IMPROVEMENTS.md` (Agent Execution Logging, Agent Memory/Context, Agent Tool Registry, Agent Retry Strategy, ReAct Pattern, Agent Evaluation)
 
 ## Масштабирование
 

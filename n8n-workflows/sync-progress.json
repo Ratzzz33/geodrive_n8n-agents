@@ -12,7 +12,10 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [250, 300],
+      "position": [
+        250,
+        300
+      ],
       "webhookId": "sync-progress"
     },
     {
@@ -38,7 +41,10 @@
       "name": "Save Progress",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2,
-      "position": [450, 300],
+      "position": [
+        450,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "postgres-credentials",
@@ -61,7 +67,10 @@
       "name": "Cron (Poll)",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
-      "position": [250, 500]
+      "position": [
+        250,
+        500
+      ]
     },
     {
       "parameters": {
@@ -73,7 +82,10 @@
       "name": "HTTP Get Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [450, 500]
+      "position": [
+        450,
+        500
+      ]
     },
     {
       "parameters": {
@@ -85,26 +97,63 @@
       "name": "Respond",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [650, 300]
+      "position": [
+        650,
+        300
+      ]
     }
   ],
   "connections": {
     "Webhook": {
-      "main": [[{ "node": "Save Progress", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Save Progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Save Progress": {
-      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Cron (Poll)": {
-      "main": [[{ "node": "HTTP Get Status", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "HTTP Get Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "HTTP Get Status": {
-      "main": [[{ "node": "Save Progress", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Save Progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   },
   "staticData": null,
   "tags": [],
@@ -112,4 +161,3 @@
   "updatedAt": "2025-01-15T00:00:00.000Z",
   "versionId": "1"
 }
-

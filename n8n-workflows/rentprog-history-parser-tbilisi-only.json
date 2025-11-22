@@ -16,7 +16,10 @@
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -57,7 +60,10 @@
       "name": "Get Operations",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -67,7 +73,10 @@
       "name": "Process Operations",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
@@ -79,7 +88,10 @@
       "name": "Save to DB",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [900, 300],
+      "position": [
+        900,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "rCT42ZxSDf7BMxCJ",
@@ -124,8 +136,9 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "Asia/Tbilisi",
+    "saveExecutionProgress": true
   },
   "active": false
 }
-

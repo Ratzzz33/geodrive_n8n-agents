@@ -1,0 +1,74 @@
+#!/usr/bin/env node
+
+/**
+ * Test: Check what parse_history_description extracts from tank_value change description
+ */
+
+import postgres from 'postgres';
+
+const CONNECTION_STRING = 'postgresql://neondb_owner:npg_cHIT9Kxfk1Am@ep-rough-heart-ahnybmq0-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require';
+
+async function testParse() {
+  const sql = postgres(CONNECTION_STRING, {
+    max: 1,
+    ssl: { rejectUnauthorized: false },
+    connect_timeout: 10
+  });
+
+  try {
+    console.log('🧪 Тестируем парсинг описания изменения tank_value...\n');
+
+    const description = "CEO Eliseev Aleksei изменил , tank_value с 47 на 46 в авто № 39736 - Mini 4x4 S Red 919";
+
+    console.log(`Описание: ${description}\n`);
+
+    const result = await sql`
+      SELECT * FROM parse_history_description(${description})
+    `;
+
+    if (result.length === 0) {
+      console.log('❌ Парсер не вернул результатов');
+      return;
+    }
+
+    const parsed = result[0];
+    console.log('Результат парсинга:');
+    console.log(`  entity_type: ${parsed.entity_type || 'NULL'}`);
+    console.log(`  entity_id: ${parsed.entity_id || 'NULL'}`);
+    console.log(`  operation: ${parsed.operation || 'NULL'}`);
+    console.log(`  user_name: ${parsed.user_name || 'NULL'}`);
+    console.log(`  amount: ${parsed.amount || 'NULL'}`);
+    console.log(`  currency: ${parsed.currency || 'NULL'}`);
+    console.log(`  extra: ${JSON.stringify(parsed.extra, null, 2)}`);
+
+    if (parsed.extra && parsed.extra.changes) {
+      console.log('\n✅ Изменения найдены:');
+      console.log(JSON.stringify(parsed.extra.changes, null, 2));
+      
+      if (parsed.extra.changes.tank_value) {
+        console.log(`\n✅ tank_value извлечён: "${parsed.extra.changes.tank_value}"`);
+        if (parsed.extra.changes.tank_value === '46') {
+          console.log('✅ Значение корректное!');
+        } else {
+          console.log(`❌ Значение неверное! Ожидалось "46", получено "${parsed.extra.changes.tank_value}"`);
+        }
+      } else {
+        console.log('\n❌ tank_value НЕ извлечён из изменений!');
+      }
+    } else {
+      console.log('\n❌ Изменения НЕ найдены в extra!');
+    }
+
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
+    throw error;
+  } finally {
+    await sql.end();
+  }
+}
+
+testParse().catch(err => {
+  console.error('Fatal error:', err);
+  process.exit(1);
+});
+

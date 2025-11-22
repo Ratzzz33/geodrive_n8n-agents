@@ -1,0 +1,881 @@
+{
+  "name": "✅ Синхронизация цен автомобилей (RentProg) раз в сутки",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Daily Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        144,
+        304
+      ],
+      "id": "332ee159-b0ef-424c-bc0a-bfda68739df9"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO rentprog_car_states_snapshot (\r\n  branch_id, rentprog_id, car_name, code, number, vin, color, year, transmission,\r\n  fuel, car_type, car_class, active, state, tank_state, clean_state, mileage,\r\n  tire_type, tire_size, last_inspection, deposit, price_hour, hourly_deposit,\r\n  monthly_deposit, investor_id, purchase_price, purchase_date, age_limit,\r\n  driver_year_limit, franchise, max_fine, repair_cost, is_air, climate_control,\r\n  parktronic, parktronic_camera, heated_seats, audio_system, usb_system,\r\n  rain_sensor, engine_capacity, number_doors, tank_value, pts,\r\n  registration_certificate, body_number, data, fetched_at\r\n)\r\nSELECT\r\n  CASE WHEN data->>'branch_id' IS NULL OR data->>'branch_id' = 'null' OR data->>'branch_id' = '' THEN NULL ELSE (data->>'branch_id')::uuid END,\r\n  NULLIF(data->>'rentprog_id', 'null'),\r\n  NULLIF(data->>'car_name', 'null'),\r\n  NULLIF(data->>'code', 'null'),\r\n  NULLIF(data->>'number', 'null'),\r\n  NULLIF(data->>'vin', 'null'),\r\n  NULLIF(data->>'color', 'null'),\r\n  CASE WHEN data->>'year' IS NULL OR data->>'year' = 'null' OR data->>'year' = '' THEN NULL ELSE (data->>'year')::integer END,\r\n  NULLIF(data->>'transmission', 'null'),\r\n  NULLIF(data->>'fuel', 'null'),\r\n  NULLIF(data->>'car_type', 'null'),\r\n  NULLIF(data->>'car_class', 'null'),\r\n  CASE WHEN data->>'active' IS NULL OR data->>'active' = 'null' OR data->>'active' = '' THEN NULL ELSE (data->>'active')::boolean END,\r\n  NULLIF(data->>'state', 'null'),\r\n  CASE WHEN data->>'tank_state' IS NULL OR data->>'tank_state' = 'null' OR data->>'tank_state' = '' THEN NULL ELSE (data->>'tank_state')::boolean END,\r\n  CASE WHEN data->>'clean_state' IS NULL OR data->>'clean_state' = 'null' OR data->>'clean_state' = '' THEN NULL ELSE (data->>'clean_state')::boolean END,\r\n  CASE WHEN data->>'mileage' IS NULL OR data->>'mileage' = 'null' OR data->>'mileage' = '' THEN NULL ELSE (data->>'mileage')::integer END,\r\n  CASE WHEN data->>'tire_type' IS NULL OR data->>'tire_type' = 'null' OR data->>'tire_type' = '' THEN NULL ELSE (data->>'tire_type')::integer END,\r\n  NULLIF(data->>'tire_size', 'null'),\r\n  NULLIF(data->>'last_inspection', 'null'),\r\n  CASE WHEN data->>'deposit' IS NULL OR data->>'deposit' = 'null' OR data->>'deposit' = '' THEN NULL ELSE (data->>'deposit')::bigint END,\r\n  CASE WHEN data->>'price_hour' IS NULL OR data->>'price_hour' = 'null' OR data->>'price_hour' = '' THEN NULL ELSE (data->>'price_hour')::bigint END,\r\n  CASE WHEN data->>'hourly_deposit' IS NULL OR data->>'hourly_deposit' = 'null' OR data->>'hourly_deposit' = '' THEN NULL ELSE (data->>'hourly_deposit')::bigint END,\r\n  CASE WHEN data->>'monthly_deposit' IS NULL OR data->>'monthly_deposit' = 'null' OR data->>'monthly_deposit' = '' THEN NULL ELSE (data->>'monthly_deposit')::bigint END,\r\n  CASE WHEN data->>'investor_id' IS NULL OR data->>'investor_id' = 'null' OR data->>'investor_id' = '' THEN NULL ELSE (data->>'investor_id')::bigint END,\r\n  CASE WHEN data->>'purchase_price' IS NULL OR data->>'purchase_price' = 'null' OR data->>'purchase_price' = '' THEN NULL ELSE (data->>'purchase_price')::bigint END,\r\n  NULLIF(data->>'purchase_date', 'null'),\r\n  CASE WHEN data->>'age_limit' IS NULL OR data->>'age_limit' = 'null' OR data->>'age_limit' = '' THEN NULL ELSE (data->>'age_limit')::bigint END,\r\n  CASE WHEN data->>'driver_year_limit' IS NULL OR data->>'driver_year_limit' = 'null' OR data->>'driver_year_limit' = '' THEN NULL ELSE (data->>'driver_year_limit')::bigint END,\r\n  CASE WHEN data->>'franchise' IS NULL OR data->>'franchise' = 'null' OR data->>'franchise' = '' THEN NULL ELSE (data->>'franchise')::integer END,\r\n  CASE WHEN data->>'max_fine' IS NULL OR data->>'max_fine' = 'null' OR data->>'max_fine' = '' THEN NULL ELSE (data->>'max_fine')::integer END,\r\n  CASE WHEN data->>'repair_cost' IS NULL OR data->>'repair_cost' = 'null' OR data->>'repair_cost' = '' THEN NULL ELSE (data->>'repair_cost')::integer END,\r\n  CASE WHEN data->>'is_air' IS NULL OR data->>'is_air' = 'null' OR data->>'is_air' = '' THEN NULL ELSE (data->>'is_air')::boolean END,\r\n  CASE WHEN data->>'climate_control' IS NULL OR data->>'climate_control' = 'null' OR data->>'climate_control' = '' THEN NULL ELSE (data->>'climate_control')::boolean END,\r\n  CASE WHEN data->>'parktronic' IS NULL OR data->>'parktronic' = 'null' OR data->>'parktronic' = '' THEN NULL ELSE (data->>'parktronic')::boolean END,\r\n  CASE WHEN data->>'parktronic_camera' IS NULL OR data->>'parktronic_camera' = 'null' OR data->>'parktronic_camera' = '' THEN NULL ELSE (data->>'parktronic_camera')::boolean END,\r\n  CASE WHEN data->>'heated_seats' IS NULL OR data->>'heated_seats' = 'null' OR data->>'heated_seats' = '' THEN NULL ELSE (data->>'heated_seats')::boolean END,\r\n  CASE WHEN data->>'audio_system' IS NULL OR data->>'audio_system' = 'null' OR data->>'audio_system' = '' THEN NULL ELSE (data->>'audio_system')::boolean END,\r\n  CASE WHEN data->>'usb_system' IS NULL OR data->>'usb_system' = 'null' OR data->>'usb_system' = '' THEN NULL ELSE (data->>'usb_system')::boolean END,\r\n  CASE WHEN data->>'rain_sensor' IS NULL OR data->>'rain_sensor' = 'null' OR data->>'rain_sensor' = '' THEN NULL ELSE (data->>'rain_sensor')::boolean END,\r\n  NULLIF(data->>'engine_capacity', 'null'),\r\n  CASE WHEN data->>'number_doors' IS NULL OR data->>'number_doors' = 'null' OR data->>'number_doors' = '' THEN NULL ELSE (data->>'number_doors')::integer END,\r\n  CASE WHEN data->>'tank_value' IS NULL OR data->>'tank_value' = 'null' OR data->>'tank_value' = '' THEN NULL ELSE (data->>'tank_value')::integer END,\r\n  NULLIF(data->>'pts', 'null'),\r\n  NULLIF(data->>'registration_certificate', 'null'),\r\n  NULLIF(data->>'body_number', 'null'),\r\n  data->'data',\r\n  NOW()\r\nFROM (SELECT '{{ JSON.stringify($json).replace(/'/g, \"''\") }}'::jsonb AS data) AS j\r\nON CONFLICT ON CONSTRAINT rentprog_car_states_snapshot_pkey DO UPDATE SET\r\n  branch_id = COALESCE(EXCLUDED.branch_id, rentprog_car_states_snapshot.branch_id),\r\n  car_name = COALESCE(EXCLUDED.car_name, rentprog_car_states_snapshot.car_name),\r\n  code = COALESCE(EXCLUDED.code, rentprog_car_states_snapshot.code),\r\n  number = COALESCE(EXCLUDED.number, rentprog_car_states_snapshot.number),\r\n  vin = COALESCE(EXCLUDED.vin, rentprog_car_states_snapshot.vin),\r\n  color = COALESCE(EXCLUDED.color, rentprog_car_states_snapshot.color),\r\n  year = COALESCE(EXCLUDED.year, rentprog_car_states_snapshot.year),\r\n  transmission = COALESCE(EXCLUDED.transmission, rentprog_car_states_snapshot.transmission),\r\n  fuel = COALESCE(EXCLUDED.fuel, rentprog_car_states_snapshot.fuel),\r\n  car_type = COALESCE(EXCLUDED.car_type, rentprog_car_states_snapshot.car_type),\r\n  car_class = COALESCE(EXCLUDED.car_class, rentprog_car_states_snapshot.car_class),\r\n  active = COALESCE(EXCLUDED.active, rentprog_car_states_snapshot.active),\r\n  state = COALESCE(EXCLUDED.state, rentprog_car_states_snapshot.state),\r\n  tank_state = COALESCE(EXCLUDED.tank_state, rentprog_car_states_snapshot.tank_state),\r\n  clean_state = COALESCE(EXCLUDED.clean_state, rentprog_car_states_snapshot.clean_state),\r\n  mileage = COALESCE(EXCLUDED.mileage, rentprog_car_states_snapshot.mileage),\r\n  tire_type = COALESCE(EXCLUDED.tire_type, rentprog_car_states_snapshot.tire_type),\r\n  tire_size = COALESCE(EXCLUDED.tire_size, rentprog_car_states_snapshot.tire_size),\r\n  last_inspection = COALESCE(EXCLUDED.last_inspection, rentprog_car_states_snapshot.last_inspection),\r\n  deposit = COALESCE(EXCLUDED.deposit, rentprog_car_states_snapshot.deposit),\r\n  price_hour = COALESCE(EXCLUDED.price_hour, rentprog_car_states_snapshot.price_hour),\r\n  hourly_deposit = COALESCE(EXCLUDED.hourly_deposit, rentprog_car_states_snapshot.hourly_deposit),\r\n  monthly_deposit = COALESCE(EXCLUDED.monthly_deposit, rentprog_car_states_snapshot.monthly_deposit),\r\n  investor_id = COALESCE(EXCLUDED.investor_id, rentprog_car_states_snapshot.investor_id),\r\n  purchase_price = COALESCE(EXCLUDED.purchase_price, rentprog_car_states_snapshot.purchase_price),\r\n  purchase_date = COALESCE(EXCLUDED.purchase_date, rentprog_car_states_snapshot.purchase_date),\r\n  age_limit = COALESCE(EXCLUDED.age_limit, rentprog_car_states_snapshot.age_limit),\r\n  driver_year_limit = COALESCE(EXCLUDED.driver_year_limit, rentprog_car_states_snapshot.driver_year_limit),\r\n  franchise = COALESCE(EXCLUDED.franchise, rentprog_car_states_snapshot.franchise),\r\n  max_fine = COALESCE(EXCLUDED.max_fine, rentprog_car_states_snapshot.max_fine),\r\n  repair_cost = COALESCE(EXCLUDED.repair_cost, rentprog_car_states_snapshot.repair_cost),\r\n  is_air = COALESCE(EXCLUDED.is_air, rentprog_car_states_snapshot.is_air),\r\n  climate_control = COALESCE(EXCLUDED.climate_control, rentprog_car_states_snapshot.climate_control),\r\n  parktronic = COALESCE(EXCLUDED.parktronic, rentprog_car_states_snapshot.parktronic),\r\n  parktronic_camera = COALESCE(EXCLUDED.parktronic_camera, rentprog_car_states_snapshot.parktronic_camera),\r\n  heated_seats = COALESCE(EXCLUDED.heated_seats, rentprog_car_states_snapshot.heated_seats),\r\n  audio_system = COALESCE(EXCLUDED.audio_system, rentprog_car_states_snapshot.audio_system),\r\n  usb_system = COALESCE(EXCLUDED.usb_system, rentprog_car_states_snapshot.usb_system),\r\n  rain_sensor = COALESCE(EXCLUDED.rain_sensor, rentprog_car_states_snapshot.rain_sensor),\r\n  engine_capacity = COALESCE(EXCLUDED.engine_capacity, rentprog_car_states_snapshot.engine_capacity),\r\n  number_doors = COALESCE(EXCLUDED.number_doors, rentprog_car_states_snapshot.number_doors),\r\n  tank_value = COALESCE(EXCLUDED.tank_value, rentprog_car_states_snapshot.tank_value),\r\n  pts = COALESCE(EXCLUDED.pts, rentprog_car_states_snapshot.pts),\r\n  registration_certificate = COALESCE(EXCLUDED.registration_certificate, rentprog_car_states_snapshot.registration_certificate),\r\n  body_number = COALESCE(EXCLUDED.body_number, rentprog_car_states_snapshot.body_number),\r\n  data = COALESCE(EXCLUDED.data, rentprog_car_states_snapshot.data),\r\n  fetched_at = NOW();\r\n\r\n"
+      },
+      "name": "Save Snapshot",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        2288,
+        304
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "id": "1de4f8c4-98e9-4f7d-bcff-913329229b6f"
+    },
+    {
+      "parameters": {
+        "query": "=WITH rec AS (\n  SELECT\n    CASE WHEN data->>'branch_id' IS NULL OR data->>'branch_id' = 'null' OR data->>'branch_id' = '' THEN NULL ELSE (data->>'branch_id')::uuid END AS branch_id,\n    NULLIF(data->>'rentprog_id', 'null') AS rentprog_id,\n    NULLIF(data->>'car_name', 'null') AS car_name,\n    NULLIF(data->>'code', 'null') AS code,\n    NULLIF(data->>'number', 'null') AS number,\n    NULLIF(data->>'vin', 'null') AS vin,\n    NULLIF(data->>'color', 'null') AS color,\n    CASE WHEN data->>'year' IS NULL OR data->>'year' = 'null' OR data->>'year' = '' THEN NULL ELSE (data->>'year')::integer END AS year,\n    NULLIF(data->>'transmission', 'null') AS transmission,\n    NULLIF(data->>'fuel', 'null') AS fuel,\n    NULLIF(data->>'car_type', 'null') AS car_type,\n    NULLIF(data->>'car_class', 'null') AS car_class,\n    CASE WHEN data->>'active' IS NULL OR data->>'active' = 'null' OR data->>'active' = '' THEN NULL ELSE (data->>'active')::boolean END AS active,\n    CASE WHEN data->>'state' IS NULL OR data->>'state' = 'null' OR data->>'state' = '' THEN NULL ELSE (data->>'state')::integer END AS state,\n    CASE WHEN data->>'tank_state' IS NULL OR data->>'tank_state' = 'null' OR data->>'tank_state' = '' THEN NULL ELSE (data->>'tank_state')::boolean END AS tank_state,\n    CASE WHEN data->>'clean_state' IS NULL OR data->>'clean_state' = 'null' OR data->>'clean_state' = '' THEN NULL ELSE (data->>'clean_state')::boolean END AS clean_state,\n    CASE WHEN data->>'mileage' IS NULL OR data->>'mileage' = 'null' OR data->>'mileage' = '' THEN NULL ELSE (data->>'mileage')::integer END AS mileage,\n    CASE WHEN data->>'tire_type' IS NULL OR data->>'tire_type' = 'null' OR data->>'tire_type' = '' THEN NULL ELSE (data->>'tire_type')::integer END AS tire_type,\n    NULLIF(data->>'tire_size', 'null') AS tire_size,\n    NULLIF(data->>'last_inspection', 'null') AS last_inspection,\n    CASE WHEN data->>'deposit' IS NULL OR data->>'deposit' = 'null' OR data->>'deposit' = '' THEN NULL ELSE (data->>'deposit')::bigint END AS deposit,\n    CASE WHEN data->>'price_hour' IS NULL OR data->>'price_hour' = 'null' OR data->>'price_hour' = '' THEN NULL ELSE (data->>'price_hour')::bigint END AS price_hour,\n    CASE WHEN data->>'hourly_deposit' IS NULL OR data->>'hourly_deposit' = 'null' OR data->>'hourly_deposit' = '' THEN NULL ELSE (data->>'hourly_deposit')::bigint END AS hourly_deposit,\n    CASE WHEN data->>'monthly_deposit' IS NULL OR data->>'monthly_deposit' = 'null' OR data->>'monthly_deposit' = '' THEN NULL ELSE (data->>'monthly_deposit')::bigint END AS monthly_deposit,\n    CASE WHEN data->>'investor_id' IS NULL OR data->>'investor_id' = 'null' OR data->>'investor_id' = '' THEN NULL ELSE (data->>'investor_id')::bigint END AS investor_id,\n    CASE WHEN data->>'purchase_price' IS NULL OR data->>'purchase_price' = 'null' OR data->>'purchase_price' = '' THEN NULL ELSE (data->>'purchase_price')::bigint END AS purchase_price,\n    NULLIF(data->>'purchase_date', 'null') AS purchase_date,\n    CASE WHEN data->>'age_limit' IS NULL OR data->>'age_limit' = 'null' OR data->>'age_limit' = '' THEN NULL ELSE (data->>'age_limit')::bigint END AS age_limit,\n    CASE WHEN data->>'driver_year_limit' IS NULL OR data->>'driver_year_limit' = 'null' OR data->>'driver_year_limit' = '' THEN NULL ELSE (data->>'driver_year_limit')::bigint END AS driver_year_limit,\n    CASE WHEN data->>'franchise' IS NULL OR data->>'franchise' = 'null' OR data->>'franchise' = '' THEN NULL ELSE (data->>'franchise')::integer END AS franchise,\n    CASE WHEN data->>'max_fine' IS NULL OR data->>'max_fine' = 'null' OR data->>'max_fine' = '' THEN NULL ELSE (data->>'max_fine')::integer END AS max_fine,\n    CASE WHEN data->>'repair_cost' IS NULL OR data->>'repair_cost' = 'null' OR data->>'repair_cost' = '' THEN NULL ELSE (data->>'repair_cost')::integer END AS repair_cost,\n    CASE WHEN data->>'is_air' IS NULL OR data->>'is_air' = 'null' OR data->>'is_air' = '' THEN NULL ELSE (data->>'is_air')::boolean END AS is_air,\n    CASE WHEN data->>'climate_control' IS NULL OR data->>'climate_control' = 'null' OR data->>'climate_control' = '' THEN NULL ELSE (data->>'climate_control')::boolean END AS climate_control,\n    CASE WHEN data->>'parktronic' IS NULL OR data->>'parktronic' = 'null' OR data->>'parktronic' = '' THEN NULL ELSE (data->>'parktronic')::boolean END AS parktronic,\n    CASE WHEN data->>'parktronic_camera' IS NULL OR data->>'parktronic_camera' = 'null' OR data->>'parktronic_camera' = '' THEN NULL ELSE (data->>'parktronic_camera')::boolean END AS parktronic_camera,\n    CASE WHEN data->>'heated_seats' IS NULL OR data->>'heated_seats' = 'null' OR data->>'heated_seats' = '' THEN NULL ELSE (data->>'heated_seats')::boolean END AS heated_seats,\n    CASE WHEN data->>'audio_system' IS NULL OR data->>'audio_system' = 'null' OR data->>'audio_system' = '' THEN NULL ELSE (data->>'audio_system')::boolean END AS audio_system,\n    CASE WHEN data->>'usb_system' IS NULL OR data->>'usb_system' = 'null' OR data->>'usb_system' = '' THEN NULL ELSE (data->>'usb_system')::boolean END AS usb_system,\n    CASE WHEN data->>'rain_sensor' IS NULL OR data->>'rain_sensor' = 'null' OR data->>'rain_sensor' = '' THEN NULL ELSE (data->>'rain_sensor')::boolean END AS rain_sensor,\n    NULLIF(data->>'engine_capacity', 'null') AS engine_capacity,\n    CASE WHEN data->>'number_doors' IS NULL OR data->>'number_doors' = 'null' OR data->>'number_doors' = '' THEN NULL ELSE (data->>'number_doors')::integer END AS number_doors,\n    CASE WHEN data->>'tank_value' IS NULL OR data->>'tank_value' = 'null' OR data->>'tank_value' = '' THEN NULL ELSE (data->>'tank_value')::integer END AS tank_value,\n    NULLIF(data->>'pts', 'null') AS pts,\n    NULLIF(data->>'registration_certificate', 'null') AS registration_certificate,\n    NULLIF(data->>'body_number', 'null') AS body_number,\n    CASE WHEN data->'data' IS NULL THEN NULL ELSE (data->'data')::jsonb END AS data\n  FROM (SELECT '{{ JSON.stringify($json).replace(/'/g, \"''\") }}'::jsonb AS data) AS j\n)\nINSERT INTO cars AS tgt (\n  id, branch_id, rentprog_id, car_name, code, number, vin, color, year, transmission,\n  fuel, car_type, car_class, active, state, tank_state, clean_state, mileage,\n  tire_type, tire_size, last_inspection, deposit, price_hour, hourly_deposit,\n  monthly_deposit, investor_id, purchase_price, purchase_date, age_limit,\n  driver_year_limit, franchise, max_fine, repair_cost, is_air, climate_control,\n  parktronic, parktronic_camera, heated_seats, audio_system, usb_system,\n  rain_sensor, engine_capacity, number_doors, tank_value, pts,\n  registration_certificate, body_number, data\n)\nSELECT\n  COALESCE((SELECT id FROM cars WHERE rentprog_id = rec.rentprog_id LIMIT 1), gen_random_uuid()) AS id,\n  rec.branch_id, rec.rentprog_id, rec.car_name, rec.code, rec.number, rec.vin, rec.color, rec.year, rec.transmission,\n  rec.fuel, rec.car_type, rec.car_class, rec.active, rec.state, rec.tank_state, rec.clean_state, rec.mileage,\n  rec.tire_type, rec.tire_size, rec.last_inspection, rec.deposit, rec.price_hour, rec.hourly_deposit,\n  rec.monthly_deposit, rec.investor_id, rec.purchase_price, rec.purchase_date, rec.age_limit,\n  rec.driver_year_limit, rec.franchise, rec.max_fine, rec.repair_cost, rec.is_air, rec.climate_control,\n  rec.parktronic, rec.parktronic_camera, rec.heated_seats, rec.audio_system, rec.usb_system,\n  rec.rain_sensor, rec.engine_capacity, rec.number_doors, rec.tank_value, rec.pts,\n  rec.registration_certificate, rec.body_number, rec.data\nFROM rec\nON CONFLICT (rentprog_id) DO UPDATE SET\n  branch_id = COALESCE(EXCLUDED.branch_id, tgt.branch_id),\n  car_name = COALESCE(EXCLUDED.car_name, tgt.car_name),\n  code = COALESCE(EXCLUDED.code, tgt.code),\n  number = COALESCE(EXCLUDED.number, tgt.number),\n  vin = COALESCE(EXCLUDED.vin, tgt.vin),\n  color = COALESCE(EXCLUDED.color, tgt.color),\n  year = COALESCE(EXCLUDED.year, tgt.year),\n  transmission = COALESCE(EXCLUDED.transmission, tgt.transmission),\n  fuel = COALESCE(EXCLUDED.fuel, tgt.fuel),\n  car_type = COALESCE(EXCLUDED.car_type, tgt.car_type),\n  car_class = COALESCE(EXCLUDED.car_class, tgt.car_class),\n  active = COALESCE(EXCLUDED.active, tgt.active),\n  state = COALESCE(EXCLUDED.state, tgt.state),\n  tank_state = COALESCE(EXCLUDED.tank_state, tgt.tank_state),\n  clean_state = COALESCE(EXCLUDED.clean_state, tgt.clean_state),\n  mileage = COALESCE(EXCLUDED.mileage, tgt.mileage),\n  tire_type = COALESCE(EXCLUDED.tire_type, tgt.tire_type),\n  tire_size = COALESCE(EXCLUDED.tire_size, tgt.tire_size),\n  last_inspection = COALESCE(EXCLUDED.last_inspection, tgt.last_inspection),\n  deposit = COALESCE(EXCLUDED.deposit, tgt.deposit),\n  price_hour = COALESCE(EXCLUDED.price_hour, tgt.price_hour),\n  hourly_deposit = COALESCE(EXCLUDED.hourly_deposit, tgt.hourly_deposit),\n  monthly_deposit = COALESCE(EXCLUDED.monthly_deposit, tgt.monthly_deposit),\n  investor_id = COALESCE(EXCLUDED.investor_id, tgt.investor_id),\n  purchase_price = COALESCE(EXCLUDED.purchase_price, tgt.purchase_price),\n  purchase_date = COALESCE(EXCLUDED.purchase_date, tgt.purchase_date),\n  age_limit = COALESCE(EXCLUDED.age_limit, tgt.age_limit),\n  driver_year_limit = COALESCE(EXCLUDED.driver_year_limit, tgt.driver_year_limit),\n  franchise = COALESCE(EXCLUDED.franchise, tgt.franchise),\n  max_fine = COALESCE(EXCLUDED.max_fine, tgt.max_fine),\n  repair_cost = COALESCE(EXCLUDED.repair_cost, tgt.repair_cost),\n  is_air = COALESCE(EXCLUDED.is_air, tgt.is_air),\n  climate_control = COALESCE(EXCLUDED.climate_control, tgt.climate_control),\n  parktronic = COALESCE(EXCLUDED.parktronic, tgt.parktronic),\n  parktronic_camera = COALESCE(EXCLUDED.parktronic_camera, tgt.parktronic_camera),\n  heated_seats = COALESCE(EXCLUDED.heated_seats, tgt.heated_seats),\n  audio_system = COALESCE(EXCLUDED.audio_system, tgt.audio_system),\n  usb_system = COALESCE(EXCLUDED.usb_system, tgt.usb_system),\n  rain_sensor = COALESCE(EXCLUDED.rain_sensor, tgt.rain_sensor),\n  engine_capacity = COALESCE(EXCLUDED.engine_capacity, tgt.engine_capacity),\n  number_doors = COALESCE(EXCLUDED.number_doors, tgt.number_doors),\n  tank_value = COALESCE(EXCLUDED.tank_value, tgt.tank_value),\n  pts = COALESCE(EXCLUDED.pts, tgt.pts),\n  registration_certificate = COALESCE(EXCLUDED.registration_certificate, tgt.registration_certificate),\n  body_number = COALESCE(EXCLUDED.body_number, tgt.body_number),\n  data = COALESCE(EXCLUDED.data, tgt.data),\n  updated_at = NOW();",
+        "BLANK": "TRUNCATED",
+        "operation": "executeQuery",
+        "options": {
+          "queryBatching": "transaction"
+        }
+      },
+      "name": "Save Cars",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        2592,
+        304
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3I9fyXVlGg4Vl4LZ",
+          "name": "Postgres account"
+        }
+      },
+      "id": "300259d8-5136-4fa4-a12a-e1a1bd8b8759"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  branch_code: 'tbilisi',\n  branch_id: '277eaada-1428-4c04-9cd7-5e614e43bedc',\n  branch_label: 'Tbilisi',\n  company_token: '91b83b93963633649f29a04b612bab3f9fbb0471b5928622'\n} }];"
+      },
+      "name": "Tbilisi Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        48
+      ],
+      "id": "f904f321-3baa-4d77-ba1f-9330e1d26d21"
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/get_token",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "company_token",
+              "value": "={{ $json.company_token }}"
+            }
+          ]
+        }
+      },
+      "name": "Get Tbilisi Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        592,
+        48
+      ],
+      "id": "13202bc0-18a7-4ba8-b244-1399eb06d3d6"
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/all_cars_full",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $node[\"Get Tbilisi Token\"].json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+          ]
+        }
+      },
+      "name": "Fetch Tbilisi Cars",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        48
+      ],
+      "id": "c666129e-1c24-4234-a8d6-6328f3dc08c7"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cars = $input.all().map(item => item.json);\nreturn [{ json: {\n  branch_code: 'tbilisi',\n  branch_id: '277eaada-1428-4c04-9cd7-5e614e43bedc',\n  branch_label: 'Tbilisi',\n  cars: cars\n} }];"
+      },
+      "name": "Wrap Tbilisi Cars",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        48
+      ],
+      "id": "cb6b8d01-0b5f-4a3d-9776-27dbbe5bb553"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  branch_code: 'batumi',\n  branch_id: '627c4c88-d8a1-47bf-b9a6-2e9ad33112a4',\n  branch_label: 'Batumi',\n  company_token: '7ad345720f8d92f10c187122427c6a2c2bb9494c6bf14e8d'\n} }];"
+      },
+      "name": "Batumi Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        192
+      ],
+      "id": "583c23e7-00ad-4bf0-bfe0-5fbd169830c0"
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/get_token",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "company_token",
+              "value": "={{ $json.company_token }}"
+            }
+          ]
+        }
+      },
+      "name": "Get Batumi Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        592,
+        192
+      ],
+      "id": "ca229c12-b43f-451b-8c51-9061c3711a52"
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/all_cars_full",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $node[\"Get Batumi Token\"].json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+          ]
+        }
+      },
+      "name": "Fetch Batumi Cars",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        192
+      ],
+      "id": "6fd442e4-4d35-4190-b8fb-210e4bff7539"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cars = $input.all().map(item => item.json);\nreturn [{ json: {\n  branch_code: 'batumi',\n  branch_id: '627c4c88-d8a1-47bf-b9a6-2e9ad33112a4',\n  branch_label: 'Batumi',\n  cars: cars\n} }];"
+      },
+      "name": "Wrap Batumi Cars",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        192
+      ],
+      "id": "577fee33-efbd-4f48-a267-8f11899841de"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  branch_code: 'kutaisi',\n  branch_id: '5e551b32-934c-498f-a4a1-a90079985c0a',\n  branch_label: 'Kutaisi',\n  company_token: '5599ebb7b94827fdfd49ca3a5b7e259cfa99d8ea78edeb50'\n} }];"
+      },
+      "name": "Kutaisi Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        320
+      ],
+      "id": "9723659f-7766-46db-8352-ea263259f396"
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/get_token",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "company_token",
+              "value": "={{ $json.company_token }}"
+            }
+          ]
+        }
+      },
+      "name": "Get Kutaisi Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        592,
+        320
+      ],
+      "id": "b7fe311b-a9ef-489e-a8a6-0abbca5d851c"
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/all_cars_full",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $node[\"Get Kutaisi Token\"].json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+          ]
+        }
+      },
+      "name": "Fetch Kutaisi Cars",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        320
+      ],
+      "id": "29a2682b-c583-47db-b765-d3683f247e5e"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cars = $input.all().map(item => item.json);\nreturn [{ json: {\n  branch_code: 'kutaisi',\n  branch_id: '5e551b32-934c-498f-a4a1-a90079985c0a',\n  branch_label: 'Kutaisi',\n  cars: cars\n} }];"
+      },
+      "name": "Wrap Kutaisi Cars",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        320
+      ],
+      "id": "8ea3c541-bbdc-4991-b3ac-06ce743cc752"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  branch_code: 'service-center',\n  branch_id: '6026cff7-eee8-4fb9-be26-604f308911f0',\n  branch_label: 'Service Center',\n  company_token: '5y4j4gcs75o9n5s1e2vrxx4a'\n} }];"
+      },
+      "name": "Service Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        464
+      ],
+      "id": "4ee92163-83eb-4612-9c68-2fe6b952f67b"
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/get_token",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "company_token",
+              "value": "={{ $json.company_token }}"
+            }
+          ]
+        }
+      },
+      "name": "Get Service Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        592,
+        464
+      ],
+      "id": "d9a54d81-7b27-4b0c-992e-6e7a9005579f"
+    },
+    {
+      "parameters": {
+        "url": "https://rentprog.net/api/v1/public/all_cars_full",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $node[\"Get Service Token\"].json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "Origin",
+              "value": "https://web.rentprog.ru"
+            },
+            {
+              "name": "Referer",
+              "value": "https://web.rentprog.ru/"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+          ]
+        }
+      },
+      "name": "Fetch Service Cars",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        464
+      ],
+      "id": "a842cc10-ae86-4627-9243-012771afbb55"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cars = $input.all().map(item => item.json);\nreturn [{ json: {\n  branch_code: 'service-center',\n  branch_id: '6026cff7-eee8-4fb9-be26-604f308911f0',\n  branch_label: 'Service Center',\n  cars: cars\n} }];"
+      },
+      "name": "Wrap Service Cars",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        464
+      ],
+      "id": "c54d29ab-23b2-4bf6-92a3-7251ed92b5ca"
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\nconst stats = { branches: {}, cars: 0 };\n\nfor (const item of $input.all()) {\n  const branchCode = item.json.branch_code || item.json.branch;\n  const branchId = item.json.branch_id;\n  const responseData = item.json.cars ?? item.json;\n\n  if (!stats.branches[branchCode]) {\n    stats.branches[branchCode] = { cars: 0 };\n  }\n\n  let cars = [];\n  if (Array.isArray(responseData)) {\n    cars = responseData;\n  } else if (Array.isArray(responseData.data)) {\n    cars = responseData.data;\n  } else if (Array.isArray(responseData.cars)) {\n    cars = responseData.cars;\n  } else if (Array.isArray(responseData.response)) {\n    cars = responseData.response;\n  } else if (responseData && typeof responseData === 'object') {\n    cars = [responseData];\n  }\n\n  stats.cars += cars.length;\n  stats.branches[branchCode].cars += cars.length;\n\n  for (const car of cars) {\n    const attrs = car.attributes || car;\n\n    results.push({ json: {\n      branch_code: branchCode,\n      branch_id: branchId,\n      rentprog_id: String(attrs.id || car.id || ''),\n      car_name: attrs.car_name || attrs.name || null,\n      code: attrs.code || null,\n      number: attrs.number || null,\n      vin: attrs.vin || null,\n      color: attrs.color || null,\n      year: attrs.year ?? null,\n      transmission: attrs.transmission || null,\n      fuel: attrs.fuel || null,\n      car_type: attrs.car_type || null,\n      car_class: attrs.car_class || null,\n      active: attrs.active,\n      state: attrs.state,\n      tank_state: attrs.tank_state,\n      clean_state: attrs.clean_state,\n      mileage: attrs.mileage,\n      tire_type: attrs.tire_type,\n      tire_size: attrs.tire_size || null,\n      last_inspection: attrs.last_inspection || null,\n      deposit: attrs.deposit,\n      price_hour: attrs.price_hour,\n      hourly_deposit: attrs.hourly_deposit,\n      monthly_deposit: attrs.monthly_deposit,\n      investor_id: attrs.investor_id,\n      purchase_price: attrs.purchase_price,\n      purchase_date: attrs.purchase_date,\n      age_limit: attrs.age_limit,\n      driver_year_limit: attrs.driver_year_limit,\n      franchise: attrs.franchise,\n      max_fine: attrs.max_fine,\n      repair_cost: attrs.repair_cost,\n      is_air: attrs.is_air,\n      climate_control: attrs.climate_control,\n      parktronic: attrs.parktronic,\n      parktronic_camera: attrs.parktronic_camera,\n      heated_seats: attrs.heated_seats,\n      audio_system: attrs.audio_system,\n      usb_system: attrs.usb_system,\n      rain_sensor: attrs.rain_sensor,\n      engine_capacity: attrs.engine_capacity,\n      number_doors: attrs.number_doors,\n      tank_value: attrs.tank_value,\n      pts: attrs.pts,\n      registration_certificate: attrs.registration_certificate,\n      body_number: attrs.body_number,\n      data: attrs\n    } });\n  }\n}\n\nconst staticData = $getWorkflowStaticData('global');\nstaticData.carStats = stats;\n\nif (!results.length) {\n  results.push({ json: { __statsOnly: true } });\n}\n\nreturn results;"
+      },
+      "name": "Normalize Cars",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        304
+      ],
+      "id": "b28f2471-e845-47dc-aa9c-95da0f075a06"
+    },
+    {
+      "parameters": {
+        "jsCode": "const stats = $getWorkflowStaticData('global').carStats || {};\nconst total = stats.cars || 0;\nconst branchSummary = Object.entries(stats.branches || {}).map(([branch, data]) => `${branch}: ${data.cars || 0}`).join(', ');\nconst message = total > 0\n  ? `🚗 Синхронизация автомобилей RentProg\\nВсего авто: ${total}\\nФилиалы: ${branchSummary || 'нет данных'}`\n  : 'ℹ️ Синхронизация автомобилей RentProg\\nНовых данных не обнаружено';\nreturn [{ json: { message, stats, total_cars: total, error: false } }];"
+      },
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        304
+      ],
+      "id": "c0416477-3278-4b24-9bc5-b7d280ed6705"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "id": "has-error",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "isTrue"
+              }
+            }
+          ],
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          }
+        }
+      },
+      "name": "If Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3168,
+        304
+      ],
+      "id": "c52dee77-6eb7-4266-983a-74372c048c69"
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": {
+          "__rl": true,
+          "value": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}",
+          "mode": "expression"
+        },
+        "text": "={{ $json.message + \"\\n\\n🔗 <a href=\\\"https://n8n.rentflow.rentals/workflow/\" + $workflow.id + \"/executions/\" + $execution.id + \"\\\">Открыть execution</a>\" }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3392,
+        208
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1tKryXxL5Gq395nN",
+          "name": "Telegram account"
+        }
+      },
+      "id": "f356ed6f-c372-42c4-9193-c0d973ebf3a5"
+    },
+    {
+      "parameters": {},
+      "name": "Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3392,
+        400
+      ],
+      "id": "b02531dc-c29f-4eb1-bebd-4b78facedb8c"
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "name": "Merge All Branches",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1488,
+        224
+      ],
+      "id": "0d5c3b43-aebb-444a-9b3f-2bf13ae152e8"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "id": "check-stats-only",
+              "leftValue": "={{ $json.__statsOnly || false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "isTrue"
+              }
+            }
+          ],
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          }
+        }
+      },
+      "name": "Has Data?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        304
+      ],
+      "id": "09422d9d-0057-4b62-8d5d-a775fedc3ee5"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Удаляем все поля связанные с ценами из данных перед сохранением в cars\n// Цены хранятся в отдельной таблице car_prices, а не в cars\nconst items = [];\nconst priceFields = ['price_values', 'prices', 'seasons', 'price_periods'];\n\nfor (const item of $input.all()) {\n  const json = { ...item.json };\n  \n  // Удаляем все поля связанные с ценами из корневого уровня\n  priceFields.forEach(field => {\n    delete json[field];\n  });\n  \n  // Также удаляем из вложенного объекта data, если он есть\n  if (json.data && typeof json.data === 'object') {\n    if (Array.isArray(json.data)) {\n      json.data = json.data.map(dataItem => {\n        if (dataItem && typeof dataItem === 'object') {\n          const cleaned = { ...dataItem };\n          priceFields.forEach(field => {\n            delete cleaned[field];\n          });\n          return cleaned;\n        }\n        return dataItem;\n      });\n    } else {\n      const cleanedData = { ...json.data };\n      priceFields.forEach(field => {\n        delete cleanedData[field];\n      });\n      json.data = cleanedData;\n    }\n  }\n  \n  items.push({ json });\n}\nreturn items;"
+      },
+      "name": "Remove Price Values",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2438,
+        304
+      ],
+      "id": "82bd70bd-e761-489d-ab93-6d93be1b445d"
+    }
+  ],
+  "connections": {
+    "Daily Trigger": {
+      "main": [
+        [
+          {
+            "node": "Tbilisi Context",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Batumi Context",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Kutaisi Context",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Service Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tbilisi Context": {
+      "main": [
+        [
+          {
+            "node": "Get Tbilisi Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tbilisi Token": {
+      "main": [
+        [
+          {
+            "node": "Fetch Tbilisi Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Tbilisi Cars": {
+      "main": [
+        [
+          {
+            "node": "Wrap Tbilisi Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wrap Tbilisi Cars": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batumi Context": {
+      "main": [
+        [
+          {
+            "node": "Get Batumi Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Batumi Token": {
+      "main": [
+        [
+          {
+            "node": "Fetch Batumi Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Batumi Cars": {
+      "main": [
+        [
+          {
+            "node": "Wrap Batumi Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wrap Batumi Cars": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Kutaisi Context": {
+      "main": [
+        [
+          {
+            "node": "Get Kutaisi Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Kutaisi Token": {
+      "main": [
+        [
+          {
+            "node": "Fetch Kutaisi Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Kutaisi Cars": {
+      "main": [
+        [
+          {
+            "node": "Wrap Kutaisi Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wrap Kutaisi Cars": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Service Context": {
+      "main": [
+        [
+          {
+            "node": "Get Service Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Service Token": {
+      "main": [
+        [
+          {
+            "node": "Fetch Service Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Service Cars": {
+      "main": [
+        [
+          {
+            "node": "Wrap Service Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wrap Service Cars": {
+      "main": [
+        [
+          {
+            "node": "Merge All Branches",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Normalize Cars": {
+      "main": [
+        [
+          {
+            "node": "Has Data?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Snapshot": {
+      "main": [
+        [
+          {
+            "node": "Remove Price Values",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "If Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All Branches": {
+      "main": [
+        [
+          {
+            "node": "Normalize Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Data?": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Cars": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Price Values": {
+      "main": [
+        [
+          {
+            "node": "Save Cars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "timezone": "Asia/Tbilisi",
+    "executionOrder": "v1"
+  }
+}
