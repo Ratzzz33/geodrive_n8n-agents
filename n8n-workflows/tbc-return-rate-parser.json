@@ -74,7 +74,7 @@
           "conditions": [
             {
               "id": "has-error",
-              "leftValue": "={{ $json.status }}",
+              "leftValue": "={{ $json.status || '' }}",
               "rightValue": "error",
               "operator": {
                 "type": "string",
@@ -115,7 +115,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=INSERT INTO events (\n  branch,\n  type,\n  ext_id,\n  ok,\n  reason,\n  processed\n) VALUES (\n  'tbc',\n  'tbc.return_rate.parse.failed',\n  NULL,\n  FALSE,\n  '{{ ($json.error || 'Unknown error').replace(/'/g, \"''\") }}',\n  TRUE\n)",
+        "query": "=INSERT INTO events (\n  type,\n  event_name,\n  ok,\n  reason,\n  processed\n) VALUES (\n  'tbc.return_rate.parse.failed',\n  'tbc.return_rate.parse.failed',\n  FALSE,\n  '{{ ($json.error || 'Unknown error').replace(/'/g, \"''\") }}',\n  TRUE\n)",
         "options": {}
       },
       "name": "Log Error",
