@@ -1338,167 +1338,52 @@ app.post('/scrape-booking-details', async (req, res) => {
 
 
 
-// Endpoint 7: Парсинг курсов KoronaPay
+// Endpoint 7: Парсинг курсов KoronaPay (через API)
 app.post('/scrape-koronapay-rates', async (req, res) => {
-  let browser;
-  
   try {
-    browser = await chromium.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-blink-features=AutomationControlled']
+    // 1. Курс RUB -> GEL (Оплата рублями за лари)
+    // sendingCountryId=RUS, sendingCurrencyId=810 (RUB), receivingCountryId=GEO, receivingCurrencyId=981 (GEL)
+    // receivingAmount=100 (получить 100 лари)
+    const paymentUrl = "https://koronapay.com/transfers/online/api/transfers/tariffs?sendingCountryId=RUS&sendingCurrencyId=810&receivingCountryId=GEO&receivingCurrencyId=981&paymentMethod=debitCard&receivingAmount=100&receivingMethod=cash";
+    
+    const paymentResponse = await fetch(paymentUrl, {
+        headers: { 
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
     });
     
-    const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      viewport: { width: 1280, height: 720 }
-    });
-
-    const page = await context.newPage();
-    
-    // Переход на страницу переводов
-    await page.goto('https://koronapay.com/transfers/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await page.waitForTimeout(5000); // Ждем загрузки React
-    
-    // Попытка взаимодействия с UI для выбора стран
-    try {
-        // 1. Проверяем текущую страну отправления
-        // Ищем элементы, похожие на выбор страны
-        // Обычно это div или span с текстом страны
-        
-        // Попробуем найти и кликнуть на страну отправления (обычно первая в списке)
-        // Предполагаем, что по дефолту Германия (как в логах)
-        const germany = page.locator('text=Германия').first();
-        if (await germany.isVisible()) {
-            console.log('Found Germany, trying to switch to Russia...');
-            await germany.click();
-            await page.waitForTimeout(1000);
-            
-            // Пытаемся найти Россию в списке
-            const russiaOption = page.locator('text=Россия').first();
-            if (await russiaOption.isVisible()) {
-                await russiaOption.click();
-            } else {
-                // Пробуем поиск
-                const searchInput = page.locator('input[placeholder*="Поиск"], input[placeholder*="Search"]');
-                if (await searchInput.isVisible()) {
-                    await searchInput.fill('Россия');
-                    await page.waitForTimeout(1000);
-                    await page.click('text=Россия');
-                }
-            }
-            await page.waitForTimeout(2000);
-        }
-        
-        // 2. Выбираем страну назначения (Грузия)
-        // Ищем Узбекистан или "Куда"
-        const uzbekistan = page.locator('text=Узбекистан').first();
-        const whereLabel = page.locator('text=Куда').first();
-        
-        if (await uzbekistan.isVisible()) {
-             await uzbekistan.click();
-        } else if (await whereLabel.isVisible()) {
-             // Кликаем на элемент под "Куда"
-             // Это сложнее без точного селектора
-        }
-        
-        // Если открылось окно выбора, ищем Грузию
-        const georgiaOption = page.locator('text=Грузия').first();
-        if (await georgiaOption.isVisible()) {
-            await georgiaOption.click();
-        } else {
-             const searchInput = page.locator('input[placeholder*="Поиск"]');
-             if (await searchInput.isVisible()) {
-                 await searchInput.fill('Грузия');
-                 await page.waitForTimeout(1000);
-                 await page.click('text=Грузия');
-             }
-        }
-        await page.waitForTimeout(2000);
-        
-    } catch (e) {
-        console.log('UI interaction error:', e);
+    if (!paymentResponse.ok) {
+        const text = await paymentResponse.text();
+        throw new Error(`Payment API error: ${paymentResponse.status} ${text}`);
     }
-
-    // Парсим курс после манипуляций
-    const rates = await page.evaluate(async () => {
-      // @ts-ignore
-      const result: { paymentRate: number | null; returnRate: number | null; error?: string; debug_title?: string; debug_text?: string } = {
-        paymentRate: null,
-        returnRate: null
-      };
-      
-      try {
-        // @ts-ignore
-        result.debug_title = document.title;
-        // @ts-ignore
-        result.debug_text = document.body.innerText ? document.body.innerText.substring(0, 2000) : 'No text';
-
-        // @ts-ignore
-        const bodyText = document.body.textContent || '';
-        
-        // Ищем "1 GEL = X.XX RUB"
-        // Или "Курс: 35.50"
-        
-        const rateMatch = bodyText.match(/1\s*(GEL|лари|₾)\s*[=≈]\s*(\d+[.,]\d+)\s*(RUB|руб|₽)/i);
-        if (rateMatch) {
-             result.paymentRate = parseFloat(rateMatch[2].replace(',', '.'));
-        }
-        
-        // Если нет, ищем просто цифры рядом с валютами в __NEXT_DATA__
-        // @ts-ignore
-        if (!result.paymentRate && window.__NEXT_DATA__) {
-          // @ts-ignore
-          const nextData = window.__NEXT_DATA__;
-          const searchForRates = (obj: any, depth = 0): number | null => {
-            if (depth > 10) return null;
-            if (typeof obj === 'number' && obj > 20 && obj < 100) return obj; 
-            if (typeof obj === 'object' && obj !== null) {
-              for (const [key, value] of Object.entries(obj)) {
-                 if ((key.includes('rate') || key.includes('exchange')) && typeof value === 'number' && value > 20 && value < 100) {
-                     return value;
-                 }
-                 const found = searchForRates(value, depth + 1);
-                 if (found) return found;
-              }
-            }
-            return null;
-          };
-          result.paymentRate = searchForRates(nextData);
-        }
-        
-        if (!result.paymentRate) {
-            result.error = 'Rate not found';
-        } else {
-            result.returnRate = result.paymentRate;
-        }
-        
-      } catch (e: any) {
-        result.error = e.message;
-      }
-      
-      return result;
-    });
     
-    await browser.close();
+    const paymentData = await paymentResponse.json();
+    // Ожидаем массив: [{ exchangeRate: 31.1193, ... }]
     
-    if (rates.error || !rates.paymentRate) {
-      return res.status(500).json({ 
-        success: false, 
-        error: rates.error || 'Exchange rate not found',
-        debug_title: rates.debug_title,
-        debug_text: rates.debug_text
-      });
+    if (!Array.isArray(paymentData) || !paymentData[0] || !paymentData[0].exchangeRate) {
+        throw new Error('Invalid API response format');
     }
+    
+    const paymentRate = paymentData[0].exchangeRate;
+    
+    // 2. Курс GEL -> RUB (Возврат лари в рубли)
+    // Если API не позволяет прямой перевод из Грузии в Россию, используем обратный курс как аппроксимацию
+    // Или попробуем другой метод, если найдем.
+    // Пока используем тот же курс или с небольшим спредом (например, -1% если бы мы покупали рубли)
+    // Но обычно возврат идет по курсу покупки, если операция день в день.
+    
+    const returnRate = paymentRate; 
     
     res.json({
       success: true,
-      paymentRate: rates.paymentRate,
-      returnRate: rates.returnRate || rates.paymentRate,
-      parsedAt: new Date().toISOString()
+      paymentRate,
+      returnRate,
+      parsedAt: new Date().toISOString(),
+      method: 'api'
     });
     
   } catch (error: any) {
-    if (browser) await browser.close();
+    console.error('KoronaPay API error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
