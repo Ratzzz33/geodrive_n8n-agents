@@ -15,7 +15,10 @@
       "name": "Every 4 Hours",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -41,7 +44,10 @@
       "name": "Scrape KoronaPay via Playwright",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [440, 300]
+      "position": [
+        440,
+        300
+      ]
     },
     {
       "parameters": {
@@ -50,7 +56,10 @@
       "name": "Parse KoronaPay Rate",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [640, 300]
+      "position": [
+        640,
+        300
+      ]
     },
     {
       "parameters": {
@@ -76,7 +85,10 @@
       "name": "Check for Errors",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [840, 300]
+      "position": [
+        840,
+        300
+      ]
     },
     {
       "parameters": {
@@ -87,7 +99,10 @@
       "name": "Save to DB",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1040, 200],
+      "position": [
+        1040,
+        200
+      ],
       "credentials": {
         "postgres": {
           "name": "PostgreSQL Neon"
@@ -103,7 +118,10 @@
       "name": "Log Error",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1040, 400],
+      "position": [
+        1040,
+        400
+      ],
       "credentials": {
         "postgres": {
           "name": "PostgreSQL Neon"
@@ -117,14 +135,43 @@
       "name": "Format Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1240, 200]
+      "position": [
+        1240,
+        200
+      ]
     },
     {
       "parameters": {},
       "name": "Success",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1440, 200]
+      "position": [
+        1440,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "-1003484642420",
+        "text": "=🚨 <b>Ошибка парсинга курса KoronaPay</b>\n\nError: {{ $json.error || $json.reason || 'Unknown error' }}\n\n<i>Suggestion: {{ $json.suggestion || 'Check logs' }}</i>",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1240,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-api",
+          "name": "Telegram Bot"
+        }
+      }
     }
   ],
   "connections": {
@@ -132,7 +179,7 @@
       "main": [
         [
           {
-            "node": "Get KoronaPay Page",
+            "node": "Scrape KoronaPay via Playwright",
             "type": "main",
             "index": 0
           }
@@ -200,6 +247,17 @@
           }
         ]
       ]
+    },
+    "Log Error": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -212,4 +270,3 @@
     "executionTimeout": 3600
   }
 }
-
